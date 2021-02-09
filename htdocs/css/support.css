@@ -1,8 +1,9 @@
 body {
-	font-family:var(--body-font,'Roboto, sans-serif');
+	font-family:var(--body-font,'Sans, Verdana, sans-serif');
 }
 code {
-	font-size:115%;
+	font-family: SansMono, monospace;
+	font-size: 115%;
 }
 
 .panel {
@@ -47,7 +48,7 @@ code {
 .action {
 	margin:1em;
 	background-color:var(--body-back-alt,'#ebf5ef');
-	color:var(--body-text-alt,'#339933');
+	color:var(--body-text-alt,'#336633');
 	border:solid 1px var(--panel-back-lt,'#00b171');
 	border-radius:0.25em;
 	-moz-box-shadow:0px 3px 8px 0px #333333;

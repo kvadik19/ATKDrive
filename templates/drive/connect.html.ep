@@ -26,7 +26,7 @@
 	#response,
 	input.udata,
 	textarea.udata {
-		font-family:monospace;
+		font-family:SansMono, monospace;
 		padding:0px 0.5em;
 		font-size:12pt;
 		line-height:1.5;
@@ -44,6 +44,7 @@
 		width: 20%;
 	}
 	#response {
+		color:var(--panel-back,'#016b45');
 		border: dashed 1px;
 		width: 50%;
 		min-height: 3em;
@@ -51,7 +52,7 @@
 		font-size: 9pt;
 	}
 	#getfile {
-		font-family:monospace;
+		font-family:SansMono, monospace;
 		font-weight:bold;
 		font-size:120%;
 	}
