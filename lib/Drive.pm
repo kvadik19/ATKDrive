@@ -1,0 +1,267 @@
+package Drive;
+use Mojo::Base 'Mojolicious';
+use Mojo::Base 'Mojolicious::Controller';
+use Mojo::Transaction::WebSocket;
+use FindBin;
+use Mojo::JSON qw(j decode_json encode_json);
+use Mojo::Util qw(url_escape url_unescape b64_encode  trim md5_sum);
+use Fcntl qw(:flock SEEK_END);
+use Utils::LOGGY;
+use Utils::DATER;
+require 'Drive/funcs.pl';
+
+use Data::Dumper;
+
+use strict;
+use utf8;
+
+use DBI;
+
+our %sys;
+our $sys_root = "$FindBin::Bin/..";
+our $logger;
+our $dbh;
+
+#################
+sub startup {
+#################
+	my $self = shift;
+# kill( 'SIGUSR2', $mypid)
+	$self->config( hypnotoad => { listen => [ "http://127.0.0.1:9210",
+											"https://127.0.0.1:9209" ],	# Need to be set in nginx map directive
+								workers => 2,		# two worker processes per CPU core
+								spare => 8,
+								proxy => 0,
+								} );
+	$self->plugin('DefaultHelpers');
+	$self->secrets( ['sug4hyg327ah243Hhjck'] );
+	$self->plugin('PODRenderer');
+	
+	my $ws = Mojo::Transaction::WebSocket->new();
+	my $r = $self->routes;
+
+	$r->websocket('/channel')->to( controller => 'support', action => 'wsocket', )->name('wsocket');
+
+	$r->route('/drive')->to(controller => 'support', action => 'hello')->name('admin');
+	$r->route('/drive/*path')->to(controller => 'support', action => 'support');
+
+	$r->route('/')->to(controller => 'client', action => 'checkin')->name('checkin');
+	$r->route('/*path')->to(controller => 'client', action => 'checkin');
+
+	%sys = readcnf("$sys_root/lib/Drive/sysd.conf");
+	add_xml( \%sys, "$sys_root/$sys{'conf_dir'}/dict.xml");		# Some dictionaries
+
+	$logger = LOGGY->new(
+			filename => "$sys_root$sys{log_dir}/drive.log",
+			loglevel => $sys{'loglevel'},
+			max_size => $sys{'logsize'},
+			log_cycle => $sys{'logcycle'}
+		);
+
+	$self->helper(logger => sub { return $logger } );
+
+	my @db_str = ( $sys{'db_base'},
+					$sys{'db_host'} || 'localhost:3306',
+				);
+	my ($db_user, $db_pass) = split(/:/, $sys{'db_user'});
+	my $db_connect = {	'string' => "DBI:mysql:".join(':', @db_str),
+						'user' => $db_user, 
+						'pwd' => $db_pass,
+						};		# Need to be tuned up by config files!!!
+
+	my $create_dbh = sub {
+						return DBI->connect($db_connect->{'string'}, $db_connect->{'user'}, $db_connect->{'pwd'},
+										{mysql_enable_utf8 => 1,PrintError => 0, RaiseError => 1});
+					};
+	my $reconnect = sub {			# Re-estabilish MySQL connect dropped by timeout error
+						my $self = shift;
+						eval {  $Drive::dbh->do( "SET NAMES $sys{'db_encoding'}" )  };	# Execute dummy query
+						$self->logger->debug("DB reconnect: $Drive::dbh->{'mysql_errno'} $@") if $@;
+						my $try = 3;
+						my $error = $Drive::dbh->{'mysql_errno'};
+						while ( '-2006-2013-' =~ /\.$error\./ && $try -- ) {		# Server closed connection by timeout
+# 							sleep(5);		# Wait for possible system self-recover (such as mysql restarts)
+							$Drive::dbh = $create_dbh->();
+							eval { $self->helper(dbh => $Drive::dbh) };
+							eval { $Drive::dbh->do("SET NAMES $Drive::sys{'db_encoding'}") };
+							$self->logger->debug("DB re-reconnect: $Drive::dbh->{'mysql_errno'} $@") if $@;
+							$error = $Drive::dbh->{'mysql_errno'};
+						}
+						return $Drive::dbh->{'mysql_error'} if $Drive::dbh->{ 'mysql_error' };
+						return undef;
+					};
+	$self->helper(dbh => $create_dbh );							# Because need DB handler in every forked subprocesses!
+	$self->helper(db_reconnect => $reconnect );
+	$dbh = $self->dbh;
+
+	$logger->debug("Starting server pid $$ on ports.");
+
+	$self->hook( before_dispatch => sub {
+						my $self = shift;
+						$logger->debug(">>>> ".$self->req->headers->every_header('x-real-ip')->[0]." => ".
+											$self->req->method.": ".$self->req->url->base.$self->req->url->path );
+						foreach my $dir ( qw(js css img) ) {			# Compose js/css version numbers to prevent browser caching
+							$self->{'stats'}->{$dir} = (stat("$sys_root/$sys{'url_prefix'}/$dir"))[9];
+						}
+						$self->{'qdata'} = query_data($self);
+						$self->stash(
+								user => $self->{'qdata'}->{'user_state'},
+								encoding => $sys{'encoding'},
+								html_code => $self->{'qdata'}->{'html_code'},
+								http_state => 200,
+								tags => {'site_name' => 'ATKDrive'},
+								sys => \%sys,
+								stats => $self->{'stats'},
+								fail => $self->{'qdata'}->{'fail'},
+							);
+						$self->layout('default');
+					}
+			);
+	$self->hook( before_render => sub {
+						my ($self, $args ) = @_;
+						if ( $self->{'qdata'}->{'layout'} ) {		# Omit default layout
+							$self->layout( $self->{'qdata'}->{'layout'});
+						}
+						if ( $self->{'qdata'}->{'tags'} ) {			# Embed some data into template
+							my $tags = $self->stash('tags');
+							while ( my ($name,$value) = each(%{$self->{'qdata'}->{'tags'}}) ) {
+								$tags->{$name} = $value;
+							}
+							$self->stash(tags => $tags);
+						}
+					}
+			);
+}
+
+#################
+sub loader {	#	All of queries operation
+#################
+	my $self = shift;
+
+	my $http_state = 200;
+	my $path = [split(/\//, $self->stash('path'))];
+
+	$logger->debug(">>>> ".$self->req->headers->every_header('x-real-ip')->[0]." => ".
+						$self->req->method.": ".$self->req->url->base.$self->req->url->path );
+
+	$self->layout('default');
+
+	my $qdata = Drive::query_data( $self );
+
+	while ( my($cook, $val) = each( %{$qdata->{'user_state'}->{'cookie'}} ) ) {
+		my $opts = {'expires' => time + 176*24*60*60, 'domain' => $qdata->{'user_state'}->{'host'}, 'path' => '/', };		# 
+		
+		if ( ref($val) eq 'HASH' ) {		# Obsoleted feature?
+			$opts = $val;
+			$val = $val->{'value'};
+			delete($opts->{'value'});
+			$opts->{'domain'} = $qdata->{'user_state'}->{'host'};
+			$opts->{'path'} = '/';
+		} elsif( $val =~ /^$/ ) {
+			$opts->{'expires'} = time - 365*24*60*60;
+		}
+		$self->cookie($cook => $val, $opts);
+	}				# Create cookies
+
+	my $tags = { 'share_img' => $sys{'share_img'} };
+
+	eval {	while ( my($tag, $val) = each( %{$qdata->{'user_state'}->{'tags'}}) ) {
+				if ( $tag eq 'layout' ) {
+					$self->layout($val);
+				} elsif ( $tag eq 'http_status' ) {
+					$self->res->code($val);
+					$http_state = $val;
+				} elsif( $val && $val =~ /\S/ ) {
+					$tags->{$tag} = $val;
+				}
+			}
+		};			# Prevent crashes
+
+	$qdata->{'user_state'}->{'root_url'} = '/' unless $qdata->{'user_state'}->{'root_url'};
+
+	$self->stash(
+			user => $qdata->{'user_state'},
+			encoding => $sys{'encoding'},
+			html_code => $qdata->{'html_code'},
+			http_state => $http_state,
+			tags => $tags,
+			sys => \%sys,
+			stats => $self->{'stats'},
+			fail => $qdata->{'fail'},
+		);
+	
+
+	if ( $tags->{'redirect'} ) {
+		$self->redirect_to($tags->{'redirect'});
+	} else {
+		eval { $self->render( template => 'drive/main', status => $http_state ) };
+		if ( $@ ) {
+			$http_state = 503;
+			$self->render( text => $@, status => $http_state );
+			$logger->debug( $@ );
+		}
+	}
+	return;
+}
+#####################
+sub query_data {	#		Collect query data as hash
+#####################
+	my ($self, ) = @_;
+
+	my $pnames = $self->req->params->names;
+	my $http_params;
+
+	foreach my $par ( @$pnames) {
+		$http_params->{$par} = $self->param($par);
+
+		# Decode from IE shit
+		$http_params->{$par} = encode_json( decode_json($self->param($par))) if $self->param($par) =~ /(\\u[\da-f]{4})+/i;
+
+		if ( $http_params->{$par} =~ /^[\{\[].+[\]\}]$/ ) {		# Got JSON?
+			my $data = $http_params->{$par};
+			$data = url_unescape( $data );
+			eval { $data = decode_json( encode_utf8($data) ) };
+			unless ( $@ ) {
+				$http_params->{$par} = $data;
+			} else {
+				$self->logger->dump("Decode param '$par' : $@", 2, 1);
+			}
+		}
+	}
+
+	my $user_state = {};
+	$user_state = Drive::get_user( $self, );
+
+	my $stack = [ grep { $_ } split(/\//, lc($user_state->{'query'})) ];
+
+	return { 'http_params' => $http_params, 'user_state' => $user_state, 'stack' => $stack, 'method' => $self->req->method };
+}
+#################
+sub get_user {	#	Catch user information
+#################
+	my ($self, ) = @_;
+	my $usr_data = {
+					'ip' => ipton($self->req->headers->every_header('x-real-ip')->[0]),
+					'agent' => $self->req->headers->every_header('user-agent')->[0],
+					'referer' => substr($self->req->headers->every_header('referer')->[0], 0, 255),
+					'query' => url_unescape($self->req->url->path->{'path'}),
+					'host' => $self->req->url->base->{'host'},
+					'stats' => $self->{'stats'},
+				};		# $self->req->url->base.
+
+	$usr_data->{'parent'} = $usr_data->{'referer'} || $usr_data->{'query'};
+# 	$usr_data->{'parent'} =  $usr_data->{'query'} if $usr_data->{'referer'} eq $usr_data->{'parent'};
+	$usr_data->{'parent'} =  '/' if $usr_data->{'query'} eq $usr_data->{'parent'};
+
+	$usr_data->{'is_mobile'} = ( $usr_data->{'agent'} =~ /Android|webOS|iPhone|iP.d|BlackBerry|Mini|Mobile|Touch/i );
+	$usr_data->{'on_mobile'} = $self->cookie('m') || $usr_data->{'is_mobile'} || '0';
+
+	my $cooklist = $self->req->cookies;
+	foreach my $cook ( @$cooklist ) {
+		my $name = $cook->name;
+		$usr_data->{'cookie'}->{$name} = $cook->value;
+	}
+	delete( $usr_data->{'cookie'}->{'uid'} ) if $usr_data->{'cookie'}->{'uid'} eq '0';
+	return $usr_data;
+}
+1;

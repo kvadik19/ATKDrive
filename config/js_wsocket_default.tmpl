@@ -1,0 +1,41 @@
+<script type="text/javascript">
+	// Не забудьте указать данные для авторизации
+	const URL = '<TMPL_VAR NAME="ws_url">';
+
+	let ask_ws = function(msg, callbk) {
+			if (typeof(msg) === 'object') msg = JSON.stringify(msg);
+			let agent = new WebSocket(URL);
+			agent.onerror = function(evt) {
+										console.log('WS Closed on error: ', evt);
+										this.close();
+									};
+			agent.onclose = function(evt) {
+										if ( evt.code != 1005 ) console.log('Something wrong with WS')
+									};
+			agent.onopen = function() {
+										this.send( msg );
+									};
+			agent.onmessage = function(evt) {
+						let msg = evt.data;
+						if ( msg.match(/^[\{\[].+[\]\}]$/) ) {
+							try { msg = JSON.parse( evt.data );
+							} catch(e) { console.log(e) };
+						}
+						if ( callbk ) callbk(msg);
+						this.close();
+					};
+		};
+
+	let whenGotResponse = function(data) {
+			console.log(data);
+			console.log('При получении ответа он будет передан в функцию');
+		};
+
+	document.addEventListener('DOMContentLoaded', function(e) {
+			// Подразумевается, что в странице есть элемент класса '.wsquery' для отправки ws-запроса
+			document.querySelector('.wsquery').onclick = function(e) {
+					let msg = {'description':'В этой переменной можно текст либо объект'};
+					ask_ws( msg, whenGotResponse );
+				};
+		});
+</script>

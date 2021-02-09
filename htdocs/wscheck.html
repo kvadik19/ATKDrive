@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<title>Websocket test site</title>
+	<meta name="keywords" content="" />
+	<meta name="robots" content="noindex,nofollow" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<style type="text/css">
+		.panel {
+			color: #ffffff;
+			background-color: #016B45;
+			max-width:50%;
+			min-width:30%;
+			margin:5em auto;
+			border-radius:0.5em;
+			padding:1em 0px;
+			-moz-box-shadow:0px 3px 8px 0px #333333;
+			-webkit-box-shadow:0px 3px 8px 0px #333333;
+			box-shadow:0px 3px 8px 0px #333333;
+			display:flex;
+			flex-direction:column;
+		}
+		textarea#message {
+			min-height:10em;
+			width:100%;
+			font-family:monospace;
+			font-size:12pt;
+			margin-top:1em;
+		}
+		.inner {
+			font-family:monospace;
+			font-size:12pt;
+			margin:0px 1em;
+		}
+		#request,
+		#response {
+			margin:1em;
+			line-height:1.5;
+			min-height:10em;
+		}
+		#response {
+			border:1px dashed;
+		}
+	</style>
+
+	<script type="text/javascript">
+		const URL = 'ws://wsClient:123av456@atk.onpoz.ru/channel';
+
+		const eCodes = { '1000':'Normal closure',
+				'1001':'Going away',
+				'1002':'Protocol error',
+				'1003':'Wrong type of data',
+				'1004':'Reserved, unknown',
+				'1005':'No status code',
+				'1006':'The connection was closed abnormally',
+				'1007':'Wrong data format',
+				'1008':'Security policy violated',
+				'1009':'Message is too big',
+				'1010':'Server is not meet to our condition',
+				'1011':'Server requirements too high',
+				'1015':'TLS handshake failed'
+			};
+
+	let ask_ws = function(msg, callbk) {
+				let status = {};
+				if (typeof(msg) === 'object') msg = JSON.stringify(msg);
+				let agent = new WebSocket(URL);
+				agent.onerror = function(evt) {
+											console.log('WS Closed on error: ', evt);
+											this.close();
+										};
+				agent.onclose = function(evt) {
+											status = {'code':evt.code, 'message':'Unknown reason'};
+											if ( eCodes[evt.code] ) status.message = eCodes[evt.code];
+										};
+				agent.onopen = function() {
+											this.send( msg );
+										};
+				agent.onmessage = function(evt) {
+							let msg = evt.data;
+							if ( msg.match(/^[\{\[].+[\]\}]$/) ) {
+								try { msg = JSON.parse( evt.data );
+								} catch(e) {  status = {'code':2000, 'message':e};
+												console.log(e) };
+							}
+							if ( callbk ) callbk(msg);
+							this.close();
+						};
+				return status;
+		};
+
+		let display = function(data) {
+				if ( typeof(data) === 'object' ) {
+					data = JSON.stringify(data);
+				}
+				document.getElementById('response').innerText = data;
+			};
+		document.addEventListener('DOMContentLoaded', function(e) {
+				document.querySelector('.wsquery').onclick = function(e) {
+						let msg = document.getElementById('message').value;
+						let state;
+						if ( msg.length > 0 ) {
+							state = ask_ws( msg, display);
+							console.log(state);
+						}
+					};
+			});
+	</script>
+</head>
+<body>
+<div class="panel">
+	<div id="request" class="inner">
+		<button type="button" class="wsquery">Send</button><br>
+		<textarea id="message"></textarea>
+	</div>
+	<div class="inner">Response:</div>
+	<div class="inner" id="response">
+	</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<div class="action">
+	<h4>Содержимое файла паролей <code><%== $auth_file %></code></h4>
+	<p class="comment"><br>
+	В этом файле содержится список логинов и паролей для доступа на страницы настроек.<br>
+	Пароли хранятся в зашифрованном виде, поэтому Вы можете только изменять их. Восстановить пароль &#8212; шансов никаких.
+	</p>
+%= include 'drive/edline'
+	<div class="buttonbar">
+		<a href="<%= url_for('admin') %>" class="button esc">Не сохранять</a>
+		<a href="#" id="reload" class="button">Перезагрузить файл</a>
+		<a href="#" id="save" class="button sav">Сохранить</a>
+	</div>
+</div>
+
+<script type="text/javascript">
+	document.addEventListener('DOMContentLoaded', function(e) { 
+			let snapshot = document.getElementById('access').innerHTML;		// To check data changes
+
+			document.getElementById('reload').onclick = function(e) {
+					if ( document.getElementById('access').innerHTML != snapshot 
+							&& confirm('Забыть сделанные изменения?') ) {
+						document.location.reload();
+					} 
+				};
+
+			document.getElementById('save').onclick = function(e) {
+					if ( snapshot === document.getElementById('access').innerHTML ) {
+						document.location = '<%= url_for('admin') %>';
+						return;
+					}
+					flush( {'code':'access','users':accessData() }, document.location.href, function(resp) {
+									if ( resp.match(/^\{/) ) {
+										resp = JSON.parse(resp);
+										if ( resp.code === 'access' && resp.success == 1 ) {
+											document.location = '<%= url_for('admin') %>';
+											return;
+										} else if ( resp.fail ) {
+											alert(resp.fail);
+										}
+									}
+									console.log(resp);
+									alert('Сохранение не удалось');
+								} );
+				};
+
+			accessInit();
+		});
+</script>

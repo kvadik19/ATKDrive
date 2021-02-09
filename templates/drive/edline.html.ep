@@ -1,0 +1,185 @@
+%# Used in access (etc.) template
+	<table class="edline" id="access" data-magic="<%= $magic_mask %>">
+		<tr>
+		<th></th><th>Login</th><th>Password</th>
+		</tr>
+% foreach my $row (@$users) {
+		<tr class="edline">
+			<td><span class="charmark red" title="Удалить строку">&#10008;</span></td>
+			<td class="edata" data-name="<%== $row->{'name'} %>"><%== $row->{'name'} %></td>
+			<td class="edata" data-pwd="<%== $row->{'pwd'} %>"><%== $row->{'display'} %></td>
+		</tr>
+% }
+		<tr class="addline">
+			<td><span class="charmark green" title="Добавить строку">&#10133;</span></td><td colspan="2"></td>
+		</tr>
+	</table>
+
+<script type="text/javascript">
+	let delClick = function(e) {
+					let div = e.target;
+					let row = div.closest('tr.edline');
+					if ( row.querySelector('td.edata:not(:empty)') ) {
+						let lname = row.querySelector('td[data-name]').innerText;
+						if ( confirm('Удалить запись клиента \xAB'+lname+'\xBB?') ) {
+							row.parentNode.removeChild(row);
+						}
+					} else {
+						row.parentNode.removeChild(row);
+					}
+				};
+	let closeEdit = function() {
+			let open = document.querySelectorAll('#access td[contenteditable=true]');
+			for ( let nO=0; nO<open.length; nO++ ) { 
+				open[nO].onkeydown = null;
+				open[nO].contentEditable = false;
+				open[nO].onclick = fireEdit;
+			}
+		};
+	let fireEdit = function(e) {
+					let td = e;
+					if ( td.target ) {
+						td = e.target;
+						e.stopImmediatePropagation();
+					}
+					closeEdit();
+					document.onclick = function(evt, ) {
+							let box;
+							if ( td.getBoundingClientRect ) {
+								box = td.getBoundingClientRect();
+							} else {
+								box = {'top':td.offsetTop,
+										'left':td.offsetLeft,
+										'width':td.offsetWidth,
+										'height':td.offsetHeight
+										};
+							}
+
+							if ( evt.pageX < box.left || evt.pageY < box.top
+								|| evt.pageX > box.left + box.width
+								|| evt.pageY > box.top + box.height ) 
+							{
+								closeEdit();
+								document.onclick = null;
+							}
+						};
+					td.onkeydown = function(evt) {
+							if ( evt.keyCode.toString().match(/^(9|13)$/) ) {
+								evt.preventDefault();
+								if ( td.previousElementSibling.className.match(/edata/) ) {		// Check this first!
+// 									fireEdit( td.previousElementSibling );
+									closeEdit();
+								} else if ( td.nextElementSibling.className.match(/edata/) ) {
+									fireEdit( td.nextElementSibling );
+								}
+							}
+						};
+					td.onclick = null;
+					td.contentEditable = true;
+					td.focus();
+				};
+
+	var accessData = function() {
+			let formData = [];
+			let magic = document.getElementById('access').dataset.magic * 1;
+			document.querySelectorAll('#access tr.edline').forEach( r => {
+					let row = {};
+					let allow = true;
+					r.querySelectorAll('td.edata').forEach( c => {
+							Object.keys(c.dataset).forEach( k => {
+									row['old_'+k] = c.dataset[k];
+									let text = c.innerText;
+									if ( text.length > 0 ) {
+										let chk = text.charCodeAt(0);
+										if (k === 'pwd' && chk >1500
+											&& text.length === magic) {		// Check if 'password' cell is'nt changed
+																			// Have length as mask, same characters
+											for ( let c=1; c < magic; c++ ) {
+												if ( text.charCodeAt(c) != chk ) {
+													chk = false;
+													break;
+												}
+											}
+											if ( chk && c.dataset[k] ) text = c.dataset[k];
+										}
+									} else {
+										allow = false;
+									}
+									row[k] = text;
+								});
+						});
+					if (allow) formData.push(row);
+				});
+			return formData;
+		};
+
+	var accessInit = function() {
+			document.querySelectorAll('#access tr.edline span.charmark.red').forEach( d => { d.onclick = delClick });
+			document.querySelectorAll('#access tr.edline td.edata').forEach( td => { td.onclick = fireEdit });
+			document.querySelector('#access tr.addline span.charmark.green').onclick = function(e) {
+					let last = document.querySelector('#access tr.addline');
+					let free = document.querySelector('#access tr.edline td:empty');
+					if ( free ) {
+						e.stopImmediatePropagation();
+						alert('Имеется незаполненная строка!');
+						fireEdit( free );
+					} else {
+						let row = createObj('tr',{'className':'edline'});
+						let del = createObj('span', {'className':'charmark red','title':'Удалить строку',
+													'innerHTML':'&#10008;','onclick':delClick });
+						row.appendChild(createObj('td',{}));
+						row.firstElementChild.appendChild(del);
+						row.appendChild(createObj('td',{'className':'edata','data-name':'','innerText':'','onclick':fireEdit}));
+						row.appendChild(createObj('td',{'className':'edata','data-pwd':'','innerText':'','onclick':fireEdit}));
+						last.parentNode.insertBefore(row, last);
+						e.stopImmediatePropagation();
+						fireEdit(row.querySelector('td.edata'));
+					}
+				};
+		};		// accessInit
+</script>
+<style type="text/css">
+	table.edline {
+		margin:0px 30px;
+		background-color:var(--body-back-dk);
+		border:1px solid var(--panel-back-lt);
+		border-collapse:collapse;
+		font-family:monospace;
+	}
+	table.edline th {
+		background-color:var(--panel-back-lt);
+		color:var(--panel-text);
+		padding:0.5em 2em;
+		text-align:left;
+	}
+	table.edline td {
+		padding:0.3em 1em;
+		height:2em;
+	}
+	table.edline td[contenteditable=true] {
+		background-color:var(--body-back);
+		color:var(--body-text);
+		border:ridge 0.2em;
+		padding:0.1em 1em;
+	}
+	table.edline td.edata {
+		min-width:12em;
+		font-size:120%;
+	}
+	table.edline tr.edline td {
+		border-bottom:1px solid var(--panel-back-lt);
+	}
+	table.edline tr td:first-child span {
+		padding:0.3em 1em;
+		background-color:var(--panel-back-lt);
+		border-radius:0.25em;
+		filter:saturate(1.5);
+		-webkit-filter:saturate(1.5);
+	}
+	table.edline tr.edline td:first-child span {
+		display:none;
+	}
+	table.edline tr.edline:hover td:first-child span {
+		display:inline-block;
+	}
+</style>

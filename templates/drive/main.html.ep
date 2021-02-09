@@ -1,0 +1,6 @@
+<%== $html_code %>
+% if ( $self->stash('fail') ) {
+<p class="fail">
+	<%= $fail %>
+</p>
+% }

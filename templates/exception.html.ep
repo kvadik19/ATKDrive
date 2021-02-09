@@ -1,0 +1,15 @@
+<div class="action">
+	<h2>Ошибка <%= $http_state %></h2>
+	<p class="error">
+	<%== $html_code %>
+	</p>
+	<p class="comment">
+	Вернемся назад через <span id="_cnt"></span> с.
+	</p>
+</div>
+<script type="text/javascript">
+	let cnt = 4;
+	document.getElementById('_cnt').innerText = cnt;
+	window.setInterval( e => { document.getElementById('_cnt').innerText = cnt; cnt-- }, 1000);
+	window.setTimeout( e => { document.location='<%= "$user->{'parent'}" %>' }, cnt*1000);
+</script>

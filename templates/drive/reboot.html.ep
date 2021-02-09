@@ -1,0 +1,12 @@
+<div class="action">
+	<p class="comment">
+	Процессу <%= $pid %> отправлен сигнал <%= $signal %><br>
+	Перезагружается: <span id="_cnt"></span><br>
+	</p>
+</div>
+<script type="text/javascript">
+	let cnt = 3;
+	document.getElementById('_cnt').innerText = cnt;
+	window.setInterval( e => { document.getElementById('_cnt').innerText = cnt; cnt-- }, 1000);
+	window.setTimeout( e => { document.location='<%= url_for('admin') %>' }, cnt*1000);
+</script>

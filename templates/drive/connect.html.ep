@@ -1,0 +1,227 @@
+<style type="text/css">
+	div.options {
+		padding:0px 20px;
+		display:flex;
+		flex-direction:column;
+	}
+	.optrow {
+		display:flex;
+		flex-direction:row;
+		justify-content: space-between;
+	}
+	.optrow >div {
+		display:flex;
+		flex-direction:column;
+		flex-grow:6;
+		margin:0.5em;
+		line-height:1.8;
+		font-size:90%;
+	}
+	.optrow >div:nth-of-type(odd) {
+		flex-grow:1;
+		align-items:flex-end;
+	}
+	.optrow >div:nth-of-type(even) {
+	}
+	#response,
+	input.udata,
+	textarea.udata {
+		font-family:monospace;
+		padding:0px 0.5em;
+		font-size:12pt;
+		line-height:1.5;
+	}
+	textarea.udata {
+		min-height:3em;
+	}
+	textarea#js_wsocket {
+		tab-size: 20px;
+		overflow: auto;
+		white-space: pre;
+		min-height:10em;
+	}
+	#response:empty {
+		width: 20%;
+	}
+	#response {
+		border: dashed 1px;
+		width: 50%;
+		min-height: 3em;
+		overflow: auto;
+		font-size: 9pt;
+	}
+	#getfile {
+		font-family:monospace;
+		font-weight:bold;
+		font-size:120%;
+	}
+</style>
+
+<div class="action">
+	<h4>Секция connect из файла <code><%== $config_file %></code></h4>
+	<p class="comment">
+	В этом файле содержатся оперативные настройки системы. 
+	Настройки этой секции используются для коммуникации между в модулем 1С и веб-интерфейсом.<br>
+	</p>
+	<div id="connect" class="options">
+		<h4>Запросы к модулю 1С</h4>
+		<div class="optrow">
+			<div>
+				<label for="host">Имя или адрес хоста</label>
+			</div>
+			<div>
+				<input type="text" id="host" class="udata" value="<%= $config->{'host'} %>" />
+			</div>
+			<div>
+				<label for="port">Порт</label>
+			</div>
+			<div>
+				<input type="text" id="port" class="udata" value="<%= $config->{'port'} %>" />
+			</div>
+		</div>
+		<div class="optrow">
+			<div>
+				<label for="request">Тестовое сообщение</label>
+				<button type="button" id="ping">Отправить</button>
+			</div>
+			<div>
+				<textarea id="ping_msg" class="udata"><%= $config->{'ping_msg'} %></textarea>
+			</div>
+			<div>
+				<label for="response">Ответ хоста</label>
+			</div>
+			<div id="response"></div>
+		</div>
+	</div>
+
+	<p class="comment">Модуль 1С отправляет запросы к веб-интерфейсу с веб-страницы рабочего места менеджера.<br> 
+	Запросы отправляются через websocket. JavaScript должен быть помещен в веб-страницу.
+	</p>
+	<div id="wsocket" class="options">
+		<h4>Запросы к веб-интерфейсу по протоколу websocket</h4>
+		<div class="optrow">
+			<div class="tooltip">
+				<label for="jscode">JavaScript обращения к интерфейсу</label>
+				<button id="jscopy" type="button">
+					Скопировать
+				</button>
+			</div>
+			<div>
+				<textarea id="js_wsocket" class="udata"><%= $config->{'js_wsocket'} %></textarea>
+			</div>
+		</div>
+		<div class="optrow">
+			<div class="comment">
+				<p>
+				<strong>Файл <code><%== $auth_file %></code></strong><br>
+				Авторизация для выполнения websocket-запросов. Логин и пароль указываются в URL запроса
+				в виде <code>ws://login:password@hostname.zn/path</code><br>
+				Скачать файл <a href="#getfile" id="getfile" data-fname="wscheck.html">wscheck.html</a> для проверки работы websocket.
+				</p>
+			</div>
+			<div>
+%= include 'drive/edline'
+			</div>
+		</div>
+	</div>
+
+	<div class="buttonbar">
+		<a href="<%= url_for('admin') %>" class="button esc">Не сохранять</a>
+		<a href="#" id="reload" class="button">Перезагрузить файл</a>
+		<a href="#" id="save" class="button sav">Сохранить</a>
+	</div>
+</div>
+
+<script type="text/javascript">
+	let getSnap = function() {
+			let snap = '';
+			document.querySelectorAll('.udata').forEach( i => { snap += i.value });
+			snap += document.getElementById('access').innerHTML;
+			return snap;
+		};
+	document.addEventListener('DOMContentLoaded', function(e) {
+			let snapshot = getSnap();
+
+			document.getElementById('reload').onclick = function(e) {
+					if ( snapshot !== getSnap() 
+						&& confirm('Забыть сделанные изменения?') ) {
+						document.location.reload();
+					} 
+				};
+
+			document.getElementById('save').onclick = function(e) {
+					if ( snapshot === getSnap() ) {
+						document.location = '<%= url_for('admin') %>';
+						return;
+					}
+					let formData = {};
+					document.querySelectorAll('.udata').forEach( i => {
+															formData[i.id] = i.value;
+														});
+					formData.users = accessData();		// Get access login list
+					flush( {'code':'connect','data':formData }, document.location.href, function(resp) {
+									if ( resp.match(/^\{/) ) {
+										resp = JSON.parse(resp);
+										if ( resp.code === 'connect' && resp.success == 1 ) {
+											document.location = '<%= url_for('admin') %>';
+											return;
+										} else if ( resp.fail ) {
+											alert(resp.fail);
+										}
+									}
+									console.log(resp);
+									alert('Сохранение не удалось');
+								} );
+				};
+			document.getElementById('getfile').onclick = function(e) {
+					let fn = e.target.dataset.fname;
+					let link = createObj('a',{'href':'/'+fn, 'download':fn});
+					link.click();
+					link = null;
+				};
+
+			document.getElementById('ping').onclick = function(e) {
+					let [ host, port, msg ] = [
+								document.getElementById('host').value,
+								document.getElementById('port').value,
+								document.getElementById('ping_msg').value
+							];
+					if ( host && port && msg ) {
+						let formData = {'host':host, 'port':port, 'msg':msg};
+						flush( {'code':'ping','data':formData }, document.location.href
+									, function(resp) {
+									if ( resp.match(/^\{/) ) {
+										resp = JSON.parse(resp);
+										if ( resp.code === 'ping' ) {
+											document.getElementById('response').innerText = resp.response;
+										}
+									} else {
+										document.getElementById('response').innerText = resp;
+									}
+								} );
+					}
+				};
+
+			document.getElementById('js_wsocket').onkeydown = function(evt) {
+							if ( evt.keyCode.toString().match(/^9$/) ) {
+								evt.preventDefault();
+								let host = evt.target;
+								let text = host.value;
+								let pos = host.selectionStart + 1;
+								host.value = text.substr(0, host.selectionStart)+'\t'+text.substr(host.selectionEnd);
+								host.setSelectionRange(pos, pos);
+								host.focus();
+							}
+				};
+
+			if ( document.execCommand ) {
+				document.getElementById('jscopy').onclick = function(e) {
+						document.getElementById('js_wsocket').select();
+						document.execCommand('copy');
+					};
+			} else {
+				document.getElementById('jscopy').disabled = true;
+			}
+			accessInit();
+		});
+</script>

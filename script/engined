@@ -1,0 +1,33 @@
+#!/bin/sh
+
+if [ $# -ne 1 ]
+then
+	echo "Start/restart Drive as daemon on defined ports. Alternate usage: `basename $0` stop";
+	cmd="";
+else
+	cmd=$1;
+fi
+
+# export db_name="atk"
+# export db_host="localhost"
+# export db_port="3306"
+# export db_login="vdk"
+# export db_pass="14rucoO"
+
+if [ -r '/var/www/atk/script/engine' ]
+then
+	if [ "$cmd" = "stop" ]
+	then 
+		hypnotoad -s /var/www/atk/script/engine
+	else
+		hypnotoad /var/www/atk/script/engine
+
+# Launch server in interactive mode for develope purposes
+# 		morbo -l http://127.0.0.1:9210 /var/www/atk/script/engine
+	fi
+else
+	echo Server script does not exist or is not readable. Exit.; 
+	exit 1;
+fi
+
+
