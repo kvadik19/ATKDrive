@@ -1,0 +1,256 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<dates>
+	<de name="case">
+		<hour>Stunde</hour>
+		<hour>Öffnungszeiten</hour>
+		<day>Tag</day>
+		<day>Tage</day>
+		<month>Monat</month>
+		<month>Monate</month>
+		<week>Woche</week>
+		<week>Wochen</week>
+		<year>Jahr</year>
+		<year>Jahre</year>
+	</de>
+	<de name="days">
+		<full>Montag</full>
+		<full>Dienstag</full>
+		<full>Mittwoch</full>
+		<full>Donnerstag</full>
+		<full>Freitag</full>
+		<full>Samstag</full>
+		<full>Sonntag</full>
+		<short>Mon</short>
+		<short>Die</short>
+		<short>Mit</short>
+		<short>Don</short>
+		<short>Fre</short>
+		<short>Sam</short>
+		<short>Son</short>
+	</de>
+	<de name="months">
+		<full>Januar</full>
+		<full>Februar</full>
+		<full>März</full>
+		<full>April</full>
+		<full>Mai</full>
+		<full>Juni</full>
+		<full>Juli</full>
+		<full>August</full>
+		<full>September</full>
+		<full>Oktober</full>
+		<full>November</full>
+		<full>Dezember</full>
+		<short>Jan</short>
+		<short>Feb</short>
+		<short>Mär</short>
+		<short>Apr</short>
+		<short>Mai</short>
+		<short>Jun</short>
+		<short>Jul</short>
+		<short>Aug</short>
+		<short>Sep</short>
+		<short>Okt</short>
+		<short>Nov</short>
+		<short>Dez</short>
+	</de>
+	<de name="relative" today="Heute" tomorrow="Morgen" yesterday="Gestern" />
+	<de name="format">
+		<date>%d.%m.%Y</date>
+		<datetime>%d.%m.%Y %T</datetime>
+	</de>
+	<en name="case">
+		<hour>Hour</hour>
+		<hour>Hours</hour>
+		<day>Day</day>
+		<day>Days</day>
+		<month>Month</month>
+		<month>Months</month>
+		<week>Week</week>
+		<week>Weeks</week>
+		<year>Year</year>
+		<year>Years</year>
+	</en>
+	<en name="days">
+		<full>Saturday</full>
+		<full>Sunday</full>
+		<full>Monday</full>
+		<full>Tuesday</full>
+		<full>Wednesday</full>
+		<full>Thursday</full>
+		<full>Friday</full>
+		<short>Sa</short>
+		<short>Su</short>
+		<short>Mo</short>
+		<short>Tu</short>
+		<short>We</short>
+		<short>Th</short>
+		<short>Fr</short>
+	</en>
+	<en name="months">
+		<full>January</full>
+		<full>February</full>
+		<full>March</full>
+		<full>April</full>
+		<full>May</full>
+		<full>June</full>
+		<full>July</full>
+		<full>August</full>
+		<full>September</full>
+		<full>October</full>
+		<full>November</full>
+		<full>December</full>
+		<short>Jan</short>
+		<short>Feb</short>
+		<short>Mar</short>
+		<short>Apr</short>
+		<short>May</short>
+		<short>Jun</short>
+		<short>Jul</short>
+		<short>Aug</short>
+		<short>Sep</short>
+		<short>Oct</short>
+		<short>Nov</short>
+		<short>Dec</short>
+	</en>
+	<en name="relative" today="Today" tomorrow="Tomorrow" yesterday="Yesterday" />
+	<en name="format">
+		<date>%m/%d/%Y</date>
+		<datetime>%m/%d/%Y %T</datetime>
+	</en>
+	<ru name="case">
+		<hour>Час</hour>
+		<hour>Часа</hour>
+		<hour>Часов</hour>
+		<day>День</day>
+		<day>Дня</day>
+		<day>Дней</day>
+		<month>Месяц</month>
+		<month>Месяца</month>
+		<month>Месяцев</month>
+		<week>Неделя</week>
+		<week>Недели</week>
+		<week>Недель</week>
+		<year>Год</year>
+		<year>Года</year>
+		<year>Лет</year>
+	</ru>
+	<ru name="days">
+		<full>Понедельник</full>
+		<full>Вторник</full>
+		<full>Среда</full>
+		<full>Четверг</full>
+		<full>Пятница</full>
+		<full>Суббота</full>
+		<full>Воскресенье</full>
+		<short>Пн</short>
+		<short>Вт</short>
+		<short>Ср</short>
+		<short>Чт</short>
+		<short>Пт</short>
+		<short>Сб</short>
+		<short>Вс</short>
+	</ru>
+	<ru name="months">
+		<full>Январь</full>
+		<full>Февраль</full>
+		<full>Март</full>
+		<full>Апрель</full>
+		<full>Май</full>
+		<full>Июнь</full>
+		<full>Июль</full>
+		<full>Август</full>
+		<full>Сентябрь</full>
+		<full>Октябрь</full>
+		<full>Ноябрь</full>
+		<full>Декабрь</full>
+		<fullm>января</fullm>
+		<fullm>февраля</fullm>
+		<fullm>марта</fullm>
+		<fullm>апреля</fullm>
+		<fullm>мая</fullm>
+		<fullm>июня</fullm>
+		<fullm>июля</fullm>
+		<fullm>августа</fullm>
+		<fullm>сентября</fullm>
+		<fullm>октября</fullm>
+		<fullm>ноября</fullm>
+		<fullm>декабря</fullm>
+		<short>Янв</short>
+		<short>Фев</short>
+		<short>Мар</short>
+		<short>Апр</short>
+		<short>Май</short>
+		<short>Июн</short>
+		<short>Июл</short>
+		<short>Авг</short>
+		<short>Сен</short>
+		<short>Окт</short>
+		<short>Ноя</short>
+		<short>Дек</short>
+	</ru>
+	<ru name="relative" today="Сегодня" tomorrow="Завтра" yesterday="Вчера" />
+	<ru name="format">
+		<date>%d.%m.%Y</date>
+		<datetime>%d.%m.%Y %T</datetime>
+	</ru>
+	<zh name="case">
+		<hour>小时</hour>
+		<hour>小时</hour>
+		<day>天</day>
+		<day>天</day>
+		<month>个月</month>
+		<month>个月</month>
+		<week>周</week>
+		<week>周</week>
+		<year>年</year>
+		<year>年</year>
+	</zh>
+	<zh name="days">
+		<full>周一</full>
+		<full>周二</full>
+		<full>周三</full>
+		<full>周四</full>
+		<full>周五</full>
+		<full>周六</full>
+		<full>日</full>
+		<short>周一</short>
+		<short>周二</short>
+		<short>周三</short>
+		<short>周四</short>
+		<short>周五</short>
+		<short>周六</short>
+		<short>日</short>
+	</zh>
+	<zh name="months">
+		<full>一月</full>
+		<full>二月</full>
+		<full>三月</full>
+		<full>四月</full>
+		<full>五月</full>
+		<full>六月</full>
+		<full>七月</full>
+		<full>八月</full>
+		<full>九月</full>
+		<full>十月</full>
+		<full>十一月</full>
+		<full>十二月</full>
+		<short>一月</short>
+		<short>二月</short>
+		<short>三月</short>
+		<short>四月</short>
+		<short>五月</short>
+		<short>六月</short>
+		<short>七月</short>
+		<short>八月</short>
+		<short>九月</short>
+		<short>十月</short>
+		<short>十一月</short>
+		<short>十二月</short>
+	</zh>
+	<zh name="relative" today="今天" tomorrow="明天" yesterday="昨天" />
+	<zh name="format">
+		<date>%Y年%c月%e日</date>
+		<datetime>%Y年%c月%e日 %T</datetime>
+	</zh>
+</dates>

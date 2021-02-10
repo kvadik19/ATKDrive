@@ -1,0 +1,76 @@
+:root {
+	--body-back:#ffffff;
+	--body-back-dk:#f5f5f5;
+	--body-back-alt:#ebf5ef;
+	--body-text:#333333;
+	--body-text-alt:#336633;
+	--body-text-lt:#cccccc;
+	--body-font:Sans, Verdana, sans-serif;
+
+	--panel-back:#016B45;
+	--panel-back-lt:#00b171;
+	--panel-text:#ffffff;
+	--panel-text-dk:#cccccc;
+	--panel-font:Sans, Verdana, sans-serif;
+
+	--btn-bg:linear-gradient(0deg,#cccccc,#fafafa);
+	--btn-bg-alt:linear-gradient(180deg,#cccccc,#fafafa);
+	--btn-fg:#333333;
+	--btn-bg-red:linear-gradient(0deg,#cc9999,#facccc);
+	--btn-bg-red-alt:linear-gradient(180deg,#cc9999,#facccc);
+	--btn-fg-red:#993333;
+	--btn-bg-green:linear-gradient(0deg,#99cc99,#ccfacc);
+	--btn-bg-green-alt:linear-gradient(180deg,#99cc99,#ccfacc);
+	--btn-fg-green:#339933;
+
+	--balloon-back:#ffffcc;
+	--balloon-text:#663333;
+	--balloon-sel-back:#6699aa;
+	--balloon-sel-text:#ffffff;
+	--balloon-h-back:#996600;
+	--balloon-h-text:#e5e5e5;
+	
+	--balloon-border:1px solid #999999;
+
+}
+@font-face {
+	font-family:Sans;
+	src:url('/css/fonts/MyriadPro-Regular.woff');
+}
+@font-face {
+	font-family:SansCond;
+	src:url('/css/fonts/MyriadPro-Cond.woff');
+}
+@font-face {
+	font-family:SansLite;
+	src:url('/css/fonts/MyriadPro-Light.woff');
+}
+@font-face {
+	font-family:SansItalic;
+	src:url('/css/fonts/MyriadPro-CondIt.woff');
+}
+@font-face {
+	font-family:SansBold;
+	src:url('/css/fonts/MyriadPro-BoldCond.woff');
+}
+@font-face {
+	font-family:SansCaps;
+	src:url('/css/fonts/MyriadPro-BlackCond.woff');
+}
+@font-face {
+	font-family:Seriff;
+	src:url('/css/fonts/NotoSerif.woff');
+}
+@font-face {
+	font-family:SeriffItalic;
+	src:url('/css/fonts/NotoSerif-Italic.woff');
+}
+@font-face {
+	font-family:SansMono;
+	src:url('/css/fonts/UbuntuMono-Regular.woff');
+}
+@font-face {
+	font-family:Sitements;
+	src:url('/css/fonts/sitements.otf');
+}
+
