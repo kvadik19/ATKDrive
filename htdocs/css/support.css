@@ -87,7 +87,7 @@ code {
 }
 
 div.optrow {
-	margin:10px 30px;
+	margin:10px 0px;
 	background-color:var(--body-back-dk);
 	border:1px solid var(--panel-back-lt);
 }

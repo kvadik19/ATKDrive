@@ -166,9 +166,10 @@ sub connect {		# Process websocket queries
 		my $resp = Utils::NETS->ask_inet(
 							host => $param->{'data'}->{'host'},
 							port => $param->{'data'}->{'port'},
-							msg => encode_utf8($param->{'data'}->{'msg'}),
+							msg => encode_utf8($param->{'data'}->{'ping_msg'}),
 							login => $param->{'data'}->{'htlogin'},
 							pwd => $param->{'data'}->{'htpasswd'},
+# 							logger => $self->logger,
 						);
 		$ret->{'json'} = { 'code' => 'ping', 'response' => decode_utf8($resp) };
 

@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS users (
+_uid INT(11) NOT NULL AUTO_INCREMENT,
+_fp CHAR(32) DEFAULT '',
+_email CHAR(128) DEFAULT '',
+_login CHAR(128) DEFAULT '',
+_pwd CHAR(32) DEFAULT '',
+_ustate TINYINT DEFAULT 0,
+_umode TINYINT DEFAULT 0,
+_ip BIGINT DEFAULT 0,
+_rtime INT(10) DEFAULT 0,
+_ltime INT(10) DEFAULT 0,
+_hash CHAR(64) DEFAULT '',
+PRIMARY KEY uid (_uid),
+KEY fp (_fp),
+KEY email (_email),
+KEY login (_login),
+KEY pwd (_pwd),
+KEY ustate (_ustate),
+KEY umode (_umode),
+KEY hash (_hash)
+) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;

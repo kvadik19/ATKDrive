@@ -8,6 +8,7 @@ use Mojo::Util qw(url_escape url_unescape b64_encode  trim md5_sum);
 use Fcntl qw(:flock SEEK_END);
 use Utils::LOGGY;
 use Utils::DATER;
+use Time::HiRes;
 require 'Drive/funcs.pl';
 
 use Data::Dumper;
@@ -191,7 +192,48 @@ sub get_user {	#	Catch user information
 		my $name = $cook->name;
 		$usr_data->{'cookie'}->{$name} = $cook->value;
 	}
-	delete( $usr_data->{'cookie'}->{'uid'} ) if $usr_data->{'cookie'}->{'uid'} eq '0';
+# 	$usr_data = Drive::check_user( $usr_data );
+
 	return $usr_data;
+}
+#####################
+sub check_user {	# Check for package is complete
+#####################
+	my ( $self, $usr)  = @_;
+	my $logtime = time;
+	my $new_fp = md5_sum( $usr->{'ip'}.Time::HiRes::time() );	# Create new fp, means as fingerprint
+	$usr->{'cookie'}->{'fp'} = $new_fp;
+
+	my $where;
+	my $udata;
+	if ( $usr->{'cookie'}->{'fp'} ) {
+		$where = "_fp='$usr->{'cookie'}->{'fp'}'";
+		$udata = $Drive::dbh->selectall_arrayref("SELECT _uid,_umode,_ustate,_fp,_login FROM users WHERE $where",{Slice=>{}});
+		if ( $udata->[0]->{'_uid'} ) {
+			$usr->{'cookie'}->{'uid'} = $udata->[0]->{'_uid'};
+			$usr->{'logged'} = 1;
+			$Drive::dbh->do("UPDATE users SET _fp='$new_fp' WHERE _uid='$udata->[0]->{'_uid'}'");
+		} else {
+			$usr->{'cookie'}->{'uid'} = 0;
+			$usr->{'logged'} = 0;
+		}
+	}
+	return $usr;
+}
+#####################
+sub check_column {	# Check for package is complete
+#####################
+	my ($self, $col, $spec) = @_;
+	my ( $table, $column ) = split(/\./, $col);
+	eval { $self->dbh->do("SELECT $column FROM $table LIMIT 0,1") };
+	return 1 unless $@;
+	if ( $self->dbh->{'mysql_errno'} == 1054 && $spec ) {		# Unknown column
+		eval {	$self->dbh->do("ALTER TABLE $table ADD COLUMN $column $spec");
+				$self->dbh->do("ALTER TABLE $table ADD INDEX $column ($column)");
+			};
+		return 1 unless $@;
+	} elsif( $self->dbh->{'mysql_errno'} == 1146 ) {	# Unknown table
+	};
+	return 0;
 }
 1;

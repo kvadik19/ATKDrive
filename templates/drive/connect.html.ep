@@ -7,7 +7,7 @@
 	.optgroup {
 		display:flex;
 		flex-direction:column;
-		margin:10px 30px;
+		margin:10px 0px;
 		background-color:var(--body-back-dk);
 		border:1px solid var(--panel-back-lt);
 	}
@@ -98,7 +98,7 @@
 					<label for="htlogin">Логин для закрытого HTTP URL</label>
 				</div>
 				<div class="quant">
-					<input type="text" id="ntlogin" class="udata" value="<%= $config->{'htlogin'} %>" />
+					<input type="text" id="htlogin" class="udata" value="<%= $config->{'htlogin'} %>" />
 				</div>
 				<div class="quant">
 					<label for="htpasswd">Пароль для закрытого HTTP URL</label>
@@ -110,13 +110,13 @@
 		</div>
 		<div class="optrow">
 			<div class="quant">
-				<label for="request">Тестовое сообщение</label>
+				<label for="ping_msg">Тестовое сообщение</label>
 				<button type="button" id="ping">Отправить</button>
 			</div>
 			<div class="quant">
 				<textarea id="ping_msg" class="udata"><%= $config->{'ping_msg'} %></textarea>
 			</div>
-			<div>
+			<div class="quant">
 				<label for="response">Ответ хоста</label>
 			</div>
 			<div id="response" class="quant"></div>
@@ -212,13 +212,15 @@
 				};
 
 			document.getElementById('ping').onclick = function(e) {
-					let [ host, port, msg ] = [
+					let [ host, port, ping_msg, htlogin, htpasswd ] = [
 								document.getElementById('host').value,
 								document.getElementById('port').value,
-								document.getElementById('ping_msg').value
+								document.getElementById('ping_msg').value,
+								document.getElementById('htlogin').value,
+								document.getElementById('htpasswd').value
 							];
-					if ( host && msg ) {
-						let formData = {'host':host, 'port':port, 'msg':msg};
+					if ( host && ping_msg ) {
+						let formData = {'host':host, 'port':port, 'ping_msg':ping_msg, 'htlogin':htlogin, 'htpasswd':htpasswd};
 						document.getElementById('response').innerText = '';
 						flush( {'code':'ping','data':formData }, document.location.href
 									, function(resp) {
