@@ -10,8 +10,7 @@ use Cwd 'abs_path';
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
-use IO::Socket;
-use IO::Select;
+use Utils::NETS;
 use Time::HiRes qw( usleep );
 use HTML::Template;
 
@@ -164,10 +163,14 @@ sub connect {		# Process websocket queries
 		$ret->{'users'} = $self->access_read( $auth_file, $ret->{'magic_mask'} );
 
 	} elsif( $param->{'code'} eq 'ping' ) {
-		$ret->{'json'} = {'code' => 'ping', 'response' => decode_utf8( $self->ask_inet( $param->{'data'}->{'host'}, 
-																			$param->{'data'}->{'port'}, 
-																			encode_utf8($param->{'data'}->{'msg'}) ))
-						};
+		my $resp = Utils::NETS->ask_inet(
+							host => $param->{'data'}->{'host'},
+							port => $param->{'data'}->{'port'},
+							msg => encode_utf8($param->{'data'}->{'msg'}),
+							login => $param->{'data'}->{'htlogin'},
+							pwd => $param->{'data'}->{'htpasswd'},
+						);
+		$ret->{'json'} = { 'code' => 'ping', 'response' => decode_utf8($resp) };
 
 	} elsif( $param->{'code'} eq 'connect' ) {
 		$ret->{'json'} = {'code' => 'connect', 'success' => 1, 'params' => []};
@@ -198,38 +201,6 @@ sub reboot {		# Manually reboot backserver
 	my $signal = 'USR2';
 	my $res = kill( $signal, getppid() );
 	return {'pid' => getppid, 'signal' => $signal};
-}
-#####################
-sub ask_inet {		# Process inet transactions
-#####################
-	my ($self, $host, $port, $msg_send) = @_;
-	return "Not enough data to connect" unless $host && $port;
-
-	my $msg_recv;
-	my $timeout = $Drive::sys{'inet_timeout'}	|| 5;
-	my $buffsize = $Drive::sys{'inet_buffer'} || 2048;
-	my $proto = $Drive::sys{'inet_proto'} || 'tcp';
-	my $sock = IO::Socket::INET->new(
-						PeerAddr	=> $host,
-						PeerPort	=> $port,
-						Proto		=> $proto,
-					);
-	return "$@ $IO::Socket::errstr" if $@;
-	$sock->autoflush(1);
-	my $ready = IO::Select->new( $sock );
-	my ($canw, ) = $ready->can_write( $timeout );
-	if ( $canw ) {
-		$canw->send("$msg_send", 0);
-		my ($canr, ) = $ready->can_read( $timeout );
-		if ( $canr ) {
-			$canr->recv($msg_recv, $buffsize);
-			return $msg_recv;
-		} else {
-			return "Can't Read from $host in $timeout sec.";
-		}
-	} else {
-		return "Can't Send to $host in $timeout sec.";
-	}
 }
 #####################
 sub wsocket {		# Process websocket queries

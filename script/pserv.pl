@@ -11,6 +11,7 @@ use Mojo::JSON qw(decode_json encode_json);
 use Encode;
 use Data::Dumper;
 
+my $EOL = "\015\012";
 my $port = 10001;
 my $buffsize = 1024;
 
@@ -52,6 +53,11 @@ while ( my $client = $sock->accept() ) {
 		$msg_send = decode_utf8(encode_json( $msg_send ));
 	} else {
 		$msg_send ="ECHO: $msg_recv";
+	}
+	if ( $msg_recv =~ /HTTP\/\d+\.\d+/ ) {
+		$msg_send = "HTTP/1.1 200 OK$EOL"
+					."Content-Type:text/plain;charset=UTF8$EOL"
+					."$EOL$msg_send";
 	}
 	$msg_recv = '';
 	$client->send( "$msg_send", 0 );

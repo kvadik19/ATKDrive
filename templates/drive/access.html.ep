@@ -20,7 +20,9 @@
 					if ( document.getElementById('access').innerHTML != snapshot 
 							&& confirm('Забыть сделанные изменения?') ) {
 						document.location.reload();
-					} 
+					} else {
+						document.location.reload();
+					}
 				};
 
 			document.getElementById('save').onclick = function(e) {

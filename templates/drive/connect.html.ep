@@ -4,12 +4,24 @@
 		display:flex;
 		flex-direction:column;
 	}
+	.optgroup {
+		display:flex;
+		flex-direction:column;
+		margin:10px 30px;
+		background-color:var(--body-back-dk);
+		border:1px solid var(--panel-back-lt);
+	}
+	.optgroup > .optrow {
+		border:none;
+	}
 	.optrow {
 		display:flex;
 		flex-direction:row;
 		justify-content: space-between;
+		margin:0px;
+		border:none;
 	}
-	.optrow >div {
+	.optrow div.quant {
 		display:flex;
 		flex-direction:column;
 		flex-grow:6;
@@ -17,11 +29,11 @@
 		line-height:1.8;
 		font-size:90%;
 	}
-	.optrow >div:nth-of-type(odd) {
+	.optrow div.quant:nth-of-type(odd) {
 		flex-grow:1;
 		align-items:flex-end;
 	}
-	.optrow >div:nth-of-type(even) {
+	.optrow div.quant:nth-of-type(even) {
 	}
 	#response,
 	input.udata,
@@ -66,32 +78,48 @@
 	</p>
 	<div id="connect" class="options">
 		<h4>Запросы к модулю 1С</h4>
-		<div class="optrow">
-			<div>
-				<label for="host">Имя или адрес хоста</label>
+		<div class="optgroup">
+			<div class="optrow">
+				<div class="quant">
+					<label for="host">Имя или адрес хоста<br>Или URL для HTTP-запросов</label>
+				</div>
+				<div class="quant">
+					<input type="text" id="host" class="udata" value="<%= $config->{'host'} %>" />
+				</div>
+				<div class="quant">
+					<label for="port">Порт</label>
+				</div>
+				<div class="quant">
+					<input type="text" id="port" class="udata" value="<%= $config->{'port'} %>" />
+				</div>
 			</div>
-			<div>
-				<input type="text" id="host" class="udata" value="<%= $config->{'host'} %>" />
-			</div>
-			<div>
-				<label for="port">Порт</label>
-			</div>
-			<div>
-				<input type="text" id="port" class="udata" value="<%= $config->{'port'} %>" />
+			<div class="optrow">
+				<div class="quant">
+					<label for="htlogin">Логин для закрытого HTTP URL</label>
+				</div>
+				<div class="quant">
+					<input type="text" id="ntlogin" class="udata" value="<%= $config->{'htlogin'} %>" />
+				</div>
+				<div class="quant">
+					<label for="htpasswd">Пароль для закрытого HTTP URL</label>
+				</div>
+				<div class="quant">
+					<input type="text" id="htpasswd" class="udata" value="<%= $config->{'htpasswd'} %>" />
+				</div>
 			</div>
 		</div>
 		<div class="optrow">
-			<div>
+			<div class="quant">
 				<label for="request">Тестовое сообщение</label>
 				<button type="button" id="ping">Отправить</button>
 			</div>
-			<div>
+			<div class="quant">
 				<textarea id="ping_msg" class="udata"><%= $config->{'ping_msg'} %></textarea>
 			</div>
 			<div>
 				<label for="response">Ответ хоста</label>
 			</div>
-			<div id="response"></div>
+			<div id="response" class="quant"></div>
 		</div>
 	</div>
 
@@ -101,18 +129,18 @@
 	<div id="wsocket" class="options">
 		<h4>Запросы к веб-интерфейсу по протоколу websocket</h4>
 		<div class="optrow">
-			<div class="tooltip">
-				<label for="jscode">JavaScript обращения к интерфейсу</label>
+			<div class="quant">
+				<label for="js_wsocket">JavaScript обращения к интерфейсу</label>
 				<button id="jscopy" type="button">
 					Скопировать
 				</button>
 			</div>
-			<div>
+			<div class="quant">
 				<textarea id="js_wsocket" class="udata"><%= $config->{'js_wsocket'} %></textarea>
 			</div>
 		</div>
 		<div class="optrow">
-			<div class="comment">
+			<div class="comment quant">
 				<p>
 				<strong>Файл <code><%== $auth_file %></code></strong><br>
 				Авторизация для выполнения websocket-запросов. Логин и пароль указываются в URL запроса
@@ -120,7 +148,7 @@
 				Скачать файл <a href="#getfile" id="getfile" data-fname="wscheck.html">wscheck.html</a> для проверки работы websocket.
 				</p>
 			</div>
-			<div>
+			<div class="quant">
 %= include 'drive/edline'
 			</div>
 		</div>
@@ -147,7 +175,9 @@
 					if ( snapshot !== getSnap() 
 						&& confirm('Забыть сделанные изменения?') ) {
 						document.location.reload();
-					} 
+					} else {
+						document.location.reload();
+					}
 				};
 
 			document.getElementById('save').onclick = function(e) {
@@ -187,8 +217,9 @@
 								document.getElementById('port').value,
 								document.getElementById('ping_msg').value
 							];
-					if ( host && port && msg ) {
+					if ( host && msg ) {
 						let formData = {'host':host, 'port':port, 'msg':msg};
+						document.getElementById('response').innerText = '';
 						flush( {'code':'ping','data':formData }, document.location.href
 									, function(resp) {
 									if ( resp.match(/^\{/) ) {
