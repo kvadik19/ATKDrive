@@ -7,10 +7,15 @@
 	--body-text-lt:#cccccc;
 	--body-font:Sans, Verdana, sans-serif;
 
+	--head-back: #1b242d;
+	--head-text: #bdbdbd;
+	--head-text-lt: #ffffff;
+
 	--panel-back:#016B45;
 	--panel-back-lt:#00b171;
+	--panel-back-dk: #1d1d1d;
 	--panel-text:#ffffff;
-	--panel-text-dk:#cccccc;
+	--panel-text-dk:#b7bfc3;
 	--panel-font:Sans, Verdana, sans-serif;
 
 	--btn-bg:linear-gradient(0deg,#cccccc,#fafafa);
@@ -33,17 +38,21 @@
 	--balloon-border:1px solid #999999;
 
 }
+
 @font-face {
 	font-family:Sans;
-	src:url('/css/fonts/MyriadPro-Regular.woff');
+/* 	src:url('/css/fonts/MyriadPro-Regular.woff'); */
+	src:url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap");
 }
 @font-face {
 	font-family:SansCond;
-	src:url('/css/fonts/MyriadPro-Cond.woff');
+/* 	src:url('/css/fonts/MyriadPro-Cond.woff'); */
+	src:url("https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap");
 }
 @font-face {
 	font-family:SansLite;
-	src:url('/css/fonts/MyriadPro-Light.woff');
+/* 	src:url('/css/fonts/MyriadPro-Light.woff'); */
+	src:url("https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap");
 }
 @font-face {
 	font-family:SansItalic;
@@ -51,7 +60,8 @@
 }
 @font-face {
 	font-family:SansBold;
-	src:url('/css/fonts/MyriadPro-BoldCond.woff');
+	src:url("https://fonts.googleapis.com/css2?family=Roboto:wght@900&display=swap");
+/* 	src:url('/css/fonts/MyriadPro-BoldCond.woff'); */
 }
 @font-face {
 	font-family:SansCaps;

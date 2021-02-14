@@ -33,7 +33,7 @@ my $self = shift;
 	my $action = shift( @{$self->{'qdata'}->{'stack'}} );
 	$action = shift( @{$self->{'qdata'}->{'stack'}} ) if $action eq 'drive';
 
-	my $template = 'drive/main';
+	my $template = 'main';
 	my $out = "404 : Page $action not found yet";
 
 	eval { $out = $self->$action };

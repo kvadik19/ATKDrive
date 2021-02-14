@@ -46,8 +46,8 @@ sub startup {
 	$r->route('/drive')->to(controller => 'support', action => 'hello')->name('admin');
 	$r->route('/drive/*path')->to(controller => 'support', action => 'support');
 
-	$r->route('/')->to(controller => 'client', action => 'checkin')->name('checkin');
-	$r->route('/*path')->to(controller => 'client', action => 'checkin');
+	$r->route('/')->to(controller => 'client', action => 'checkin')->name('cabinet');
+	$r->route('/*path')->to(controller => 'client', action => 'checked');
 
 	%sys = readcnf("$sys_root/lib/Drive/sysd.conf");
 	add_xml( \%sys, "$sys_root/$sys{'conf_dir'}/dict.xml");		# Some dictionaries
@@ -95,7 +95,7 @@ sub startup {
 	$self->helper(db_reconnect => $reconnect );
 	$dbh = $self->dbh;
 
-	$logger->debug("Starting server pid $$ on ports.");
+	my $default_tags = {'site_name' => decode_utf8($sys{'our_site'})};
 
 	$self->hook( before_dispatch => sub {
 						my $self = shift;
@@ -105,12 +105,15 @@ sub startup {
 							$self->{'stats'}->{$dir} = (stat("$sys_root/$sys{'url_prefix'}/$dir"))[9];
 						}
 						$self->{'qdata'} = query_data($self);
+						my @date = timestr();
+						$default_tags->{'years'} = $date[0];
+						$default_tags->{'years'} = "2021-$default_tags->{'years'}" if $default_tags->{'years'} ne '2021';
 						$self->stash(
 								user => $self->{'qdata'}->{'user_state'},
 								encoding => $sys{'encoding'},
 								html_code => $self->{'qdata'}->{'html_code'},
 								http_state => 200,
-								tags => {'site_name' => 'ATKDrive'},
+								tags => $default_tags,
 								sys => \%sys,
 								stats => $self->{'stats'},
 								fail => $self->{'qdata'}->{'fail'},
@@ -130,8 +133,18 @@ sub startup {
 							}
 							$self->stash(tags => $tags);
 						}
+						my $domain = $self->req->url->base;
+						$domain = substr( $domain, rindex($domain, '/')+1 );
+						while ( my($cook, $val) = each( %{$self->{'qdata'}->{'user_state'}->{'cookie'}}) ) {
+							my $opts = {'expires' => time + 176*24*60*60, 'domain' => $domain, 'path' => '/', };
+							if( $val =~ /^$/ ) {
+								$opts->{'expires'} = time - 365*24*60*60;
+							}
+							$self->cookie($cook => $val, $opts);
+						}				# Create cookies
 					}
 			);
+	$logger->debug("Starting server pid $$ on defined ports.");
 }
 
 #####################
@@ -192,22 +205,23 @@ sub get_user {	#	Catch user information
 		my $name = $cook->name;
 		$usr_data->{'cookie'}->{$name} = $cook->value;
 	}
-# 	$usr_data = Drive::check_user( $usr_data );
+	Drive::check_user( $self, $usr_data );
 
 	return $usr_data;
 }
 #####################
-sub check_user {	# Check for package is complete
+sub check_user {	# Check for user logged in
 #####################
 	my ( $self, $usr)  = @_;
 	my $logtime = time;
 	my $new_fp = md5_sum( $usr->{'ip'}.Time::HiRes::time() );	# Create new fp, means as fingerprint
-	$usr->{'cookie'}->{'fp'} = $new_fp;
+	$usr->{'fp'} = $usr->{'cookie'}->{'fp'};		# Store current fp
+	$usr->{'cookie'}->{'fp'} = $new_fp;			# Write new fp
 
 	my $where;
 	my $udata;
-	if ( $usr->{'cookie'}->{'fp'} ) {
-		$where = "_fp='$usr->{'cookie'}->{'fp'}'";
+	if ( $usr->{'fp'} ) {
+		$where = "_fp='$usr->{'fp'}'";
 		$udata = $Drive::dbh->selectall_arrayref("SELECT _uid,_umode,_ustate,_fp,_login FROM users WHERE $where",{Slice=>{}});
 		if ( $udata->[0]->{'_uid'} ) {
 			$usr->{'cookie'}->{'uid'} = $udata->[0]->{'_uid'};

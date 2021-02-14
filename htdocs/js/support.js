@@ -156,3 +156,39 @@ function findParentBy(node,code) {
 		}
 	} catch(e) { return null }
 }
+
+function getCookie(c_name) {
+	if (document.cookie.length > 0) {
+		let cooks = document.cookie.split(';');
+		let re = new RegExp('^\\s*'+c_name);
+		let got = cooks.grep( cook => { return cook.match(re)});
+		if ( got.length > 0 ) {
+			let cook = got[got.length-1];
+			return decodeURIComponent( cook.split('=')[1] );
+		}
+	}
+	return '';
+};
+
+function setCookie(name, value, options) {		// https://learn.javascript.ru/cookie
+	options = options || {};
+	let expires = options.expires;
+	if (typeof(expires) == 'number' && expires) {
+		let d = new Date();
+		d.setTime(d.getTime() + expires * 1000);
+		expires = options.expires = d;
+	}
+	if (expires && expires.toUTCString) {
+		options.expires = expires.toUTCString();
+	}
+	value = encodeURIComponent(value);
+	let updatedCookie = name + "=" + value;
+	for (let propName in options) {
+		updatedCookie += "; " + propName;
+		let propValue = options[propName];
+		if (propValue !== true) {
+			updatedCookie += "=" + propValue;
+		}
+	}
+	document.cookie = updatedCookie;
+}

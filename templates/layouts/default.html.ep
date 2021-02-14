@@ -5,56 +5,24 @@
 	<meta http-equiv="content-language" content="ru" />
 	<title><%= $tags->{'page_title'} %> &#8226; <%= $tags->{'site_name'} %></title>
 
-	<link rel="shortcut icon" type="image/png" href="/favicon.png">
-	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
-	<link rel="icon" type="image/png" href="/favicon.png">
-	<link rel="icon" href="/img/naico.gif" type="image/gif" />
-	<link rel="icon" type="image/png" sizes="16x16" href="/app-16.png">
-	<link rel="icon" type="image/png" sizes="24x24" href="/app-24.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/app-32.png">
-	<link rel="icon" type="image/png" sizes="48x48" href="/app-48.png">
-	<link rel="icon" type="image/png" sizes="128x128" href="/app-128.png">
-	<link rel="apple-touch-icon" type="image/png" sizes="16x16" href="/app-16.png">
-	<link rel="apple-touch-icon" type="image/png" sizes="24x24" href="/app-24.png">
-	<link rel="apple-touch-icon" type="image/png" sizes="32x32" href="/app-32.png">
-	<link rel="apple-touch-icon" type="image/png" sizes="48x48" href="/app-48.png">
-	<link rel="apple-touch-icon" type="image/png" sizes="128x128" href="/app-128.png">
-	<link rel="manifest" href="/manifest.json">
+	<link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
 
-	<meta name="description" content="<%= $tags->{'description'} %>" />
+	<meta name="description" content="<%= $tags->{'description'} || 'ПЕРЕВОЗИМ БЫСТРО, ПЕРЕВОЗИМ ВЫГОДНО!' %>" />
 	<meta name="keywords" content="<%= $tags->{'keywords'} %>" />
 	<meta name="news_keywords" content="<%= $tags->{'keywords'} %>" />
-	<meta name="robots" content="index,follow" />
+	<meta name="robots" content="noindex,nofollow" />
 	<meta name="referrer" content="no-referrer-when-downgrade"/>
-	<meta name="yandex-verification" content="88798eb068e720c8" target="onpositive.net"/>
-	<meta name="yandex-verification" content="68711a8b61ad43f8" target="onpositive.ru"/>
-	<meta name="yandex-verification" content="0403b1ba45bf8c9c" target="onpoz.ru"/>
 
+<!-- 	<link rel="manifest" href="/manifest.json"> -->
 <!-- 	<link rel="alternate" type="application/rss+xml" title="" href="/index_.rss" /> -->
-
-	<meta property="og:url" content="<%== $user->{'host'} %><%== $tags->{'share_url'} %>" />
-	<meta property="og:site_name" content="<%= $tags->{'site_name'} %>" />
-	<meta property="og:title" content="<%= $tags->{'page_title'} %> &#8226; <%= $tags->{'site_name'} %>" />
-	<meta property="og:type" content="<%= ( url_for() eq '/') ? 'website' : 'article' %>" />
-	<meta property="og:locale" content="ru" />
-	<meta property="og:description" content="<%= $tags->{'description'} %>" />
-% if ( $tags->{'share_img'} ) {
-	<meta property="og:image" content="<%== $user->{'host'} %><%== $tags->{'share_img'} %>" />
-	<link rel="image_src" href="<%== $user->{'host'} %><%== $tags->{'share_img'} %>">
-	<meta property="twitter:image" content="<%== $user->{'host'} %><%== $tags->{'share_img'} %>" />
-% }
-	<meta name="twitter:card" content="summary" />
-	<meta name="twitter:site" content="" />
-	<meta name="twitter:creator" content="" />
-	<meta name="twitter:title" content="<%= $tags->{'page_title'} %> &#8226; <%= $tags->{'site_name'} %>" />
-	<meta name="twitter:description" content="<%= $tags->{'description'} %>" />
 
 	<link rel="stylesheet" type="text/css" href="/css/defines.css?<%== $stats->{'css'} %>" />
 	<link rel="stylesheet" type="text/css" href="/css/main.css?<%== $stats->{'css'} %>" />
-	<link rel="stylesheet" type="text/css" href="/css/common.css?<%== $stats->{'css'} %>" />
 % if ( $user->{'on_mobile'} ) {
 	<link rel="stylesheet" type="text/css" href="/css/compact.css?<%== $stats->{'css'} %>" />
-	<meta name="viewport" content="width=device-width, target-densityDpi=144, user-scalable=yes" />
+	<meta name="viewport" content="width=device-width, target-densityDpi=144, user-scalable=yes, initial-scale=1.0" />
 	<meta name="HandHeldFriendly" content="true" />
 	<!-- Chrome, Firefox OS and Opera -->
 	<meta name="theme-color" content="#016B45">
@@ -63,11 +31,61 @@
 	<!-- iOS Safari -->
 	<meta name="apple-mobile-web-app-status-bar-style" content="#016B45">
 % }
-	<script type="text/javascript" src="/js/main.min.js?<%= $stats->{'js'} %>"></script>
+	<script type="text/javascript">
+		function createObj(type, descr) {
+			let inp = document.createElement(type);
+			for( prop in descr ) {
+				try { eval('inp.'+prop+'=descr[prop]') } catch(e) { inp.setAttribute(prop, descr[prop]) };
+			}
+			return inp;
+		}
+		window.on_mobile = <%= ($user->{'on_mobile'}) ? 'true' : 'false' %>;
+	</script>
+	<script type="text/javascript" src="/js/support.js?<%= $stats->{'js'} %>"></script>
 </head>
-
 <body>
+<header class="header">
+	<div class="container">
+		<div class="header__body">
+			<a href="//alvetk.ru" class="header__logo">
+				<img src="/img/logo.svg" alt="LOGO" />
+			</a>
+		</div>
+	</div>
+</header>
 <%== content %>
+<footer class="footer">
+	<div class="container">
+		<div class="footer-block">
+		<p class="footer-block__text">&copy; <%= $tags->{'years'} %> «АЛВЕ ТрансКарго». Все права защищены, использование материалов
+			сайта возможно только с указанием источника</p>
+		<div class="footer-block__mobile">
+			<span>Скачать приложение</span>
+			<div>
+				<a href="//alvetk.ru/mobilnoe-prilozhenie-atk/">Mobile app</a>
+			</div>
+		</div>
+		<ul class="footer-list">
+			<li>
+			<a href="//www.facebook.com/ALVETK/" target="_blank">
+				<img src="/img/fb.svg" alt="icon_facebook" />
+			</a>
+			</li>
+			<li>
+			<a href="//www.instagram.com/alve_tk" target="_blank">
+				<img src="/img/instagram.svg" alt="icon_instagram" />
+			</a>
+			</li>
+			<li>
+			<a href="//vk.com/alvetk163" target="_blank">
+				<img src="/img/vk.svg" alt="icon_vk" />
+			</a>
+			</li>
+		</ul>
+		</div>
+	</div>
+</footer>
+
 </body>
 </html>
 %	$self->logger->dump("<<<< Reply ".$self->stash('http_state')." => ".$self->req->headers->every_header('x-real-ip')->[0].
