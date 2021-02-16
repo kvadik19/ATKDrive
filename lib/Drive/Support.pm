@@ -66,7 +66,7 @@ my $self = shift;
 sub access {				# .htaccess file editor
 #############################
 my $self = shift;
-	my $auth_file = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}").'/.admin';
+	my $auth_file = "$Drive::sys_root$Drive::sys{'conf_dir'}/admin";
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = {'users' => [], 'auth_file' => $auth_file, 'magic_mask' => 8};
 
@@ -131,7 +131,7 @@ sub connect {		# Process websocket queries
 #####################
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}");
+	my $conf_dir = "$Drive::sys_root$Drive::sys{'conf_dir'}";
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
@@ -202,6 +202,25 @@ sub reboot {		# Manually reboot backserver
 	my $signal = 'USR2';
 	my $res = kill( $signal, getppid() );
 	return {'pid' => getppid, 'signal' => $signal};
+}
+#####################
+sub utable {		# User registration tuneup
+#####################
+	my $self = shift;
+	my $ret = { 'struct' => [] };
+	my $struct = $self->dbh->selectall_arrayref("SHOW FULL COLUMNS FROM users",{Slice=>{}});
+	foreach my $def (@$struct) {
+		my $dat = {};
+		foreach my $fld ( qw(Field Type Default Key) ) {
+			$dat->{lc($fld)} = $def->{$fld};
+		}
+		if ( $dat->{'type'} =~ /\((\d+)\)/ ) {
+			$dat->{'len'} = $1;
+			$dat->{'type'} =~ s/\(\d+\)//;
+		}
+		push( @{$ret->{'struct'}}, $dat);
+	}
+	return $ret;
 }
 #####################
 sub wsocket {		# Process websocket queries

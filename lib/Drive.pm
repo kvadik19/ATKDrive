@@ -19,7 +19,7 @@ use utf8;
 use DBI;
 
 our %sys;
-our $sys_root = "$FindBin::Bin/..";
+our $sys_root;
 our $logger;
 our $dbh;
 
@@ -38,6 +38,7 @@ sub startup {
 	$self->secrets( ['sug4hyg327ah243Hhjck'] );
 	$self->plugin('PODRenderer');
 	
+	$sys_root = upper_dir("$FindBin::Bin/..");
 	my $ws = Mojo::Transaction::WebSocket->new();
 	my $r = $self->routes;
 
@@ -190,6 +191,7 @@ sub get_user {	#	Catch user information
 					'referer' => substr($self->req->headers->every_header('referer')->[0], 0, 255),
 					'query' => url_unescape($self->req->url->path->{'path'}),
 					'host' => $self->req->url->base->{'host'},
+					'proto' => $self->req->url->base->{'scheme'},
 					'stats' => $self->{'stats'},
 				};		# $self->req->url->base.
 
@@ -226,7 +228,7 @@ sub check_user {	# Check for user logged in
 		if ( $udata->[0]->{'_uid'} ) {
 			$usr->{'cookie'}->{'uid'} = $udata->[0]->{'_uid'};
 			$usr->{'logged'} = 1;
-			$Drive::dbh->do("UPDATE users SET _fp='$new_fp' WHERE _uid='$udata->[0]->{'_uid'}'");
+			$Drive::dbh->do("UPDATE users SET _fp='$new_fp',_ltime='$logtime' WHERE _uid='$udata->[0]->{'_uid'}'");
 		} else {
 			$usr->{'cookie'}->{'uid'} = 0;
 			$usr->{'logged'} = 0;

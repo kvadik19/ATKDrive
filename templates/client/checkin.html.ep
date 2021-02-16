@@ -81,7 +81,8 @@
 								btn.innerText = btn.innerText.replace(/\?$/g,'');
 								btn.disabled = true;
 							}
-						} else if ( resp.data.state === 0 ) {		// Not found
+
+						} else if ( resp.data.state === 0 ) {		// Not found but some additive moves occuried
 							let btn = document.querySelector('#buttonbar .optrow.if button');
 							if ( btn ) btn.className += ' if';
 							btn = document.getElementById('register');
@@ -89,7 +90,20 @@
 								btn.innerText = btn.innerText.replace(/\?$/g,'')+'?';
 								btn.disabled = false;
 							}
+							if ( resp.data.action === 'reset') {
+								if (resp.data.html_code ) {
+									let alrt = document.getElementById('alert');
+									if ( !alrt ) {
+										alrt = createObj('div',{'id':'alert','className':'alert','style.display':'none',
+														'onclick':function(e){ alrt.style.display = 'none' }});
+										document.querySelector('#main div.container').appendChild(alrt);
+									}
+									alrt.innerHTML = resp.data.html_code;
+									alrt.style.display = 'block';
+								}
+							}
 						} else {
+							console.log(resp);
 						}
 // 						document.location = resp.data.point;
 					} else {

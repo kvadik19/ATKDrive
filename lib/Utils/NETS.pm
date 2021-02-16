@@ -8,6 +8,9 @@ use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use IO::Socket;
 use IO::Select;
+use Net::SMTP::SSL;
+use MIME::Lite;
+
 use Time::HiRes qw( usleep );
 use Fcntl qw(:flock SEEK_END);
 
@@ -98,6 +101,23 @@ sub ask_inet {		# Process inet transactions
 		}
 	}
 	return $msg_recv;
+}
+#########################
+sub email_good {			# Precheck email address fnd fix possible miss
+#########################
+	my $aref = shift;
+	my $text = $$aref;
+	$$aref =~ s/\s//g;
+	my $good;
+	my ($usr, $host) = split(/@/, $$aref);
+	$usr =~ s/^\.+//g;
+	$host =~ s/[,;\/]/./g;
+	my $res = `host $host`;
+	if ( $res =~ /(\d{1,3}.?){4}/ && $usr =~ /^[\w\-.]+$/ ) {
+		$$aref = lc($usr).'@'.lc($host);
+		$good = 1;
+	}
+	return $good;
 }
 #####################
 sub read_ws {		# Process websocket queries

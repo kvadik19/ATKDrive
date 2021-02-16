@@ -237,11 +237,32 @@ ul li { list-style-type:none; }
 .form__btn:disabled {
 	color:var(--panel-text-dk, '#b7bfc3');
 }
+.alert {
+	color:var(--panel-text, '#ffffff');
+	background-color:var(--panel-back-lt, '#016B45');
+	border-radius: 6px;
+	width: 50%;
+	left: 25%;
+	top:20%;
+	position:absolute;
+	z-index:1;
+	padding:2em;
+	margin: 10px auto;
+	-moz-box-shadow:0px 3px 8px 0px #333333;
+	-webkit-box-shadow:0px 3px 8px 0px #333333;
+	box-shadow:0px 3px 8px 0px #333333;
+	cursor:pointer;
+	line-height:1.5;
+	text-align:center;
+	text-align-last:center;
+}
+
 @media screen and (max-width:800px) {
 	.panel {max-width:100%;padding:1em;}
 	.panel h1 {font-size:16pt;line-height:1.2;}
 	.form__input {font-size:12pt;}
 	.form__btn {font-size:10pt;padding:0.5em 1em;}
+	.alert { width: 90%;left:5%;font-size:80%;padding:1em;}
 }
 .panel .opts >a {
 	list-style-type:none;
@@ -301,6 +322,7 @@ div.optrow h4 {
 .buttonbar a.button:active {
 	background: var(--btn-bg-alt);
 }
+
 .action {
 	margin:1em;
 	background-color:var(--body-back-alt,'#ebf5ef');
