@@ -1,0 +1,19 @@
+<div class="action">
+	<h4>Структура и верстка таблицы <code>users</code></h4>
+<table id="struct">
+% foreach my $row ( @$struct ) {
+	<tr>
+	<td><%== $row->{'field'} %></td>
+	<td><%== $row->{'type'} %></td>
+	<td><%== $row->{'len'} %></td>
+	<td><%== $row->{'key'} %></td>
+	<td><%== $row->{'default'} %></td>
+	</tr>
+% }
+</table>
+</div>
+
+<script type="text/javascript">
+	document.addEventListener('DOMContentLoaded', function(e) { 
+		});
+</script>
