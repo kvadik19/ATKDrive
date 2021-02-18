@@ -10,6 +10,12 @@ const mimeTypes = {'ttf':'application/x-font-ttf', 'ttc':'application/x-font-ttf
 				'zip':'application/zip', 
 				};
 
+var doubleClickEvent = new MouseEvent('dblclick', {
+		'view': window,
+		'bubbles': true,
+		'cancelable': true
+	});
+
 var responder = createRequestObject();
 var flusher = function(e) {
 	try {
@@ -169,6 +175,29 @@ function getCookie(c_name) {
 	}
 	return '';
 };
+
+function actionStore(node, action) {		// Stores assigned event handlers for node and its childrens (for cloneNode needs)
+	let ret = {};
+	ret[action] = node[action];
+	if (node.children.length > 0) {
+		ret.subact = [];
+		for ( let nn = 0; nn < node.children.length; nn++ ) {
+			ret.subact.push( actionStore(node.children[nn], action) )
+		}
+	}
+	return ret;
+}
+
+function actionSet(node, set) {		// ReStores event handlers for cloned node and its childrens (for cloneNode needs)
+	let action = Object.keys(set)[0];
+	node[action] = set[action];
+	if ( set.subact && node.children.length > 0 ) {
+		for ( let nn = 0; nn < set.subact.length; nn++ ) {
+			if ( node.children[nn] ) actionSet(node.children[nn], set.subact[nn]);
+		}
+	}
+	return true;
+}
 
 function setCookie(name, value, options) {		// https://learn.javascript.ru/cookie
 	options = options || {};

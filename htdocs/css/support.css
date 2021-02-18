@@ -97,6 +97,28 @@ div.optrow h4 {
 	padding:0px;
 	text-indent:0px;
 }
+div.options {
+	padding:0px 20px;
+	display:flex;
+	flex-direction:column;
+}
+.optgroup {
+	display:flex;
+	flex-direction:column;
+	margin:10px 0px;
+	background-color:var(--body-back-dk);
+	border:1px solid var(--panel-back-lt);
+}
+.optgroup .optrow {
+	border:none;
+}
+.optrow {
+	display:flex;
+	flex-direction:row;
+	justify-content: space-between;
+	margin:0px;
+	border:none;
+}
 
 .buttonbar {
 	padding:1em 0px;
@@ -155,3 +177,68 @@ div.optrow h4 {
 	opacity: 0.8;
 }
 /* /PRETTYFY */
+/* Context menu panel */
+.popup-menu {
+	position:absolute;
+	z-index:3;
+	display:block;
+	background-color:var(--balloon-back, '#ffffcc');
+	padding:0.5em 0px;
+	-moz-box-shadow:0px 2px 3px 0px #003300;
+	-webkit-box-shadow:0px 2px 3px 0px #003300;
+	box-shadow:0px 2px 3px 0px #003300;
+	border-radius:4px;
+}
+.popup-menu >h4{
+	padding:0.5em;
+	margin:0px 0px 0.5em 0px;
+	color:var(--balloon-h-text, '#e5e5e5');
+	background-color:var(--balloon-h-back, '#996600');
+	font-family: var(--pop-font, 'Sans, Verdana, sans-serif');
+	font-size: inherit;
+	text-align: center;
+	font-weight: bold;
+	border-bottom: 2px groove;
+	border-radius:4px 4px 0px 0px;
+}
+.floatbar {
+	position:absolute;
+}
+.floatbar.drag {
+	opacity:0.8;
+	filter:alpha(opacity=80);
+}
+.floatbar .dragbar {
+	cursor:grab;
+	cursor:-webkit-grab;
+}
+.floatbar.drag .dragbar {
+	cursor:grabbing;
+	cursor:-webkit-grabbing;
+}
+
+.popup-do {
+	color:var(--balloon-text, '#663333');
+	font-family: var(--pop-font, 'Sans, Verdana, sans-serif');
+	padding:0px 0.5em 0px 1.2em;
+	line-height:1.5;
+}
+.popup-do.mark:before {
+	content:'\2714';
+	width:1em;
+	margin-left:-1em;
+/* 	color:var(--balloon-sel-back, '#6699aa'); */
+}
+.popup-do[disabled],
+.popup-do.disabled {
+	color:var(--body-text-lt, '#999999');
+	font-style:italic;
+	cursor:default;
+}
+.popup-do:not([disabled]):not(.disabled):hover {
+	background-color:var(--balloon-sel-back,'#6699aa');
+	color:var(--balloon-sel-text, '#ffffff');
+	cursor:pointer;
+}
+
+/* /Context menu panel END*/

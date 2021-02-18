@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<sys>
+	<user_mode>
+		<carrier title="перевозчик" value="1" name="carrier" />
+		<customer title="заказчик" value="2" name="customer" />
+	</user_mode>
+
+	<user_state>
+		<register allow="cabinet" title="В процессе регистрации" value="0" name="register" />
+		<confirm allow="none" title="Проверяется eMail" value="1" name="confirm" />
+		<signout allow="none" title="Клиент отписался" value="2" name="signout" />
+		<verify allow="cabinet" title="Проверяется администратором" value="3" name="verify" />
+		<rejected allow="cabinet" title="Отклонен администратором" value="4" name="rejected" />
+		<accepted allow="all" title="Утвержден администратором" value="5" name="accepted" />
+	</user_state>
+
+	<media_role import="1" logo="2" item="3" poster="4" thumbnail="5" comment="6" stuff="7" seealso="8" />
+	<mime_type>
+		<swf>application/x-shockwave-flash</swf>
+		<mp4>video/mp4</mp4>
+		<mpeg>video/mpeg</mpeg>
+		<mpg>video/mpeg</mpg>
+		<mpe>video/mpeg</mpe>
+		<avi>video/x-msvideo</avi>
+		<jpg>image/jpeg</jpg>
+		<jpe>image/jpeg</jpe>
+		<jpeg>image/jpeg</jpeg>
+		<gif>image/gif</gif>
+		<png>image/png</png>
+		<ico>image/x-icon</ico>
+		<bmp>image/x-ms-bmp</bmp>
+		<tif>image/tiff</tif>
+		<tiff>image/tiff</tiff>
+		<svg>image/svg+xml</svg>
+		<ttf>application/x-font-ttf</ttf>
+		<ttc>application/x-font-ttf</ttc>
+		<otf>application/x-font-opentype</otf>
+		<woff>application/font-woff</woff>
+		<woff2>application/font-woff2</woff2>
+		<sfnt>application/font-sfnt</sfnt>
+		<eot>application/vnd.ms-fontobject</eot>
+		<zip>application/zip</zip>
+	</mime_type>
+</sys>

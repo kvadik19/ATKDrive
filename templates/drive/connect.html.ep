@@ -1,26 +1,4 @@
 <style type="text/css">
-	div.options {
-		padding:0px 20px;
-		display:flex;
-		flex-direction:column;
-	}
-	.optgroup {
-		display:flex;
-		flex-direction:column;
-		margin:10px 0px;
-		background-color:var(--body-back-dk);
-		border:1px solid var(--panel-back-lt);
-	}
-	.optgroup > .optrow {
-		border:none;
-	}
-	.optrow {
-		display:flex;
-		flex-direction:row;
-		justify-content: space-between;
-		margin:0px;
-		border:none;
-	}
 	.optrow div.quant {
 		display:flex;
 		flex-direction:column;
@@ -116,7 +94,7 @@
 			<div class="quant">
 				<textarea id="ping_msg" class="udata"><%= $config->{'ping_msg'} %></textarea>
 			</div>
-			<div class="quant">
+			<div>
 				<label for="response">Ответ хоста</label>
 			</div>
 			<div id="response" class="quant"></div>

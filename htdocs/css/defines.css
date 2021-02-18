@@ -37,6 +37,10 @@
 	
 	--balloon-border:1px solid #999999;
 
+	--pop-back:#ffffff;
+	--pop-sel-back:#e5e5e5;
+	--pop-sel-text:#d71921;
+	--pop-font:Sans, Verdana, sans-serif;
 }
 
 @font-face {

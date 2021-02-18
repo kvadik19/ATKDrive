@@ -1,19 +1,436 @@
+<style type="text/css">
+	#struct {
+		margin: 10px 0px;
+		font-size: 10pt;
+		font-family: SansMono, monospace;
+	}
+	#struct .optrow {
+		margin:0px;
+	}
+	#struct .optrow:nth-of-type(even) {
+		background:var(--body-back-alt);
+	}
+	.field div {
+		padding:2px 5px;
+		align-items: center;
+		display: inline-flex;
+	}
+	.field.locked .lock {
+		color:#000099;
+	}
+	.optrow.header {
+		text-align: center;
+		align-items:flex-start;
+		font-family: SansBold, sans-serif;
+		background-color: var(--panel-back-lt);
+		color:var(--panel-text);
+	}
+	.header >div {
+		padding:0px 5px;
+	}
+	.name {
+		width:300px;
+	}
+	.title {
+		width:350px;
+	}
+	.default {
+		width:250px;
+	}
+	.type {
+		width:80px;
+	}
+	.len {
+		width:80px;
+		justify-content:flex-end;
+	}
+	.screen {
+		border-left:1px solid var(--panel-back-lt);
+		width:30px;
+	}
+	.screen input[type="checkbox"] {
+		width:18px;
+		height:18px;
+	}
+	.optrow .screen,
+	.optrow .opmenu {
+		padding:0px;
+	}
+	.screenbox {
+		flex-flow:column;
+	}
+	.screenbox button {
+		padding:0px 1px;
+		line-height:1;
+		margin-left:2px;
+	}
+	.screenbox span {
+		display:inline-flex;
+		flex-flow:row;
+		justify-content:flex-end;
+		width:100%;
+	}
+	.screenbox .screen {
+		width:27px;
+	}
+	.header .opmenu {
+		width:30px;
+	}
+	.opmenu span {
+		width:30px;
+		height:30px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background-color:var(--head-back);
+		color:var(--head-text);
+		cursor:context-menu;
+	}
+	.onedit {
+		padding:0px 2px;
+	}
+</style>
+
 <div class="action">
 	<h4>Структура и верстка таблицы <code>users</code></h4>
-<table id="struct">
+	<p class="comment">Используйте двойной щелчок для изменения содержимого ячейки, щелчок правой кнопкой для вызова меню.<br>
+	Поля, начинающиеся с подчеркивания, изменению имени и типа не подлежат.
+	</p>
+	<div class="options">
+<div id="struct" class="optgroup">
+	<div class="optrow header">
+		<div class="name">Имя поля (переменной)</div>
+		<div class="type">Тип</div>
+		<div class="len">Длина</div>
+		<div class="default">Значение по умолчанию</div>
+		<div class="title">Название в форме (label)</div>
+		<div class="screenbox">
+		<span>Экраны<button id="addcol" type="button">&#10133;</button></span>
+		<span>
+%	for ( 1..$scr_num ) {
+		<div class="screen"><%= $_ %></div>
+%	}
+		</span>
+		</div>
+		<div class="opmenu"></div>
+	</div>
+	<div id="rowholder">
 % foreach my $row ( @$struct ) {
-	<tr>
-	<td><%== $row->{'field'} %></td>
-	<td><%== $row->{'type'} %></td>
-	<td><%== $row->{'len'} %></td>
-	<td><%== $row->{'key'} %></td>
-	<td><%== $row->{'default'} %></td>
-	</tr>
+	<div class="optrow field<%= $row->{'field'} =~ /^_/ ? ' locked' : '' %>">
+		<div class="edo name<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>" data-type="<%== $row->{'type'} %>" data-key="<%== $row->{'key'} %>"><%== $row->{'field'} %></div>
+		<div class="edo type<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>"><%== $row->{'typet'} %></div>
+		<div class="edo len"><%== $row->{'len'} %></div>
+		<div class="edo default"><%== $row->{'default'} %></div>
+		<div class="edo title"><%== $row->{'title'} %></div>
+%	for ( 1..$scr_num ) {
+		<div class="screen"><input type="checkbox" value="<%= $_ %>"<%= $row->{'scr'} == $_ ? 'checked' : '' %>></div>
+%	}
+		<div class="opmenu"><span>&#9776;</span></div>
+	</div>
 % }
-</table>
+	</div><!-- rowholder -->
+</div>
+	</div>
+	<div id="popm" class="popup-menu" style="display:none">
+		<div class="popup-do" data-action="top">В начало</div>
+		<div class="popup-do" data-action="up">Выше</div>
+		<div class="popup-do" data-action="dn">Ниже</div>
+		<div class="popup-do" data-action="bot">В конец</div>
+		<hr>
+		<div class="popup-do" data-action="before" data-skip="* .name:empty">Вставить выше</div>
+		<div class="popup-do" data-action="after" data-skip="* .name:empty">Вставить ниже</div>
+		<hr>
+		<div class="popup-do" data-action="del" data-skip=".locked">Удалить</div>
+	</div>
+
+	<div class="buttonbar">
+		<a href="<%= url_for('admin') %>" class="button esc">Не сохранять</a>
+		<a href="#" id="reload" class="button">Перезагрузить данные</a>
+		<a href="#" id="save" class="button sav">Сохранить</a>
+	</div>
 </div>
 
 <script type="text/javascript">
-	document.addEventListener('DOMContentLoaded', function(e) { 
+	let getSnap = function() {
+			let snap = document.getElementById('rowholder').innerHTML;
+			return snap;
+		};
+
+document.addEventListener('DOMContentLoaded', function(e) { 
+	let snapshot = getSnap();
+	document.getElementById('reload').onclick = function(e) {
+			if ( snapshot !== getSnap() 
+				&& confirm('Забыть сделанные изменения?') ) {
+				document.location.reload();
+			} else {
+				document.location.reload();
+			}
+		};
+
+	document.getElementById('save').onclick = function(e) {
+			if ( snapshot === getSnap() ) {
+				document.location = '<%= url_for('admin') %>';
+				return;
+			}
+			let formData = [];
+			let rowData;
+			document.querySelectorAll('.optrow.field').forEach( r => {
+						rowData = {'screen':[]};
+						r.querySelectorAll('.edo').forEach( d =>{ 
+								let key = d.className.replace(/\s*edo|lock\s*/g,'');
+								rowData[key] = d.innerText 
+							});
+						let snum = 1;
+						r.querySelectorAll('.screen').forEach( s => {
+									if ( s.firstElementChild.checked ) rowData.screen.push(snum);
+									snum++;
+								});
+						formData.push(rowData);
+					});
+
+			flush( {'code':'utable','data':formData }, document.location.href, function(resp) {
+							if ( resp.match(/^\{/) ) {
+								resp = JSON.parse(resp);
+								if ( resp.code === 'utable' && resp.success == 1 ) {
+									document.location = '<%= url_for('admin') %>';
+									return;
+								} else if ( resp.fail ) {
+									alert(resp.fail);
+								}
+							}
+							alert('Сохранение не удалось');
+						} );
+		};
+
+	document.getElementById('addcol').onclick = function(e) {
+			let l = document.querySelector('.header .screenbox .screen:last-of-type');
+			let n = l.cloneNode(true);
+			n.innerText = (l.innerText*1) + 1;
+			l.parentNode.appendChild(n);
+			document.querySelectorAll('.optrow.field').forEach( r => {
+					let s = r.querySelector('.screen');
+					let c = s.cloneNode(true);
+					c.querySelector('input[type="checkbox"]').removeAttribute('checked');
+					r.insertBefore(c, s.nextElementSibling );
+				});
+		};
+	let fieldEdit = {
+			action: function(evt) {
+					this.target = evt.target;
+					if ( evt.target.matches('.lock') ) return;
+					let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
+					let val = evt.target.innerText;
+					evt.target.innerHTML = '';
+					if ( evt.target.matches('.type') ) {
+						let pop = createObj('select',{'className':'onedit',
+								'style.width':(w-28)+'px','style.height':(h-8)+'px',
+								'onblur':this.killSel,
+								'onchange':this.killSel,'onkeydown':this.keyOut });
+						this.ftypes.forEach( (t, n) => { 
+								let o = createObj('option',{'innerText':t.title,'value':t.name,'data-value':t.value,
+												'onmouseup':this.killSel});
+								pop.appendChild(o);
+								if ( t.name == val ) {
+									o.setAttribute('selected', true);
+									pop.selectedIndex = n;
+								}
+							});
+						if (!pop.selectedIndex) pop.selectedIndex = 0;
+						evt.target.appendChild(pop);
+						pop.focus();
+					} else {
+						let inpt = createObj('input',{'type':'text','className':'onedit',
+								'placeholder':this.pholder[evt.target.className.replace(/\s*edo\s*/,'')],
+								'style.width':(w-28)+'px','style.height':(h-8)+'px',
+								'value':val,
+								'onblur':this.killInpt,'onkeydown':this.keyOut });
+						evt.target.appendChild(inpt);
+						inpt.focus();
+					}
+				},
+			killSel: function(evt) {
+					let host = evt.target.closest('.edo');
+					try { host.innerText = evt.target.value } catch(e) {};
+				},
+			killInpt: function(evt) {
+					let host = evt.target.closest('.edo');
+					host.innerText = evt.target.value.replace(/^_/g,'');
+					if ( host.matches('.len') ) {
+						let val = 8;
+						if (evt.target.value.match(/(\d+)([\,\.\-](\d+))?/) ) {
+							val = evt.target.value.replace(/^\D*(\d+)([\,\.\-](\d+))?\D*$/,'$1.$3')
+												.replace(/\.$/g,'');
+							val = Math.min(val*1, 255);
+							val = val.toString().replace(/\./, ',');
+						}
+						host.innerText = val;
+					}
+				},
+			keyOut: function(evt) {
+					let host = evt.target.closest('.edo');
+					if ( evt.keyCode.toString().match(/^(9|13)$/) ) {
+						evt.preventDefault();
+						let next = host.nextElementSibling;
+						if ( next.matches('.edo:not(.lock)') ) {
+							next.dispatchEvent(doubleClickEvent);
+						} else {
+							evt.target.blur();
+						}
+					}
+				},
+			pholder: {'len':'99[,90]','name':'Только латиница','title':'Описание поля','default':'Если нужно значение'},
+			ftypes: [{'name':'char', 'title':'Строка','value':'1'},
+						{'name':'dec', 'title':'Число','value':'2'},
+						{'name':'file', 'title':'Файл','value':'3'},
+					]
+		};
+	let popMenu = {
+			popup: document.getElementById('popm'),
+			init: function() {
+					this.popup.querySelectorAll('.popup-do').forEach( i =>{
+								i.onclick = this.action;
+						});
+					this.popup.onselectstart = function() { return false; };
+					this.popup.onselect = function() { return false; };
+				},
+			clickMenu: function(evt) {		// Click outside panel
+					if ( evt.pageX < popMenu.popup.offsetLeft || 
+						evt.pageY < popMenu.popup.offsetTop ||
+						evt.pageX > popMenu.popup.offsetLeft + popMenu.popup.offsetWidth ||
+						evt.pageY > popMenu.popup.offsetTop + popMenu.popup.offsetHeight ) 
+					{
+						popMenu.killMenu(evt);
+					}
+				},
+			killMenu: function(evt) {			// Hide the panel
+					document.removeEventListener('click', popMenu.clickMenu);
+					popMenu.popup.style.display = 'none';
+				},
+
+			action: function(e) {
+					if ( e.target.hasAttribute('disabled') ) return;
+					let ok = false;
+					try { ok = mOper[e.target.dataset.action](popMenu.target) } catch(er) { console.log(er) };
+					if (ok) popMenu.popup.style.display = 'none';
+				},
+			fire: function(evt) {
+					evt.stopImmediatePropagation();
+					this.target = evt.target.closest('.field');
+					this.popup.querySelectorAll('.popup-do').forEach( i => {
+							i.removeAttribute('disabled');
+							if ( i.dataset.skip ) {
+								if ( i.dataset.skip.match(/^\*/) ) {
+									if ( document.querySelector(i.dataset.skip)) i.setAttribute('disabled', true);
+								} else {
+									if ( this.target.matches(i.dataset.skip) ) i.setAttribute('disabled', true);
+								}
+							}
+						});
+					[posX, posY] = [evt.pageX, evt.pageY];
+					this.popup.style.display = 'block';
+					let menuW = this.popup.offsetWidth;
+					let menuH = this.popup.offsetHeight;
+					if (posX + menuW > window.innerWidth) posX = window.innerWidth - menuW - 20;
+					if (posY + menuH > window.outerHeight) posY = window.outerHeight - menuH - 20;
+					this.popup.style.left = posX+'px';
+					this.popup.style.top = posY+'px';
+					document.addEventListener('click', this.clickMenu);
+				},
+			target:{},
+		};
+	let mOper = {
+			top: function(itm) {
+					if ( itm.previousElementSibling ) {
+						let c = this.dupe(itm);
+						itm.parentNode.insertBefore(c, itm.parentNode.firstElementChild);
+						itm.parentNode.removeChild(itm);
+					}
+					return true;
+				},
+			up: function(itm) {
+					if ( itm.previousElementSibling ) {
+						let c = this.dupe(itm);
+						itm.parentNode.insertBefore(c, itm.previousElementSibling);
+						itm.parentNode.removeChild(itm);
+					}
+					return true;
+				},
+			dn: function(itm) {
+					if ( itm.nextElementSibling ) {
+						let next = itm.nextElementSibling;
+						let c = this.dupe(itm);
+						if ( next.nextElementSibling ) {
+							itm.parentNode.insertBefore(c, next.nextElementSibling);
+						} else {
+							itm.parentNode.appendChild(c);
+						}
+						itm.parentNode.removeChild(itm);
+					}
+					return true;
+				},
+			bot: function(itm) {
+					if ( itm.nextElementSibling ) {
+						let c = this.dupe(itm);
+						itm.parentNode.appendChild(c);
+						itm.parentNode.removeChild(itm);
+					}
+					return true;
+				},
+			before: function(itm) {
+					let c = this.dupe(itm, 1);
+					itm.parentNode.insertBefore(c, itm);
+					c.querySelector('.edo').dispatchEvent(doubleClickEvent);
+					return true;
+				},
+			after: function(itm) {
+					let c = this.dupe(itm, 1);
+					if ( itm.nextElementSibling ) {
+						itm.parentNode.insertBefore(c, itm.nextElementSibling);
+					} else {
+						itm.parentNode.appendChild(c);
+					}
+					c.querySelector('.edo').dispatchEvent(doubleClickEvent);
+					return true;		// Check ability mode
+				},
+			del: function(itm) {
+					if (itm.matches('.locked')) return false;		// Check ability mode
+					let msg = itm.querySelector('.name').innerText;
+					if ( msg ) {
+						if ( confirm('Удалить переменную \xAB'+msg+'\xBB?') ) {
+							itm.parentNode.removeChild(itm);
+						}
+					} else {
+						itm.parentNode.removeChild(itm);
+					}
+					return true;
+				},
+			dupe: function(itm, purge) {
+					let clone = itm.cloneNode(true);
+					let lmb = actionStore(itm, 'onclick');
+					let dmb = actionStore(itm, 'ondblclick');
+					let rmb = actionStore(itm, 'oncontextmenu');
+					actionSet(clone, lmb);
+					actionSet(clone, rmb);
+					actionSet(clone, dmb);
+					if ( purge ) {
+						for (i=0; i<clone.children.length; i++) {
+							Object.keys(clone.children[i].dataset).forEach( k =>{ clone.children[i].dataset[k] = ''} );
+							if ( !clone.children[i].firstChild ) continue;
+							if (clone.children[i].firstChild.nodeType == 3) clone.children[i].innerText = '';
+							clone.children[i].className = clone.children[i].className.replace(/\s*lock/,'');
+						}
+						clone.className = clone.className.replace(/\s*locked/,'');
+					}
+					return clone;
+				},
+		};
+	document.querySelectorAll('.optrow.field').forEach( r => {
+			r.querySelector('.opmenu span').onclick = function(e) { popMenu.fire(e) };
+			r.querySelectorAll('.edo').forEach( d =>{ d.ondblclick = function(e) {fieldEdit.action(e)} });
+			r.oncontextmenu = function(e) { e.preventDefault(); popMenu.fire(e) };
 		});
+	popMenu.init();
+});
+//	U+2261	IDENTICAL TO	&#8801;
+//	U+2630	TRIGRAM FOR HEAVEN	&#9776;
 </script>

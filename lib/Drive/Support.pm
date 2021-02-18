@@ -85,7 +85,7 @@ my $self = shift;
 	return $ret;
 }
 #############
-sub access_read {
+sub access_read {			# .htaccess read
 #############
 	my $self = shift;
 	my $fn = shift;
@@ -104,7 +104,7 @@ sub access_read {
 	return $list;
 }
 #############
-sub access_write {
+sub access_write {			# htpasswd operations
 #############
 	my ($self, $fn, $list) = @_;
 	my $fout;
@@ -127,7 +127,7 @@ sub access_write {
 	return undef;
 }
 #####################
-sub connect {		# Process websocket queries
+sub connect {		# Setup interconnect settings
 #####################
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
@@ -135,7 +135,8 @@ sub connect {		# Process websocket queries
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
-	Drive::add_xml( $config, $conf_file );
+	$config = Drive::read_xml( $conf_file );
+
 	my $ret = {'config_file' => $conf_file, 'auth_file' => $auth_file, 'magic_mask' => 8,
 				'config' => $config->{'connect'}};
 
@@ -169,12 +170,11 @@ sub connect {		# Process websocket queries
 							msg => encode_utf8($param->{'data'}->{'ping_msg'}),
 							login => $param->{'data'}->{'htlogin'},
 							pwd => $param->{'data'}->{'htpasswd'},
-# 							logger => $self->logger,
 						);
-		$ret->{'json'} = { 'code' => 'ping', 'response' => decode_utf8($resp) };
+		$ret->{'json'} = { 'code' => $param->{'code'}, 'response' => decode_utf8($resp) };
 
 	} elsif( $param->{'code'} eq 'connect' ) {
-		$ret->{'json'} = {'code' => 'connect', 'success' => 1, 'params' => []};
+		$ret->{'json'} = {'code' => $param->{'code'}, 'success' => 1, 'params' => []};
 
 		if ( $param->{'data'}->{'users'} ) {
 			my $op = $self->access_write( $auth_file, $param->{'data'}->{'users'} );
@@ -196,29 +196,34 @@ sub connect {		# Process websocket queries
 	return $ret;
 }
 #####################
-sub reboot {		# Manually reboot backserver
-#####################
-	my $self = shift;
-	my $signal = 'USR2';
-	my $res = kill( $signal, getppid() );
-	return {'pid' => getppid, 'signal' => $signal};
-}
-#####################
 sub utable {		# User registration tuneup
 #####################
 	my $self = shift;
-	my $ret = { 'struct' => [] };
+	my $param = $self->{'qdata'}->{'http_params'};
+	my $conf_dir = "$Drive::sys_root$Drive::sys{'conf_dir'}";
+	my $conf_file = "$conf_dir/config.xml";
+	my $ret = { 'struct'=>[], 'scr_num'=>1, };
+
+	my $config = {};
+	$config = Drive::read_xml( $conf_file );
+
 	my $struct = $self->dbh->selectall_arrayref("SHOW FULL COLUMNS FROM users",{Slice=>{}});
 	foreach my $def (@$struct) {
 		my $dat = {};
 		foreach my $fld ( qw(Field Type Default Key) ) {
 			$dat->{lc($fld)} = $def->{$fld};
 		}
-		if ( $dat->{'type'} =~ /\((\d+)\)/ ) {
-			$dat->{'len'} = $1;
-			$dat->{'type'} =~ s/\(\d+\)//;
+		if ( $dat->{'type'} =~ /^(\w+)\(([\d\.]+)\)$/ ) {
+			$dat->{'typet'} = $1;
+			$dat->{'len'} = $2;
 		}
+		$dat->{'scr'} = 1 if $ret->{'scr_num'} == 1;
 		push( @{$ret->{'struct'}}, $dat);
+	}
+
+	unless ( $param->{'code'} ) {
+	} elsif( $param->{'code'} eq 'utable') {
+		$ret->{'json'} = {'code' => $param->{'code'}, 'success' => 1, 'config' => $config};
 	}
 	return $ret;
 }
@@ -251,5 +256,13 @@ sub wsocket {		# Process websocket queries
 	$self->on( finish => sub { my ( $ws, $code, $reason ) = @_;
 						$self->{'messenger'}->terminate() if $self->{'messenger'};
 					});
+}
+#####################
+sub reboot {		# Manually reboot backserver
+#####################
+	my $self = shift;
+	my $signal = 'USR2';
+	my $res = kill( $signal, getppid() );
+	return {'pid' => getppid, 'signal' => $signal};
 }
 1
