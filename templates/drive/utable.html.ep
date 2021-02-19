@@ -15,7 +15,7 @@
 		align-items: center;
 		display: inline-flex;
 	}
-	.field.locked .lock {
+	.field .lock {
 		color:#000099;
 	}
 	.optrow.header {
@@ -36,6 +36,7 @@
 	}
 	.default {
 		width:250px;
+		justify-content:center;
 	}
 	.type {
 		width:80px;
@@ -116,10 +117,11 @@
 	</div>
 	<div id="rowholder">
 % foreach my $row ( @$struct ) {
-	<div class="optrow field<%= $row->{'field'} =~ /^_/ ? ' locked' : '' %>">
-		<div class="edo name<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>" data-type="<%== $row->{'type'} %>" data-key="<%== $row->{'key'} %>"><%== $row->{'field'} %></div>
+	<div class="optrow field<%= $row->{'field'} =~ /^_/ ? ' locked' : '' %>" 
+			data-name="<%== $row->{'field'} %>" data-type="<%== $row->{'type'} %>" data-default="<%== $row->{'default'} %>">
+		<div class="edo name<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>"><%== $row->{'field'} %></div>
 		<div class="edo type<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>"><%== $row->{'typet'} %></div>
-		<div class="edo len"><%== $row->{'len'} %></div>
+		<div class="edo len<%= $row->{'typet'} eq 'file' ? ' lock' : '' %>"><%== $row->{'len'} %></div>
 		<div class="edo default"><%== $row->{'default'} %></div>
 		<div class="edo title"><%== $row->{'title'} %></div>
 %	for ( 1..$scr_num ) {
@@ -175,14 +177,15 @@ document.addEventListener('DOMContentLoaded', function(e) {
 			let formData = [];
 			let rowData;
 			document.querySelectorAll('.optrow.field').forEach( r => {
-						rowData = {'screen':[]};
+						rowData = {'_screen':[], '_default':{}};
+						Object.keys(r.dataset).forEach( k =>{ rowData._default[k] = r.dataset[k] });
 						r.querySelectorAll('.edo').forEach( d =>{ 
-								let key = d.className.replace(/\s*edo|lock\s*/g,'');
+								let key = d.className.replace(/(\s*edo\s*)|(\s*lock\s*)/g,'');
 								rowData[key] = d.innerText 
 							});
 						let snum = 1;
 						r.querySelectorAll('.screen').forEach( s => {
-									if ( s.firstElementChild.checked ) rowData.screen.push(snum);
+									if ( s.firstElementChild.checked ) rowData._screen.push(snum);
 									snum++;
 								});
 						formData.push(rowData);
@@ -192,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 							if ( resp.match(/^\{/) ) {
 								resp = JSON.parse(resp);
 								if ( resp.code === 'utable' && resp.success == 1 ) {
-									document.location = '<%= url_for('admin') %>';
+// 									document.location = '<%= url_for('admin') %>';
 									return;
 								} else if ( resp.fail ) {
 									alert(resp.fail);
@@ -240,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 						pop.focus();
 					} else {
 						let inpt = createObj('input',{'type':'text','className':'onedit',
-								'placeholder':this.pholder[evt.target.className.replace(/\s*edo\s*/,'')],
+								'placeholder':this.pholder[evt.target.className.replace(/(\s*edo\s*)|(\s*lock\s*)/,'')],
 								'style.width':(w-28)+'px','style.height':(h-8)+'px',
 								'value':val,
 								'onblur':this.killInpt,'onkeydown':this.keyOut });
@@ -250,14 +253,26 @@ document.addEventListener('DOMContentLoaded', function(e) {
 				},
 			killSel: function(evt) {
 					let host = evt.target.closest('.edo');
-					try { host.innerText = evt.target.value } catch(e) {};
+					let len = host.closest('.field').querySelector('.edo.len');
+					try {	len.className = len.className.replace(/\s*lock\s*/g,'');
+							if ( evt.target.value === 'file' ) {
+								len.innerText = 'N/A';
+								len.className += ' lock';
+							} else if (len.innerText === 'N/A') {
+								len.innerText = '8';
+							}
+							host.innerText = evt.target.value 
+						} catch(e) {};
 				},
 			killInpt: function(evt) {
 					let host = evt.target.closest('.edo');
 					host.innerText = evt.target.value.replace(/^_/g,'');
 					if ( host.matches('.len') ) {
 						let val = 8;
-						if (evt.target.value.match(/(\d+)([\,\.\-](\d+))?/) ) {
+						let type = host.closest('.field').querySelector('.edo.type');
+						if ( type.innerText === 'file' ) {
+							val = 'N/A';
+						} else if (evt.target.value.match(/(\d+)([\,\.\-](\d+))?/) ) {
 							val = evt.target.value.replace(/^\D*(\d+)([\,\.\-](\d+))?\D*$/,'$1.$3')
 												.replace(/\.$/g,'');
 							val = Math.min(val*1, 255);
@@ -413,13 +428,15 @@ document.addEventListener('DOMContentLoaded', function(e) {
 					actionSet(clone, rmb);
 					actionSet(clone, dmb);
 					if ( purge ) {
+						Object.keys(clone.dataset).forEach( k =>{ clone.dataset[k] = ''} );
 						for (i=0; i<clone.children.length; i++) {
+							// Purge cell dataset for some case
 							Object.keys(clone.children[i].dataset).forEach( k =>{ clone.children[i].dataset[k] = ''} );
 							if ( !clone.children[i].firstChild ) continue;
 							if (clone.children[i].firstChild.nodeType == 3) clone.children[i].innerText = '';
-							clone.children[i].className = clone.children[i].className.replace(/\s*lock/,'');
+							clone.children[i].className = clone.children[i].className.replace(/\s*lock\s*/,'');
 						}
-						clone.className = clone.className.replace(/\s*locked/,'');
+						clone.className = clone.className.replace(/\s*locked\s*/,'');
 					}
 					return clone;
 				},

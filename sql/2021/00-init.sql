@@ -19,3 +19,18 @@ KEY ustate (_ustate),
 KEY umode (_umode),
 KEY hash (_hash)
 ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE TABLE IF NOT EXISTS media (
+id INT(11) NOT NULL AUTO_INCREMENT,
+owner_id INT(11) NOT NULL,
+owner_table CHAR(32) DEFAULT 'users',
+owner_field CHAR(64) DEFAULT '',
+filename CHAR(128) DEFAULT '',
+title CHAR(255) DEFAULT '',
+ord TINYINT DEFAULT 0,
+PRIMARY KEY id (id),
+KEY owner_id (owner_id),
+KEY owner_table (owner_table),
+KEY owner_field (owner_field),
+KEY title (title),
+KEY ord (ord)
+) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;

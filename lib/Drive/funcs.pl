@@ -378,14 +378,6 @@ my ( $array, $test, @args ) = @_;
 		$cnt++;
 	}
 	return -1;
-
-# my ( $array, $cmp, $test ) = @_;
-# my $cnt = 0;
-#   foreach my $item ( @$array ) {
-# 	return $cnt if &$test( $item, $cmp ) eq $cmp;
-# 	$cnt++;
-#   }
-#   return -1;
 }
 #########################
 sub find_hash {				#	Find hash element by condition

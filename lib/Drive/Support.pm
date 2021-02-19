@@ -207,11 +207,11 @@ sub utable {		# User registration tuneup
 	my $config = {};
 	$config = Drive::read_xml( $conf_file );
 
-	my $struct = $self->dbh->selectall_arrayref("SHOW FULL COLUMNS FROM users",{Slice=>{}});
+	my $struct = $self->dbh->selectall_arrayref("DESCRIBE users",{Slice=>{}});
 	foreach my $def (@$struct) {
 		my $dat = {};
 		foreach my $fld ( qw(Field Type Default Key) ) {
-			$dat->{lc($fld)} = $def->{$fld};
+			$dat->{lc($fld)} = $def->{$fld};		# Lower case column names!
 		}
 		if ( $dat->{'type'} =~ /^(\w+)\(([\d\.]+)\)$/ ) {
 			$dat->{'typet'} = $1;
@@ -223,9 +223,91 @@ sub utable {		# User registration tuneup
 
 	unless ( $param->{'code'} ) {
 	} elsif( $param->{'code'} eq 'utable') {
-		$ret->{'json'} = {'code' => $param->{'code'}, 'success' => 1, 'config' => $config};
+		$ret->{'json'} = { 'code' => $param->{'code'}, 'success' => 1 };
+		my $define = $param->{'data'};
+
+		my $dupes;			#### Prevent duplicates first
+		my $recno = 0;
+		foreach my $def ( @$define ) {
+			push( @{$dupes->{$def->{'name'}}}, $recno );
+			$recno++;
+		}
+		if ( scalar( keys(%$dupes)) != scalar(@$define) ) {
+			my $to_drop = [];
+			while( my($fld, $rec) = each( %$dupes) ) {
+				while ( scalar( @$rec) > 1 ) {
+					push( @$to_drop, shift( @$rec) );
+				}
+			}
+			if ( scalar( @$to_drop) ) {
+				push( @{$ret->{'json'}->{'fail'}}, scalar( @$to_drop).' Duplicates found');
+				$to_drop = [ sort {$b <=> $a} @$to_drop ];		# Delete some recods, begining from end
+				while ( my $no = shift( @$to_drop) ) {
+					splice( @$define, $no, 1);
+				}
+			}
+		}			#### Prevent duplicates first end
+
+		my $sql_stack;
+		foreach my $def ( @$define ) {			# Find for new/changed fields
+			my $sql = $self->db_modi( $def, $ret->{'struct'});
+			if ( $sql ) {
+				push( @$sql_stack, {'name'=>$def->{'name'}, 'sql'=>$sql});
+				if ( $sql =~ /ADD COLUMN/ ) {
+					push( @$sql_stack, {'name'=>$def->{'name'}, 'sql'=>"ALTER TABLE users ADD INDEX $def->{'name'} ($def->{'name'})"});
+				}
+			}
+		}
+		foreach my $def ( @{$ret->{'struct'}} ) {			# Find for deleted fields
+			my $has = Drive::find_first( $define, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
+			if ( $has < 0 ) {
+				push( @$sql_stack, {'name'=>$def->{'field'}, 'sql'=>"ALTER TABLE users DROP COLUMN $def->{'field'}"});
+			}
+		}
+		$ret->{'json'}->{'update'} = $sql_stack;
 	}
 	return $ret;
+}
+#####################
+sub db_modi {		# Create sql to modify table
+#####################
+my ($self, $def, $struct) = @_;
+my $sql;
+	return $sql if $def->{'type'} eq 'file';
+
+	my $sql_make = sub {
+			my ($new, $old) = @_;
+			my $sql = '';
+			$new->{'field'} = $new->{'name'};
+			$new->{'len'} =~ s/\D+/,/;
+			$new->{'type'} = "$new->{'type'}($new->{'len'})" if $new->{'len'};
+			if ( $old ) {
+				my $upd = 0;
+				foreach my $fname ( qw(field type default) ) {
+					if ( $new->{$fname} ne $old->{$fname} ) {
+						$upd = 1;
+						last;
+					}
+				}
+				$sql = "ALTER TABLE users CHANGE $old->{'field'} $new->{'field'} $new->{'type'} DEFAULT '$new->{'default'}'" if $upd;
+			} else {
+				$sql = "ALTER TABLE users ADD COLUMN $new->{'field'} $new->{'type'} DEFAULT '$new->{'default'}'";
+			}
+			return $sql;
+		};
+
+	my $has = Drive::find_first( $struct, sub{ my $r = shift; return $r->{'field'} eq $def->{'name'}} );
+	if ( $has < 0 ) {
+		$has = Drive::find_first( $struct, sub{ my $r = shift; return $r->{'field'} eq $def->{'_default'}->{'name'}} );
+		if ( $has < 0 ) {			#  Check for renamed field
+			$sql = $sql_make->( $def );
+		} else {
+			$sql = $sql_make->( $def, $struct->[$has]);
+		}
+	} else {			# Existing field, change define
+		$sql = $sql_make->( $def, $struct->[$has]);
+	}
+	return $sql;
 }
 #####################
 sub wsocket {		# Process websocket queries
