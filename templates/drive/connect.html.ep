@@ -121,8 +121,9 @@
 			<div class="comment quant">
 				<p>
 				<strong>Файл <code><%== $auth_file %></code></strong><br>
-				Авторизация для выполнения websocket-запросов. Логин и пароль указываются в URL запроса
+				Авторизация для выполнения websocket/http-запросов. Логин и пароль указываются в URL запроса
 				в виде <code>ws://login:password@hostname.zn/path</code><br>
+				или <code>http://login:password@hostname.zn/path</code><br>
 				Скачать файл <a href="#getfile" id="getfile" data-fname="wscheck.html">wscheck.html</a> для проверки работы websocket.
 				</p>
 			</div>

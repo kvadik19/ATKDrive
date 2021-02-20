@@ -122,7 +122,7 @@ my $action = shift;
 	}
 
 	my $mdata = {'link_accept' => $hashlink, 'link_reject' => "$hashlink&r=1",
-					'site_name' => decode_utf8($Drive::sys{'our_site'}), 'site_url' => $Drive::sys{'our_host'},
+					'site_name' => $Drive::sys{'our_site'}, 'site_url' => $Drive::sys{'our_host'},
 					'timeout' => $Drive::sys{'reg_timeout'} 
 				};
 	my $letter = HTML::Template->new( filename => "$Drive::sys_root$Drive::sys{'mail_dir'}/$action.tmpl",
@@ -130,7 +130,13 @@ my $action = shift;
 						die_on_missing_include => 0,
 					);
 	$letter->param( $mdata );
-	$letter = decode_utf8( $letter->output() );
+	eval {
+		$letter = decode_utf8( $letter->output() );
+		};
+	if ( $@ ) {
+		$self->logger->dump("Decode letter: $@", 3);
+		$letter = '';
+	}
 
 	my $dom = Mojo::DOM->new($letter);				# Extract something from letter
 	my $banner;
@@ -141,6 +147,7 @@ my $action = shift;
 
 	my $domplain = Mojo::DOM->new( $dom->to_string );
 	$domplain->find('a')->each( sub { my ($itm, $num) = @_;
+					return unless $itm;
 					my $text = $itm->text();
 					my $href = $itm->attr('href');
 					$itm->replace("$text: $href");
@@ -149,10 +156,11 @@ my $action = shift;
 	$txtpart =~ s/[\s\n]*$//g;
 	$txtpart .= "\n";
 
-	my $subj = $dom->find('h1#head')->[0]->text();
+	my $subj = $dom->find('h1#head')->[0];
+	$subj = $subj->text() if $subj;
 
 	my $msg = MIME::Lite->new(
-			From => encode('MIME-Header', $mdata->{'site_name'})."<noreply\@$udata->{'host'}>",
+			From => encode('MIME-Header', decode_utf8($mdata->{'site_name'}))."<noreply\@$udata->{'host'}>",
 			To => encode( 'MIME-Header', $urec->{'_login'})." <$urec->{'_email'}>",
 			Subject => encode( 'MIME-Header', $subj),
 			Type => 'multipart/alternative',
@@ -167,7 +175,7 @@ my $action = shift;
 	my $htpart = MIME::Lite->new(
 			Top => 0,
 			Type =>'text/html',
-			Data => $dom->to_string,
+			Data => $dom->to_string(),
 		);
 
 	$htpart->attr('content-type.charset' => 'UTF-8');

@@ -29,14 +29,19 @@
 		padding:0px 5px;
 	}
 	.name {
-		width:300px;
+		width:200px;
 	}
 	.title {
-		width:350px;
+		width:250px;
 	}
 	.default {
-		width:250px;
+		width:200px;
 		justify-content:center;
+	}
+	@media screen and (min-width:1200px) {
+		.name { width:300px; }
+		.title { width:350px; }
+		.default { width:250px; }
 	}
 	.type {
 		width:80px;
@@ -44,10 +49,6 @@
 	.len {
 		width:80px;
 		justify-content:flex-end;
-	}
-	.screen {
-		border-left:1px solid var(--panel-back-lt);
-		width:30px;
 	}
 	.screen input[type="checkbox"] {
 		width:18px;
@@ -58,6 +59,7 @@
 		padding:0px;
 	}
 	.screenbox {
+		border-left:1px solid var(--panel-back-lt);
 		flex-flow:column;
 	}
 	.screenbox button {
@@ -66,13 +68,16 @@
 		margin-left:2px;
 	}
 	.screenbox span {
+		align-items:baseline;
 		display:inline-flex;
 		flex-flow:row;
 		justify-content:flex-end;
 		width:100%;
 	}
-	.screenbox .screen {
-		width:27px;
+	.screen {
+		width:30px;
+		text-align:left;
+		justify-content:center;
 	}
 	.header .opmenu {
 		width:30px;
@@ -124,9 +129,14 @@
 		<div class="edo len<%= $row->{'typet'} eq 'file' ? ' lock' : '' %>"><%== $row->{'len'} %></div>
 		<div class="edo default"><%== $row->{'default'} %></div>
 		<div class="edo title"><%== $row->{'title'} %></div>
+		<div class="screenbox">
+			<span>
 %	for ( 1..$scr_num ) {
-		<div class="screen"><input type="checkbox" value="<%= $_ %>"<%= $row->{'scr'} == $_ ? 'checked' : '' %>></div>
+				<div class="screen"><input type="checkbox" value="<%= $_ %>"
+				<%= Drive::find_first( $row->{'scr'}, sub { my $s=shift; return $s==$_ }) > -1 ? 'checked' : '' %>></div>
 %	}
+			</span>
+		</div>
 		<div class="opmenu"><span>&#9776;</span></div>
 	</div>
 % }
@@ -214,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 					let s = r.querySelector('.screen');
 					let c = s.cloneNode(true);
 					c.querySelector('input[type="checkbox"]').removeAttribute('checked');
-					r.insertBefore(c, s.nextElementSibling );
+					s.parentNode.appendChild(c);
 				});
 		};
 	let fieldEdit = {
@@ -433,7 +443,10 @@ document.addEventListener('DOMContentLoaded', function(e) {
 							// Purge cell dataset for some case
 							Object.keys(clone.children[i].dataset).forEach( k =>{ clone.children[i].dataset[k] = ''} );
 							if ( !clone.children[i].firstChild ) continue;
-							if (clone.children[i].firstChild.nodeType == 3) clone.children[i].innerText = '';
+							if ( !clone.children[i].firstElementChild 
+									&& clone.children[i].firstChild.nodeType == 3) {
+										clone.children[i].innerText = '';
+							}
 							clone.children[i].className = clone.children[i].className.replace(/\s*lock\s*/,'');
 						}
 						clone.className = clone.className.replace(/\s*locked\s*/,'');

@@ -11,7 +11,8 @@ use Fcntl qw(:flock SEEK_END);
 use Time::HiRes;
 use Encode;
 use Date::Handler;
-use XML::Simple;
+# use XML::Simple;
+use XML::XML2JSON;
 use File::Copy;
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape b64_encode  trim md5_sum);
@@ -268,7 +269,7 @@ my ($fpref, $cnf) = @_;
 }
 ##############
 sub xml_mask {
-###############  Mask formatted text for save into xml
+###############  Mask formatted text for save into XML::Simple
 	my $text = shift;
 	my $umask = shift;		# To decode?
 	my $out;
@@ -284,12 +285,12 @@ sub xml_mask {
 ##############
 sub add_xml {
 ###############  Read some configuration file
-my ($hashref, $xml_file) = @_;
-my $xml = {};
-	if ( -e( $xml_file ) ) {
-		eval{ $xml = XMLin( $xml_file ) };
-		$hashref->{'_xml_fail'} = $@ if $@;
+my ($hashref, $xml_file, $root) = @_;
+	unless ($root) {
+		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
+		$root = substr( $root, 0, index($root, '.'));
 	}
+	my $xml = read_xml($xml_file, $root);
 	while (my ($key, $val) = each( %$xml) ) {
 		$hashref->{$key} = $val;
 	}
@@ -298,16 +299,30 @@ my $xml = {};
 #############################
 sub write_xml {					# Store XML file
 #############################
-my ($hashref, $file_name, $root) = @_;
-	my $res;
-	if ( -e( $file_name ) ) {
-		copy( $file_name, "$file_name.bkup" );
+my ($hashref, $xml_file, $root) = @_;
+	unless ($root) {
+		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
+		$root = substr( $root, 0, index($root, '.'));
 	}
+	my $res;
+	if ( -e( $xml_file ) ) {
+		copy( $xml_file, "$xml_file.bkup" );
+	}
+
+	my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );
+	my $out = $x2->obj2json( { $root => $hashref }) ;
+	print "$out\n";
+	
+	my $sig_die = $SIG{'__DIE__'};
+	undef $SIG{'__DIE__'};
+	eval{ $out = $x2->json2xml($out) };
+	$SIG{'__DIE__'} = $sig_die;
+	return $@ if $@;
+
 	my $buffered = $|; $| = 1;					# Set unbuffered
-	open( my $fh, "+>> $file_name" ) || warn "Open $!";
+	open( my $fh, "+>> $xml_file" ) || warn "Open $!";
 	flock( $fh, LOCK_EX ) || warn "Lock $!";
 	truncate( $fh, 0 );				# Reset file contents
-	my $out = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".XMLout( $hashref, RootName=>$root || 'config' );
 	print $fh $out;
 	chmod( 0600, $fh);
 	flock( $fh, LOCK_UN ) || warn "UNLock $!";
@@ -319,16 +334,25 @@ my ($hashref, $file_name, $root) = @_;
 #############################
 sub read_xml {					# Read XML file
 #############################
-my ($filename ) = @_;
+my ($xml_file, $root ) = @_;
 my $hash;
-
-	if ( -e( $filename ) ) {
+	unless ($root) {
+		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
+		$root = substr( $root, 0, index($root, '.'));
+	}
+	if ( -e( $xml_file ) ) {
+		my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );
+		open(my $fh, "< $xml_file");
+		my $xml = join('',<$fh>);
+		
+		close( $fh );
 		my $sig_die = $SIG{'__DIE__'};
 		undef $SIG{'__DIE__'};
-		eval{ $hash = XMLin( $filename ) };
+		eval{ $hash = $x2->xml2obj($xml) };
 		$SIG{'__DIE__'} = $sig_die;
+		$hash->{'_xml_fail'} = $@ if $@;
 	}
-	return $hash;
+	return $hash->{$root};
 }
 #############################
 sub write_json {					# Store JSON file

@@ -101,6 +101,7 @@ div.options {
 	padding:0px 20px;
 	display:flex;
 	flex-direction:column;
+	overflow-x:auto;
 }
 .optgroup {
 	display:flex;

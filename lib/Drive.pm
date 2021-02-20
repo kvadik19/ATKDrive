@@ -37,12 +37,13 @@ sub startup {
 	$self->plugin('DefaultHelpers');
 	$self->secrets( ['sug4hyg327ah243Hhjck'] );
 	$self->plugin('PODRenderer');
+	$sys_root = "$FindBin::Bin/..";
 	
-	$sys_root = upper_dir("$FindBin::Bin/..");
 	my $ws = Mojo::Transaction::WebSocket->new();
 	my $r = $self->routes;
 
 	$r->websocket('/channel')->to( controller => 'support', action => 'wsocket', )->name('wsocket');
+	$r->any('/channel')->to( controller => 'support', action => 'hsocket', )->name('hsocket');
 
 	$r->route('/drive')->to(controller => 'support', action => 'hello')->name('admin');
 	$r->route('/drive/*path')->to(controller => 'support', action => 'support');
@@ -51,7 +52,7 @@ sub startup {
 	$r->route('/*path')->to(controller => 'client', action => 'checked');
 
 	%sys = readcnf("$sys_root/lib/Drive/sysd.conf");
-	add_xml( \%sys, "$sys_root/$sys{'conf_dir'}/dict.xml");		# Some dictionaries
+	add_xml( \%sys, "$sys_root/$sys{'conf_dir'}/dict.xml", 'sys');		# Some dictionaries
 
 	$logger = LOGGY->new(
 			filename => "$sys_root$sys{log_dir}/drive.log",
@@ -224,11 +225,11 @@ sub check_user {	# Check for user logged in
 	my $udata;
 	if ( $usr->{'fp'} ) {
 		$where = "_fp='$usr->{'fp'}'";
-		$udata = $Drive::dbh->selectall_arrayref("SELECT _uid,_umode,_ustate,_fp,_login FROM users WHERE $where",{Slice=>{}});
+		$udata = $self->dbh->selectall_arrayref("SELECT _uid,_umode,_ustate,_fp,_login FROM users WHERE $where",{Slice=>{}});
 		if ( $udata->[0]->{'_uid'} ) {
 			$usr->{'cookie'}->{'uid'} = $udata->[0]->{'_uid'};
 			$usr->{'logged'} = 1;
-			$Drive::dbh->do("UPDATE users SET _fp='$new_fp',_ltime='$logtime' WHERE _uid='$udata->[0]->{'_uid'}'");
+			$self->dbh->do("UPDATE users SET _fp='$new_fp',_ltime='$logtime' WHERE _uid='$udata->[0]->{'_uid'}'");
 		} else {
 			$usr->{'cookie'}->{'uid'} = 0;
 			$usr->{'logged'} = 0;

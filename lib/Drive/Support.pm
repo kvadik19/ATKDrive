@@ -10,6 +10,8 @@ use Cwd 'abs_path';
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
+use File::Path qw(make_path mkpath remove_tree rmtree);
+
 use Utils::NETS;
 use Time::HiRes qw( usleep );
 use HTML::Template;
@@ -66,7 +68,7 @@ my $self = shift;
 sub access {				# .htaccess file editor
 #############################
 my $self = shift;
-	my $auth_file = "$Drive::sys_root$Drive::sys{'conf_dir'}/admin";
+	my $auth_file = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/admin");
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = {'users' => [], 'auth_file' => $auth_file, 'magic_mask' => 8};
 
@@ -131,7 +133,7 @@ sub connect {		# Setup interconnect settings
 #####################
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
-	my $conf_dir = "$Drive::sys_root$Drive::sys{'conf_dir'}";
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
@@ -140,15 +142,7 @@ sub connect {		# Setup interconnect settings
 	my $ret = {'config_file' => $conf_file, 'auth_file' => $auth_file, 'magic_mask' => 8,
 				'config' => $config->{'connect'}};
 
-	my $masker = sub {
-			my ( $hashref, $umask ) = @_;
-			foreach my $key ( qw(ping_msg js_wsocket) ) {
-				$hashref->{$key} = Drive::xml_mask( $hashref->{$key}, $umask );
-			}
-		};
-
 	unless ( $param->{'code'} ) {
-		$masker->( $config->{'connect'}, 1);
 		unless ( $config->{'connect'}->{'js_wsocket'} ) {		# Prepare some defaults
 			if ( -e( "$conf_dir/js_wsocket_default.tmpl" ) ) {
 				my $jstmpl = HTML::Template->new( 				# Insert some site-specific data
@@ -179,18 +173,23 @@ sub connect {		# Setup interconnect settings
 		if ( $param->{'data'}->{'users'} ) {
 			my $op = $self->access_write( $auth_file, $param->{'data'}->{'users'} );
 			if ( $op ) {
+				$self->logger->dump("Write $auth_file: $op", 3);
 				$ret->{'json'}->{'success'} = 0;
 				$ret->{'json'}->{'fail'} = $op;
 			}
 			delete( $param->{'data'}->{'users'} );
 		}
 		if ( $ret->{'json'}->{'success'} ) {
-			$masker->( $param->{'data'} );
 			while( my ($key, $val) = each( %{$param->{'data'}} ) ) {
 				$config->{'connect'}->{$key} = $val;
 				push( @{$ret->{'json'}->{'params'}}, $key);
 			}
-			Drive::write_xml( $config, $conf_file );
+			my $op = Drive::write_xml( $config, $conf_file );
+			if ( $op ) {
+				$self->logger->dump("Save XML: $op", 3);
+				$ret->{'json'}->{'success'} = 0;
+				$ret->{'json'}->{'fail'} = $op;
+			}
 		}
 	}
 	return $ret;
@@ -200,28 +199,75 @@ sub utable {		# User registration tuneup
 #####################
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
-	my $conf_dir = "$Drive::sys_root$Drive::sys{'conf_dir'}";
-	my $conf_file = "$conf_dir/config.xml";
 	my $ret = { 'struct'=>[], 'scr_num'=>1, };
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}");
+	my $conf_file = "$conf_dir/config.xml";
 
 	my $config = {};
 	$config = Drive::read_xml( $conf_file );
 
-	my $struct = $self->dbh->selectall_arrayref("DESCRIBE users",{Slice=>{}});
-	foreach my $def (@$struct) {
-		my $dat = {};
+	my $struct = [];
+	my $ustr = $self->dbh->selectall_arrayref("DESCRIBE users", {Slice=>{}});
+	foreach my $def (@$ustr) {				# Just translate fieldnames to lowercase
+		my $row = {};
 		foreach my $fld ( qw(Field Type Default Key) ) {
-			$dat->{lc($fld)} = $def->{$fld};		# Lower case column names!
+			$row->{lc($fld)} = $def->{$fld};		# Lower case column names!
 		}
-		if ( $dat->{'type'} =~ /^(\w+)\(([\d\.]+)\)$/ ) {
-			$dat->{'typet'} = $1;
-			$dat->{'len'} = $2;
-		}
-		$dat->{'scr'} = 1 if $ret->{'scr_num'} == 1;
-		push( @{$ret->{'struct'}}, $dat);
+		push( @$struct, $row);
 	}
 
 	unless ( $param->{'code'} ) {
+		my $define = $config->{'utable'};
+# $self->logger->dump(Dumper($define));
+
+		my $deftype = sub { my $drow = shift;
+						if ( $drow->{'type'} =~ /^(\w+)\(([\d\.\,]+)\)$/ ) {
+							$drow->{'typet'} = $1;
+							$drow->{'len'} = $2;
+						} else {
+							$drow->{'typet'} = $drow->{'type'};
+							$drow->{'len'} = 'N/A';
+						}
+					};
+
+		if ( $define ) {
+			my $scr_count = [];
+			foreach my $def ( @$define ) {			# Actualize XML to database
+				$def->{'field'} = $def->{'name'};
+				$def->{'scr'} = [ $def->{'scr'} ] unless ref($def->{'scr'}) eq 'ARRAY';
+				$deftype->( $def );
+				unless ( $def->{'type'} eq 'file' ) {
+					my $has = Drive::find_first( $struct, sub { my $r = shift; return $r->{'field'} eq $def->{'name'}} );
+					unless ( $has < 0 ) {
+						if ( $def->{'type'} ne $struct->[$has]->{'type'} ) {
+							$def->{'type'} = $struct->[$has]->{'type'};
+							$deftype->( $def );
+						}
+						push( @$scr_count, @{$def->{'scr'}} );
+						push( @{$ret->{'struct'}}, $def);
+					}
+				} else {
+					push( @$scr_count, @{$def->{'scr'}} );
+					push( @{$ret->{'struct'}}, $def);
+				}
+			}
+			foreach my $def ( @$struct) {
+				my $has = Drive::find_first( $ret->{'struct'}, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
+				if ( $has < 0) {
+					$deftype->( $def );
+					$def->{'scr'} = 1;
+					push( @{$ret->{'struct'}}, $def);
+				}
+			}
+			$ret->{'scr_num'} = pop( @{ [sort(@$scr_count)] });
+		} else {
+			foreach my $def ( @$struct) {
+				$deftype->( $def );
+				$def->{'scr'} = 1;
+				push( @{$ret->{'struct'}}, $def);
+			}
+		}
+
 	} elsif( $param->{'code'} eq 'utable') {
 		$ret->{'json'} = { 'code' => $param->{'code'}, 'success' => 1 };
 		my $define = $param->{'data'};
@@ -240,17 +286,17 @@ sub utable {		# User registration tuneup
 				}
 			}
 			if ( scalar( @$to_drop) ) {
-				push( @{$ret->{'json'}->{'fail'}}, scalar( @$to_drop).' Duplicates found');
 				$to_drop = [ sort {$b <=> $a} @$to_drop ];		# Delete some recods, begining from end
 				while ( my $no = shift( @$to_drop) ) {
+					push( @{$ret->{'json'}->{'warn'}}, "Duplicated name $define->[$no]->{'name'} found");
 					splice( @$define, $no, 1);
 				}
 			}
-		}			#### Prevent duplicates first end
+		}			#### Prevent duplicates first END
 
 		my $sql_stack;
 		foreach my $def ( @$define ) {			# Find for new/changed fields
-			my $sql = $self->db_modi( $def, $ret->{'struct'});
+			my $sql = $self->db_modi( $def, $struct);
 			if ( $sql ) {
 				push( @$sql_stack, {'name'=>$def->{'name'}, 'sql'=>$sql});
 				if ( $sql =~ /ADD COLUMN/ ) {
@@ -258,12 +304,60 @@ sub utable {		# User registration tuneup
 				}
 			}
 		}
-		foreach my $def ( @{$ret->{'struct'}} ) {			# Find for deleted fields
+		foreach my $def ( @$struct ) {			# Find for deleted fields
 			my $has = Drive::find_first( $define, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
 			if ( $has < 0 ) {
 				push( @$sql_stack, {'name'=>$def->{'field'}, 'sql'=>"ALTER TABLE users DROP COLUMN $def->{'field'}"});
 			}
 		}
+
+		my $sql_text = '';
+		foreach my $sql ( @$sql_stack ) {			# Apply DB table changes
+			eval { $self->dbh->do($sql) };
+			if ( $@ ) {
+				push( @{$ret->{'json'}->{'fail'}}, $@);
+				$self->logger->dump( "Apply SQL: $@", 2);
+			} else {
+				$sql_text .= "$sql;\n";
+			}
+		}
+		if ( $sql_text ) {				# And store sql into file
+			my @date = Drive::timestr();
+			my $sql_dir = Drive::upper_dir("$Drive::sys_root/sql/$date[0]");
+			eval {
+					mkpath( $sql_dir, { mode => 0775 } ) unless -d( $sql_dir );		# Prepare storage, if need
+
+					opendir( my $dh, $sql_dir );
+					my $flist = [ sort {$b cmp $a} grep {$_ =~ /\.sql$/} readdir($dh) ];
+					closedir($dh);
+					my $last_file = shift( @$flist );
+					my $nextnum = '00';
+					if ( $last_file =~ /^(\d+)\D/ ) {
+						$nextnum = $1 + 1;
+						$nextnum = '0'x (2 - length($nextnum)).$nextnum;
+					}
+					open( my $fh, "> $sql_dir/$nextnum\_$date[0]-$date[1]-$date[2].sql");
+					print $fh $sql_text;
+					close($fh);
+				};
+			if ( $@ ) {
+				push( @{$ret->{'json'}->{'fail'}}, "$@; $!");
+				$self->logger->dump( "Write SQL to $sql_dir: $@; $!", 2);
+			}
+		}			# Store sql into file for further structure replication END
+
+		$config->{'utable'} = [];
+		foreach my $def ( @$define ) {				# Prepare data to strore in XML
+			my $row = {'name'=>$def->{'name'}, 'type'=>$def->{'type'}, 'title'=>$def->{'title'}, 'scr'=>$def->{'_screen'}};
+			push( @{$config->{'utable'}}, $row);
+		}
+		my $res = Drive::write_xml( $config, $conf_file );
+		if ( $res ) {
+			push( @{$ret->{'json'}->{'fail'}}, "Write XML: $res");
+			$self->logger->dump("Write XML: $res", 2);
+		}
+
+		$ret->{'json'}->{'success'} = 0 if exists($ret->{'json'}->{'fail'});
 		$ret->{'json'}->{'update'} = $sql_stack;
 	}
 	return $ret;
@@ -310,6 +404,35 @@ my $sql;
 	return $sql;
 }
 #####################
+sub hsocket {		# Process http admin queries
+#####################
+	my $self = shift;
+
+	unless ( $self->req->content->headers->content_type eq 'application/json') {
+		$self->render( template => 'exception', status => 404 );
+		return;
+	}
+	my $msg_send = {'fail' => "418 : I'm a teapot"};
+# $self->logger->dump(Dumper($self->req->content->asset),1,1);
+	my $msg_recv = $self->req->content->asset->{'content'};
+
+	if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
+		my $qry;
+		eval{ $qry = decode_json( encode_utf8($msg_recv) )};
+		if ( $@) {
+			$msg_send->{'fail'} = "Decode JSON : $@";
+			$self->logger->dump( $msg_send->{'fail'} );
+		} else {
+			delete( $msg_send->{'fail'});
+			$msg_send->{'code'} = 'ECHO';
+			$msg_send->{'data'} = $qry;
+		}
+		$msg_send = decode_utf8(encode_json( $msg_send ));
+	}
+
+	$self->render( type => 'application/json', json => $msg_send );
+}
+#####################
 sub wsocket {		# Process websocket queries
 #####################
 	my $self = shift;
@@ -317,7 +440,7 @@ sub wsocket {		# Process websocket queries
 	$self->on( message => sub { my ( $ws, $msg_recv ) = @_;
 						my $msg_send = {'fail' => "418 : I'm a teapot"};
 
-						if ( $msg_recv =~ /^[\{\[].+[\}\]]$/ ) {		# Got JSON?
+						if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 							my $qry;
 							eval{ $qry = decode_json( encode_utf8($msg_recv) )};
 							if ( $@) {
