@@ -100,7 +100,7 @@ my ($datetime, $gmt) = @_;
 	$date[4]++;
 	map { $date[$_] = "0" x ( 2 - length( $date[$_] ) ) . $date[$_] } (0, 1, 2, 3, 4);
 
-	return ($date[5], $date[4], $date[3],$date[2],$date[1],$date[0]) if wantarray();
+	return ($date[5], $date[4], $date[3],$date[2],$date[1],$date[0],$date[6]) if wantarray();
 	return "$date[3]-$date[4]-$date[5] $date[2]:$date[1]:$date[0].$date[6]";
 }
 ################################
@@ -282,14 +282,10 @@ sub xml_mask {
 	}
 	return $out
 }
-##############
-sub add_xml {
-###############  Read some configuration file
+#################
+sub add_xml {	#  Append xml content to existing hash
+#################
 my ($hashref, $xml_file, $root) = @_;
-	unless ($root) {
-		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
-		$root = substr( $root, 0, index($root, '.'));
-	}
 	my $xml = read_xml($xml_file, $root);
 	while (my ($key, $val) = each( %$xml) ) {
 		$hashref->{$key} = $val;
@@ -297,9 +293,33 @@ my ($hashref, $xml_file, $root) = @_;
 	return $hashref;
 }
 #############################
-sub write_xml {					# Store XML file
+sub read_xml {				# Read XML file
 #############################
-my ($hashref, $xml_file, $root) = @_;
+my ($xml_file, $root ) = @_;
+	my $hash;
+	unless ($root) {
+		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
+		$root = substr( $root, 0, index($root, '.'));
+	}
+	if ( -e( $xml_file ) ) {
+		my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );
+		open(my $fh, "< $xml_file");
+		my $xml = join('',<$fh>);
+		close( $fh );
+		
+		my $sig_die = $SIG{'__DIE__'};
+		undef $SIG{'__DIE__'};
+		eval{ $hash = $x2->xml2obj($xml) };
+		$SIG{'__DIE__'} = $sig_die;
+		return {'_xml_fail' => $@} if $@;
+		return $hash->{$root};
+	}
+	return $hash;
+}
+#############################
+sub write_xml {				# Store XML file
+#############################
+my ($hash, $xml_file, $root) = @_;
 	unless ($root) {
 		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
 		$root = substr( $root, 0, index($root, '.'));
@@ -308,11 +328,12 @@ my ($hashref, $xml_file, $root) = @_;
 	if ( -e( $xml_file ) ) {
 		copy( $xml_file, "$xml_file.bkup" );
 	}
+print "FOUND root $root\n";
 
-	my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );
-	my $out = $x2->obj2json( { $root => $hashref }) ;
-	print "$out\n";
-	
+	my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value', force_array=>1 );
+	my $out = $x2->obj2json( { $root => $hash }) ;
+print "$out\n";
+
 	my $sig_die = $SIG{'__DIE__'};
 	undef $SIG{'__DIE__'};
 	eval{ $out = $x2->json2xml($out) };
@@ -322,7 +343,8 @@ my ($hashref, $xml_file, $root) = @_;
 	my $buffered = $|; $| = 1;					# Set unbuffered
 	open( my $fh, "+>> $xml_file" ) || warn "Open $!";
 	flock( $fh, LOCK_EX ) || warn "Lock $!";
-	truncate( $fh, 0 );				# Reset file contents
+	truncate( $fh, 0 );				# Resect file contents
+
 	print $fh $out;
 	chmod( 0600, $fh);
 	flock( $fh, LOCK_UN ) || warn "UNLock $!";
@@ -330,29 +352,6 @@ my ($hashref, $xml_file, $root) = @_;
 	$res = $! if $!;
 	$| = $buffered;		# Restore buffer mode
 	return $res;
-}
-#############################
-sub read_xml {					# Read XML file
-#############################
-my ($xml_file, $root ) = @_;
-my $hash;
-	unless ($root) {
-		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
-		$root = substr( $root, 0, index($root, '.'));
-	}
-	if ( -e( $xml_file ) ) {
-		my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );
-		open(my $fh, "< $xml_file");
-		my $xml = join('',<$fh>);
-		
-		close( $fh );
-		my $sig_die = $SIG{'__DIE__'};
-		undef $SIG{'__DIE__'};
-		eval{ $hash = $x2->xml2obj($xml) };
-		$SIG{'__DIE__'} = $sig_die;
-		$hash->{'_xml_fail'} = $@ if $@;
-	}
-	return $hash->{$root};
 }
 #############################
 sub write_json {					# Store JSON file

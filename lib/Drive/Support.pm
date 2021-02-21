@@ -68,7 +68,7 @@ my $self = shift;
 sub access {				# .htaccess file editor
 #############################
 my $self = shift;
-	my $auth_file = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/admin");
+	my $auth_file = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}/admin");
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = {'users' => [], 'auth_file' => $auth_file, 'magic_mask' => 8};
 
@@ -120,7 +120,7 @@ sub access_write {			# htpasswd operations
 	print $fh $fout;
 	close( $fh );
 	foreach my $usr ( @$assign ) {					# Generate and update passwords
-		my $fs = system($Drive::sys{'call_htpasswd'},'-b', $fn, $usr->{'name'}, $usr->{'pwd'});
+		my $fs = system($sys{'call_htpasswd'},'-b', $fn, $usr->{'name'}, $usr->{'pwd'});
 		if ( $fs > 0 ) {
 			$self->logger->dump("Passwd operation '$usr->{'name'}' at '$fn':$!",2);
 			return $!;
@@ -133,7 +133,7 @@ sub connect {		# Setup interconnect settings
 #####################
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}");
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
@@ -186,7 +186,7 @@ sub connect {		# Setup interconnect settings
 			}
 			my $op = Drive::write_xml( $config, $conf_file );
 			if ( $op ) {
-				$self->logger->dump("Save XML: $op", 3);
+				$self->logger->dump("Save $conf_file: $op", 3);
 				$ret->{'json'}->{'success'} = 0;
 				$ret->{'json'}->{'fail'} = $op;
 			}
@@ -200,7 +200,7 @@ sub utable {		# User registration tuneup
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = { 'struct'=>[], 'scr_num'=>1, };
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}");
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";
 
 	my $config = {};
@@ -216,32 +216,30 @@ sub utable {		# User registration tuneup
 		push( @$struct, $row);
 	}
 
-	unless ( $param->{'code'} ) {
+	unless ( $param->{'code'} ) {				# Output html page
 		my $define = $config->{'utable'};
-# $self->logger->dump(Dumper($define));
-
 		my $deftype = sub { my $drow = shift;
-						if ( $drow->{'type'} =~ /^(\w+)\(([\d\.\,]+)\)$/ ) {
-							$drow->{'typet'} = $1;
-							$drow->{'len'} = $2;
+						if ( $drow->{'type'} =~ /^(\w+)\(([\d\.\,]+)\)$/ ) {		# Like `dec(10,2)'
+							$drow->{'typet'} = $1;					# `dec'
+							$drow->{'len'} = $2;					# `10,2'
 						} else {
-							$drow->{'typet'} = $drow->{'type'};
+							$drow->{'typet'} = $drow->{'type'};			# like `file'
 							$drow->{'len'} = 'N/A';
 						}
 					};
 
-		if ( $define ) {
+		if ( $define ) {			# Have XML settings file?
 			my $scr_count = [];
 			foreach my $def ( @$define ) {			# Actualize XML to database
 				$def->{'field'} = $def->{'name'};
-				$def->{'scr'} = [ $def->{'scr'} ] unless ref($def->{'scr'}) eq 'ARRAY';
+				$def->{'scr'} = [ split(/,/, $def->{'scr'}) ] unless ref( $def->{'scr'}) eq 'ARRAY';
 				$deftype->( $def );
 				unless ( $def->{'type'} eq 'file' ) {
 					my $has = Drive::find_first( $struct, sub { my $r = shift; return $r->{'field'} eq $def->{'name'}} );
 					unless ( $has < 0 ) {
 						if ( $def->{'type'} ne $struct->[$has]->{'type'} ) {
 							$def->{'type'} = $struct->[$has]->{'type'};
-							$deftype->( $def );
+							$deftype->( $def );			# Compose fields 'typet' and 'len'
 						}
 						push( @$scr_count, @{$def->{'scr'}} );
 						push( @{$ret->{'struct'}}, $def);
@@ -251,24 +249,25 @@ sub utable {		# User registration tuneup
 					push( @{$ret->{'struct'}}, $def);
 				}
 			}
-			foreach my $def ( @$struct) {
+			foreach my $def ( @$struct) {			# Actualize database to XML
 				my $has = Drive::find_first( $ret->{'struct'}, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
 				if ( $has < 0) {
-					$deftype->( $def );
-					$def->{'scr'} = 1;
+					$deftype->( $def );			# Compose fields 'typet' and 'len'
+					$def->{'scr'} = ['1'];
 					push( @{$ret->{'struct'}}, $def);
 				}
 			}
 			$ret->{'scr_num'} = pop( @{ [sort(@$scr_count)] });
-		} else {
+
+		} else {		# XML not stored yet
 			foreach my $def ( @$struct) {
-				$deftype->( $def );
-				$def->{'scr'} = 1;
+				$deftype->( $def );			# Compose fields 'typet' and 'len'
+				$def->{'scr'} = ['1'];
 				push( @{$ret->{'struct'}}, $def);
 			}
 		}
 
-	} elsif( $param->{'code'} eq 'utable') {
+	} elsif( $param->{'code'} eq 'utable') {		# Got json query when 'save changes'
 		$ret->{'json'} = { 'code' => $param->{'code'}, 'success' => 1 };
 		my $define = $param->{'data'};
 
@@ -288,13 +287,13 @@ sub utable {		# User registration tuneup
 			if ( scalar( @$to_drop) ) {
 				$to_drop = [ sort {$b <=> $a} @$to_drop ];		# Delete some recods, begining from end
 				while ( my $no = shift( @$to_drop) ) {
-					push( @{$ret->{'json'}->{'warn'}}, "Duplicated name $define->[$no]->{'name'} found");
+					push( @{$ret->{'json'}->{'warn'}}, "Duplicated name $define->[$no]->{'name'} found. Ignore");
 					splice( @$define, $no, 1);
 				}
 			}
 		}			#### Prevent duplicates first END
 
-		my $sql_stack;
+		my $sql_stack = [];
 		foreach my $def ( @$define ) {			# Find for new/changed fields
 			my $sql = $self->db_modi( $def, $struct);
 			if ( $sql ) {
@@ -311,54 +310,68 @@ sub utable {		# User registration tuneup
 			}
 		}
 
+		my @date = Drive::timestr();			# Date (y,m,d,h,m,s,ms) for creating filenames
 		my $sql_text = '';
-		foreach my $sql ( @$sql_stack ) {			# Apply DB table changes
-			eval { $self->dbh->do($sql) };
-			if ( $@ ) {
-				push( @{$ret->{'json'}->{'fail'}}, $@);
-				$self->logger->dump( "Apply SQL: $@", 2);
-			} else {
-				$sql_text .= "$sql;\n";
+		if ( scalar( @$sql_stack ) ) {
+			my $bkup_dir = Drive::upper_dir("$Drive::sys_root$sys{'bkup_dir'}");		# Backup tables
+			my $bkup_file = "$date[0]-$date[1]-$date[2]_$date[3]-$date[4].dump";
+			mkpath( $bkup_dir, { mode => 0775 } ) unless -d( $bkup_dir );		# Prepare storage, if need
+			my $host = '';
+			$host = "-h $sys{'db_host'}" if $sys{'db_host'};
+			my $fs = `mysqldump $host -B $sys{'db_base'} -q -u $sys{'db_usr'} -p$sys{'db_pwd'} > $bkup_dir/$bkup_file`;
+			if ( $fs ) {
+				push( @{$ret->{'json'}->{'warn'}}, "Backup to $bkup_file: $fs");
+				$self->logger->dump("Backup to $bkup_dir/$bkup_file: $fs", 3) ;
+			}
+
+			foreach my $sql ( @$sql_stack ) {			# Apply DB table changes
+				eval { $self->dbh->do($sql->{'sql'}) };
+				if ( $@ ) {
+					push( @{$ret->{'json'}->{'fail'}}, $@);
+					$self->logger->dump( "Apply SQL: $@", 2);
+				} else {
+					$sql_text .= "$sql->{'sql'};\n";
+				}
 			}
 		}
 		if ( $sql_text ) {				# And store sql into file
-			my @date = Drive::timestr();
 			my $sql_dir = Drive::upper_dir("$Drive::sys_root/sql/$date[0]");
+			mkpath( $sql_dir, { mode => 0775 } ) unless -d( $sql_dir );		# Prepare storage, if need
+			opendir( my $dh, $sql_dir );
+			my $flist = [ sort {$b cmp $a} grep {$_ =~ /\.sql$/} readdir($dh) ];
+			closedir($dh);
+			my $last_file = shift( @$flist );
+			my $nextnum = '00';
+			if ( $last_file =~ /^(\d+)\D/ ) {
+				$nextnum = $1 + 1;
+				$nextnum = '0'x (2 - length($nextnum)).$nextnum;
+			}
+			$last_file = "$sql_dir/$nextnum\_$date[0]-$date[1]-$date[2].sql";
 			eval {
-					mkpath( $sql_dir, { mode => 0775 } ) unless -d( $sql_dir );		# Prepare storage, if need
-
-					opendir( my $dh, $sql_dir );
-					my $flist = [ sort {$b cmp $a} grep {$_ =~ /\.sql$/} readdir($dh) ];
-					closedir($dh);
-					my $last_file = shift( @$flist );
-					my $nextnum = '00';
-					if ( $last_file =~ /^(\d+)\D/ ) {
-						$nextnum = $1 + 1;
-						$nextnum = '0'x (2 - length($nextnum)).$nextnum;
-					}
-					open( my $fh, "> $sql_dir/$nextnum\_$date[0]-$date[1]-$date[2].sql");
+					open( my $fh, "> $last_file");
 					print $fh $sql_text;
 					close($fh);
 				};
 			if ( $@ ) {
-				push( @{$ret->{'json'}->{'fail'}}, "$@; $!");
-				$self->logger->dump( "Write SQL to $sql_dir: $@; $!", 2);
+				push( @{$ret->{'json'}->{'warn'}}, "Write SQL to $last_file: $@; $!");
+				$self->logger->dump( "Write SQL to $last_file: $@; $!", 2);
 			}
 		}			# Store sql into file for further structure replication END
 
 		$config->{'utable'} = [];
 		foreach my $def ( @$define ) {				# Prepare data to strore in XML
+			$def->{'_screen'} = join(',', @{$def->{'_screen'}}) if ref($def->{'_screen'}) eq 'ARRAY';
 			my $row = {'name'=>$def->{'name'}, 'type'=>$def->{'type'}, 'title'=>$def->{'title'}, 'scr'=>$def->{'_screen'}};
 			push( @{$config->{'utable'}}, $row);
 		}
 		my $res = Drive::write_xml( $config, $conf_file );
 		if ( $res ) {
 			push( @{$ret->{'json'}->{'fail'}}, "Write XML: $res");
-			$self->logger->dump("Write XML: $res", 2);
+			$self->logger->dump(Dumper($config), 2);
+			$self->logger->dump("Write XML to $conf_file: $res", 2);
 		}
 
 		$ret->{'json'}->{'success'} = 0 if exists($ret->{'json'}->{'fail'});
-		$ret->{'json'}->{'update'} = $sql_stack;
 	}
 	return $ret;
 }
@@ -383,9 +396,13 @@ my $sql;
 						last;
 					}
 				}
-				$sql = "ALTER TABLE users CHANGE $old->{'field'} $new->{'field'} $new->{'type'} DEFAULT '$new->{'default'}'" if $upd;
+				if ( $upd ) {
+					$sql = "ALTER TABLE users CHANGE $old->{'field'} $new->{'field'} $new->{'type'}";
+					$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
+				}
 			} else {
-				$sql = "ALTER TABLE users ADD COLUMN $new->{'field'} $new->{'type'} DEFAULT '$new->{'default'}'";
+				$sql = "ALTER TABLE users ADD COLUMN $new->{'field'} $new->{'type'}";
+				$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
 			}
 			return $sql;
 		};

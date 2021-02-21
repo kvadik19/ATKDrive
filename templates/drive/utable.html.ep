@@ -165,6 +165,9 @@
 <script type="text/javascript">
 	let getSnap = function() {
 			let snap = document.getElementById('rowholder').innerHTML;
+			document.querySelectorAll('.field .screen input[type="checkbox"]').forEach( ch =>{
+						snap += (ch.checked ? '1' : '0');
+					});
 			return snap;
 		};
 
@@ -205,13 +208,22 @@ document.addEventListener('DOMContentLoaded', function(e) {
 							if ( resp.match(/^\{/) ) {
 								resp = JSON.parse(resp);
 								if ( resp.code === 'utable' && resp.success == 1 ) {
-// 									document.location = '<%= url_for('admin') %>';
-									return;
+									if ( resp.warn ) {
+										console.log(resp.warn);
+										alert('В-основном все получилось.\nСмотри консоль javascript');
+									} else {
+										document.location = '<%= url_for('admin') %>';
+									}
 								} else if ( resp.fail ) {
-									alert(resp.fail);
+									console.log(resp.warn);
+									console.log(resp.fail);
+									alert('Сохранение не удалось.\nСмотри консоль javascript');
+								} else {
+									alert('Сохранение не удалось. Без комментариев');
 								}
+							} else {
+								alert('Не сохранено. Проблемы на сервере');
 							}
-							alert('Сохранение не удалось');
 						} );
 		};
 
@@ -305,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 				},
 			pholder: {'len':'99[,90]','name':'Только латиница','title':'Описание поля','default':'Если нужно значение'},
 			ftypes: [{'name':'char', 'title':'Строка','value':'1'},
-						{'name':'dec', 'title':'Число','value':'2'},
+						{'name':'decimal', 'title':'Число','value':'2'},
 						{'name':'file', 'title':'Файл','value':'3'},
 					]
 		};
@@ -421,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 					if (itm.matches('.locked')) return false;		// Check ability mode
 					let msg = itm.querySelector('.name').innerText;
 					if ( msg ) {
-						if ( confirm('Удалить переменную \xAB'+msg+'\xBB?') ) {
+						if ( confirm('Удалить поле \xAB'+msg+'\xBB?') ) {
 							itm.parentNode.removeChild(itm);
 						}
 					} else {

@@ -66,10 +66,10 @@ sub startup {
 	my @db_str = ( $sys{'db_base'},
 					$sys{'db_host'} || 'localhost:3306',
 				);
-	my ($db_user, $db_pass) = split(/:/, $sys{'db_user'});
+	($sys{'db_usr'}, $sys{'db_pwd'}) = split(/:/, $sys{'db_user'});
 	my $db_connect = {	'string' => "DBI:mysql:".join(':', @db_str),
-						'user' => $db_user, 
-						'pwd' => $db_pass,
+						'user' => $sys{'db_usr'}, 
+						'pwd' => $sys{'db_pwd'},
 						};		# Need to be tuned up by config files!!!
 
 	my $create_dbh = sub {
