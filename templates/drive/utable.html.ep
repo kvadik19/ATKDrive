@@ -39,6 +39,7 @@
 		justify-content:center;
 	}
 	@media screen and (min-width:1200px) {
+		#struct { font-size:14pt; }
 		.name { width:300px; }
 		.title { width:350px; }
 		.default { width:250px; }

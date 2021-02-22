@@ -68,7 +68,7 @@ my $self = shift;
 sub access {				# .htaccess file editor
 #############################
 my $self = shift;
-	my $auth_file = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}/admin");
+	my $auth_file = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}/.admin");
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = {'users' => [], 'auth_file' => $auth_file, 'magic_mask' => 8};
 
@@ -233,22 +233,24 @@ sub utable {		# User registration tuneup
 			foreach my $def ( @$define ) {			# Actualize XML to database
 				$def->{'field'} = $def->{'name'};
 				$def->{'scr'} = [ split(/,/, $def->{'scr'}) ] unless ref( $def->{'scr'}) eq 'ARRAY';
-				$deftype->( $def );
-				unless ( $def->{'type'} eq 'file' ) {
-					my $has = Drive::find_first( $struct, sub { my $r = shift; return $r->{'field'} eq $def->{'name'}} );
-					unless ( $has < 0 ) {
-						if ( $def->{'type'} ne $struct->[$has]->{'type'} ) {
-							$def->{'type'} = $struct->[$has]->{'type'};
+				$deftype->( $def );			# Compose fields 'typet' and 'len'
+
+				if ( $def->{'type'} eq 'file' ) {
+					push( @$scr_count, @{$def->{'scr'}} );
+					push( @{$ret->{'struct'}}, $def);
+				} else {
+					my $hasCol = Drive::find_first( $struct, sub { my $r = shift; return $r->{'field'} eq $def->{'name'}} );
+					unless ( $hasCol < 0 ) {
+						if ( $def->{'type'} ne $struct->[$hasCol]->{'type'} ) {
+							$def->{'type'} = $struct->[$hasCol]->{'type'};
 							$deftype->( $def );			# Compose fields 'typet' and 'len'
 						}
 						push( @$scr_count, @{$def->{'scr'}} );
 						push( @{$ret->{'struct'}}, $def);
-					}
-				} else {
-					push( @$scr_count, @{$def->{'scr'}} );
-					push( @{$ret->{'struct'}}, $def);
+					}		# Not in table structure - ignore for use
 				}
 			}
+
 			foreach my $def ( @$struct) {			# Actualize database to XML
 				my $has = Drive::find_first( $ret->{'struct'}, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
 				if ( $has < 0) {
@@ -316,6 +318,16 @@ sub utable {		# User registration tuneup
 			my $bkup_dir = Drive::upper_dir("$Drive::sys_root$sys{'bkup_dir'}");		# Backup tables
 			my $bkup_file = "$date[0]-$date[1]-$date[2]_$date[3]-$date[4].dump";
 			mkpath( $bkup_dir, { mode => 0775 } ) unless -d( $bkup_dir );		# Prepare storage, if need
+
+			opendir( my $dh, $bkup_dir );				# Check outdated dumps
+			my $flist = [ sort grep {$_ =~ /\.dump$/} readdir($dh) ];
+			closedir($dh);
+			while ( my $old_file = shift( @$flist ) ) {
+				last if (stat( "$bkup_dir/$old_file"))[9] > time - (60*60*24*30) 
+							|| $#{$flist} < 2;		# Remove 30-days old backups, but leave two previous backups as minimum
+				unlink( "$bkup_dir/$old_file" );
+			}
+			
 			my $host = '';
 			$host = "-h $sys{'db_host'}" if $sys{'db_host'};
 			my $fs = `mysqldump $host -B $sys{'db_base'} -q -u $sys{'db_usr'} -p$sys{'db_pwd'} > $bkup_dir/$bkup_file`;
@@ -347,6 +359,7 @@ sub utable {		# User registration tuneup
 				$nextnum = '0'x (2 - length($nextnum)).$nextnum;
 			}
 			$last_file = "$sql_dir/$nextnum\_$date[0]-$date[1]-$date[2].sql";
+			
 			eval {
 					open( my $fh, "> $last_file");
 					print $fh $sql_text;
@@ -372,6 +385,7 @@ sub utable {		# User registration tuneup
 		}
 
 		$ret->{'json'}->{'success'} = 0 if exists($ret->{'json'}->{'fail'});
+		$ret->{'json'}->{'update'} = $sql_stack;
 	}
 	return $ret;
 }
@@ -380,29 +394,35 @@ sub db_modi {		# Create sql to modify table
 #####################
 my ($self, $def, $struct) = @_;
 my $sql;
-	return $sql if $def->{'type'} eq 'file';
 
 	my $sql_make = sub {
 			my ($new, $old) = @_;
 			my $sql = '';
 			$new->{'field'} = $new->{'name'};
-			$new->{'len'} =~ s/\D+/,/;
-			$new->{'type'} = "$new->{'type'}($new->{'len'})" if $new->{'len'};
-			if ( $old ) {
-				my $upd = 0;
-				foreach my $fname ( qw(field type default) ) {
-					if ( $new->{$fname} ne $old->{$fname} ) {
-						$upd = 1;
-						last;
+			if ( $new->{'type'} eq 'file' ) {
+				$sql = "UPDATE media SET owner_field='$new->{'name'}' WHERE owner_field='$new->{'_default'}->{'name'}'" 
+							if $new->{'_default'}->{'name'} ne $new->{'name'};
+				$sql = '' unless $new->{'_default'}->{'name'};		# NOOP if previous name undefined
+
+			} else {
+				$new->{'len'} =~ s/\D+/,/;
+				$new->{'type'} = "$new->{'type'}($new->{'len'})" if $new->{'len'};
+				if ( $old ) {
+					my $upd = 0;
+					foreach my $fname ( qw(field type default) ) {
+						if ( $new->{$fname} ne $old->{$fname} ) {
+							$upd = 1;
+							last;
+						}
 					}
-				}
-				if ( $upd ) {
-					$sql = "ALTER TABLE users CHANGE $old->{'field'} $new->{'field'} $new->{'type'}";
+					if ( $upd ) {
+						$sql = "ALTER TABLE users CHANGE $old->{'field'} $new->{'field'} $new->{'type'}";
+						$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
+					}
+				} else {
+					$sql = "ALTER TABLE users ADD COLUMN $new->{'field'} $new->{'type'}";
 					$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
 				}
-			} else {
-				$sql = "ALTER TABLE users ADD COLUMN $new->{'field'} $new->{'type'}";
-				$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
 			}
 			return $sql;
 		};

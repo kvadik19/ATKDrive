@@ -8,12 +8,6 @@ else
 	cmd=$1;
 fi
 
-# export db_name="atk"
-# export db_host="localhost"
-# export db_port="3306"
-# export db_login="vdk"
-# export db_pass="14rucoO"
-
 if [ -r '/var/www/atk/script/engine' ]
 then
 	if [ "$cmd" = "stop" ]

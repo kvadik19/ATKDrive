@@ -24,12 +24,6 @@ my @options = qw(
 		logger
 	);
 
-#############################
-sub DESTROY {					# Close service
-#############################
-my $self = shift;
-	return undef $self;
-};
 #####################
 sub ask_inet {		# Process inet transactions
 #####################
@@ -118,36 +112,6 @@ sub email_good {			# Precheck email address fnd fix possible miss
 		$good = 1;
 	}
 	return $good;
-}
-#####################
-sub read_ws {		# Process websocket queries
-#####################
-	my $self = shift;
-
-	$self->on( message => sub { my ( $ws, $msg_recv ) = @_;
-						my $msg_send = {'fail' => "418 : I'm a teapot"};
-
-						if ( $msg_recv =~ /^[\{\[].+[\}\]]$/ ) {		# Got JSON?
-							my $qry;
-							eval{ $qry = decode_json( encode_utf8($msg_recv) )};
-							if ( $@) {
-								$msg_send->{'fail'} = "Decode JSON : $@";
-								$self->logger->dump( $msg_send->{'fail'} );
-							} else {
-								delete( $msg_send->{'fail'});
-								$msg_send->{'code'} = 'ECHO';
-								$msg_send->{'data'} = $qry;
-							}
-							$msg_send = decode_utf8(encode_json( $msg_send ));
-						} else {
-							$msg_send ="ECHO: $msg_recv";
-						}
-						$ws->send( $msg_send );
-					});
-
-	$self->on( finish => sub { my ( $ws, $code, $reason ) = @_;
-						$self->{'messenger'}->terminate() if $self->{'messenger'};
-					});
 }
 
 1

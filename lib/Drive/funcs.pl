@@ -328,11 +328,9 @@ my ($hash, $xml_file, $root) = @_;
 	if ( -e( $xml_file ) ) {
 		copy( $xml_file, "$xml_file.bkup" );
 	}
-print "FOUND root $root\n";
 
 	my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value', force_array=>1 );
 	my $out = $x2->obj2json( { $root => $hash }) ;
-print "$out\n";
 
 	my $sig_die = $SIG{'__DIE__'};
 	undef $SIG{'__DIE__'};
