@@ -54,16 +54,18 @@
 			let btn = e.target;
 			let formData = { 'action':btn.id, 'fp':getCookie('fp') };
 			document.querySelectorAll('input.udata').forEach( i => { formData[i.id] = i.value });
-			if ( !(formData.login && formData.pwd) ) {
-				if ( !document.head.querySelector('style#invalid')) {		// LightUp invalid fields
-					let inv = createObj('style', {'id':'invalid','type':'text/css',
-													'innerText':'input.udata:not(:valid){'
-													+'background-color:#ffefef;'
-													+'border-color:#e00000;border-width:3px;}' });
-					document.head.appendChild(inv);
+			if ( btn.id != 'register' ) {
+				if ( !(formData.login && formData.pwd) ) {
+					if ( !document.head.querySelector('style#invalid')) {		// LightUp invalid fields
+						let inv = createObj('style', {'id':'invalid','type':'text/css',
+														'innerText':'input.udata:not(:valid){'
+														+'background-color:#ffefef;'
+														+'border-color:#e00000;border-width:3px;}' });
+						document.head.appendChild(inv);
+					}
+					document.querySelector('input.udata:not(:valid)').focus();
+					return;
 				}
-				document.querySelector('input.udata:not(:valid)').focus();
-				return;
 			}
 			flush({'code':'checkin','data':formData}, document.location.href, function(resp) {
 					try { resp = JSON.parse(resp) } catch(e) { console.log(e); return };
@@ -105,7 +107,7 @@
 						} else {
 							console.log(resp);
 						}
-// 						document.location = resp.data.point;
+						if ( resp.data.point ) document.location = resp.data.point;
 					} else {
 						console.log(resp);
 					}

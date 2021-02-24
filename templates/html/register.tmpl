@@ -1,0 +1,141 @@
+<div class="container">
+	<form id="registration-body">
+		<h1 class="registration__form--title">Регистрация</h1>
+		<p class="comment">* обозначены поля, обязательные для заполнения</p>
+
+		<div class="optgroup">
+			<label for="registration-name">ФИО*</label>
+			<input type="text" name="registration-name" id="registration-name" class="udata form__input" required />
+		</div>
+
+		<div class="optgroup">
+			<label for="registration-tel">Телефон*</label>
+			<input type="tel" name="registration-tel" id="registration-tel" class="udata form__input" 
+					placeholder="+7 (_ _ _) _ _ - _ _ - _ _" required/>
+		</div>
+
+		<div class="optgroup">
+			<label for="registration-email">E-mail*</label>
+			<input type="email" name="registration-email" id="registration-email" class="udata form__input" 
+					value="<TMPL_VAR NAME="email">" required/>
+		</div>
+
+		<div class="optgroup">
+			<div class="registration__form--role">
+				<label>Роль пользователя*</label>
+				<div class="optrow">
+					<div class="quant">
+					<input type="checkbox" name="role-customer" id="role-customer" class="udata" value="<TMPL_VAR NAME="customer">" checked />
+					<label for="role-customer">Заказчик</label>
+					</div>
+					<div class="quant">
+					<input type="checkbox" name="role-carrier" id="role-carrier" class="udata" value="<TMPL_VAR NAME="carrier">" />
+					<label for="role-carrier">Перевозчик</label>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="optgroup">
+			<div id="user-type" class="registration__form--role">
+				<label>Субъект гражданского права*</label>
+				<div class="optrow">
+					<div class="quant">
+					<input type="radio" name="subject-radio" id="entity-radio" class="udata" value="<TMPL_VAR NAME="entity">" />
+					<label for="entity-radio">Юридическое лицо</label>
+					</div>
+					<div class="quant">
+					<input type="radio" name="subject-radio" id="individual-radio" class="udata" value="<TMPL_VAR NAME="individual">" checked />
+					<label for="individual-radio">Физическое лицо</label>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="entity_section" style="display:none;">
+			<div class="upload_block">
+				<span class="block_header">Загрузить документы:</span>
+				<span class="span-title__info">
+					Копия: Документ о назначении руководителя (решение единственного учредителя или протокол собрания и т.д.
+				</span>
+				<details open>
+					<summary>Примечание</summary>
+					<span class="span-title__info">
+						В случае, если от имени этого руководителя действует иное лицо, также предоставляется копия доверенности (иного документа) на осуществление соответствующих
+						действий, заверенная его печатью
+						(при наличии печати) и подписанная руководителем или уполномоченным им лицом. 
+						В случае, если указанная доверенность подписана лицом, уполномоченным руководителем, также предоставляется
+						копия документа, подтверждающего полномочия этого лица
+					</span>
+				</details>
+
+				<input type="file" class="registration__form--document-file">
+				<input type="file" class="registration__form--document-file">
+			</div>
+			<div class="upload_block">
+				<span class="span-title__info">
+					Копия: Устав в последней редакции с учетом всех изменений и дополнений, все страницы (страница-прошивка с отметкой
+					налогового органа обязательна)</span>
+				<input type="file" class="registration__form--document-file">
+			</div>
+
+			<div class="upload_block">
+				<span class="span-title__info">
+					Копия: Свидетельство о государственной регистрации юридического лица (ОГРН)
+				</span>
+				<details open>
+					<summary>Примечание</summary>
+					<span class="span-title__info">
+						Если организация зарегистрирована до 01.07.2002, то необходимо представить 
+						свидетельство о внесении записи в ЕГРЮЛ об организации, созданной до 01.07.2002.
+					</span>
+				</details>
+				<input type="file" class="registration__form--document-file">
+			</div>
+
+			<div class="upload_block">
+				<span class="span-title__info">
+					Копия: Свидетельство о постановке на учет в налоговом органе (ИНН).
+				</span>
+				<input type="file" class="registration__form--document-file">
+			</div>
+
+			<div class="upload_block">
+				<span class="span-title__info">
+					Копия: Выписка из Единого государственного реестра юридических лиц (ЕГРЮЛ)
+				</span>
+				<details open>
+					<summary class="summary">Примечание</summary>
+					<span class="span-title__info">В макете нет текста</span>
+				</details>
+				<input type="file" class="registration__form--document-file">
+			</div>
+
+			<div class="upload_block">
+				<span class="span-title__info">
+					Копия: Уведомление Территориального органа Федеральной службы государственной статистики
+				</span>
+				<input type="file" class="registration__form--document-file">
+			</div>
+		</div>
+
+		<p class="span-title__info">Нажимая кнопку Зарегистрировать, вы соглашаетесь с
+			<a href="#">условиями обработки персональных данных</a>
+		</p>
+		<div class="buttonbar">
+			<button id="register" type="button" class="form__btn">Зарегистрировать</button>
+		</div>
+	</form>
+</div>
+<script type="text/javascript">
+document.querySelectorAll('#user-type input[type="radio"]').forEach(i =>{
+		i.onchange = function(e) { 
+				let val = e.target.form.elements[e.target.name].value;
+				let visible = 'block';
+				if (val == <TMPL_VAR NAME="individual"> ) visible = 'none';
+				document.getElementById('entity_section').style.display = visible;
+			}
+	});
+document.querySelector('input[type="tel"]').onkeypress = function(e) {
+	};
+</script>

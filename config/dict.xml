@@ -3,7 +3,12 @@
 	<user_mode>
 		<carrier title="перевозчик" value="1" name="carrier" />
 		<customer title="заказчик" value="2" name="customer" />
+		<both title="перевозчик/заказчик" value="3" name="both" />
 	</user_mode>
+	<user_type>
+		<individual title="физическое лицо" value="1" name="individual" />
+		<entity title="юридическое лицо" value="2" name="entity" />
+	</user_type>
 
 	<user_state>
 		<register allow="cabinet" title="В процессе регистрации" value="0" name="register" />

@@ -1,10 +1,12 @@
 :root {
 	--body-back:#ffffff;
 	--body-back-dk:#f5f5f5;
+	--body-gray:#fcfcfc;
+	--body-gray-dk:#eaeaea;
 	--body-back-alt:#ebf5ef;
 	--body-text:#333333;
 	--body-text-alt:#336633;
-	--body-text-lt:#cccccc;
+	--body-text-lt:#999999;
 	--body-font:Sans, Verdana, sans-serif;
 
 	--head-back: #1b242d;

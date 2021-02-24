@@ -17,6 +17,7 @@ use Utils::NETS;
 
 our $templates;
 our $my_name = 'client';
+our %sys = %Drive::sys;
 
 use Data::Dumper;
 
@@ -41,29 +42,27 @@ my $self = shift;
 			if ( $param->{'data'}->{'action'} eq 'login' ) {
 				$json->{'data'}->{'state'} = $self->login_status();
 			} elsif( $param->{'data'}->{'action'} eq 'register' ) {
-				$self->redirect_to( 'cabinet', query => $param );
-				return;
+				$json->{'data'}->{'point'} = $self->url_with('/register')->query($param->{'data'})->to_abs;
 			} elsif( $param->{'data'}->{'action'} eq 'reset' ) {
 				$json->{'data'}->{'html_code'} = $self->hash_door( $param->{'data'}->{'action'} );
 			}
 			$self->{'qdata'}->{'tags'}->{'page_title'} = "Under construction";
-		} elsif( $param->{'code'} eq 'register') {
-		} elsif( $param->{'code'} eq 'reset' ) {
-			
 		}
 		$self->render( type => 'application/json', json => $json );
 		return;
 
 	} else {
-# $self->logger->dump(Dumper($param),2,1);
 		$self->render( template => $template, status => $self->stash('http_state') );
 	}
 }
-#############################
-sub checked {				# All of operations dispatcher
-#############################
+#################
+sub checked {	# All of operations dispatcher
+#################
 my $self = shift;
-	unless ( $self->{'qdata'}->{'user_state'}->{'logged'} == 1 ) {
+# $self->logger->dump("Do Checked",2,1);
+# $self->logger->dump(Dumper($self->{'qdata'}),2,1);
+# 
+	unless ( length($self->{'qdata'}->{'user_state'}->{'fp'}) == 32 ) {
 		$self->redirect_to( 'cabinet', query => $self->{'qdata'}->{'http_params'} );
 		return;
 	}
@@ -72,6 +71,21 @@ my $self = shift;
 
 	my $template = 'main';
 	my $out = "404 : Page $action not found yet";
+	unless ( $templates->{$action} ) {
+		my $templ;
+		eval {
+			$templ = HTML::Template->new(
+					filename => "$Drive::sys_root$sys{'html_dir'}/$action.tmpl",
+					die_on_bad_params => 0,
+					die_on_missing_include => 0,
+				);
+			};
+		if ( $@ ) {
+			$self->logger->dump("Template $action: $@");
+		} else {
+			$templates->{$action} = $templ;
+		}
+	}
 
 	eval { $out = $self->$action };
 	if ( $@) {			# sub is not defined (yet?)
@@ -79,14 +93,14 @@ my $self = shift;
 		$self->stash( 'http_state' => 404 );
 		$self->{'qdata'}->{'tags'}->{'page_title'} = $out;
 		$template = 'exception';
-	} else {
-		$self->{'qdata'}->{'tags'}->{'page_title'} = $action;
-		$template = "drive/$action";
 	}
 
 	if ( ref($out) eq 'HASH' ) {
 		if ( exists( $out->{'json'}) ) {
 			$self->render( type => 'application/json', json => $out->{'json'} );
+			return;
+		} elsif( exists($out->{'redirect'})) {
+			$self->redirect_to( $out->{'redirect'} );
 			return;
 		} else {
 			while ( my ($key,$val) = each(%$out) ) {
@@ -96,8 +110,37 @@ my $self = shift;
 	} else {
 		$self->stash( 'html_code' => $out );
 	}
-	$self->{'qdata'}->{'layout'} = 'support';
 	$self->render( template => $template, status => $self->stash('http_state') );
+}
+#################
+sub logout {	# Close user connection
+#################
+my $self = shift;
+	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'} = 0;
+	return {'redirect' => 'cabinet'};
+}
+#################
+sub cabinet {	# Main user operations form
+#################
+my $self = shift;
+}
+#################
+sub register {		# User registration/personal data form
+#################
+my $self = shift;
+my $param = $self->{'qdata'}->{'http_params'};
+
+	$param->{'email'} = $param->{'login'} if $param->{'login'} =~ /\w+@\w+/;
+	foreach my $sparam ( qw(user_mode user_type) ) {
+		while( my($p,$v) = each( %{$sys{$sparam}} ) ) {
+			$param->{$p} = $v->{'value'};
+		}
+	}
+
+	$templates->{'register'}->param($param);
+	$templates->{'register'}->param($self->{'qdata'}->{'user_state'});
+	my $out = decode_utf8($templates->{'register'}->output());
+	return $out
 }
 #############################
 sub hash_door {				# Open door to user cabinet by hash reference
@@ -107,7 +150,7 @@ my $action = shift;
 	my $param = $self->{'qdata'}->{'http_params'}->{'data'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $message;
-	return $message unless -e("$Drive::sys_root$Drive::sys{'mail_dir'}/$action.tmpl");
+	return $message unless -e("$Drive::sys_root$sys{'mail_dir'}/$action.tmpl");
 
 	my $timestamp = Time::HiRes::time();
 	my $hash = $udata->{'fp'}.md5_sum($timestamp);
@@ -122,24 +165,29 @@ my $action = shift;
 	}
 
 	my $mdata = {'link_accept' => $hashlink, 'link_reject' => "$hashlink&r=1",
-					'site_name' => $Drive::sys{'our_site'}, 'site_url' => $Drive::sys{'our_host'},
-					'timeout' => $Drive::sys{'reg_timeout'} 
+					'site_name' => $sys{'our_site'}, 'site_url' => $sys{'our_host'},
+					'timeout' => $sys{'reg_timeout'} 
 				};
-	my $letter = HTML::Template->new( filename => "$Drive::sys_root$Drive::sys{'mail_dir'}/$action.tmpl",
+	my $banner;
+	my $letter;
+	eval {
+		$letter = HTML::Template->new( filename => "$Drive::sys_root$sys{'mail_dir'}/$action.tmpl",
 						die_on_bad_params => 0,
 						die_on_missing_include => 0,
 					);
+		};
+
+	return $@ unless $letter;
 	$letter->param( $mdata );
 	eval {
 		$letter = decode_utf8( $letter->output() );
 		};
 	if ( $@ ) {
 		$self->logger->dump("Decode letter: $@", 3);
-		$letter = '';
+		return $@;
 	}
 
 	my $dom = Mojo::DOM->new($letter);				# Extract something from letter
-	my $banner;
 	if ( $dom->find('comment')->[0] ) {
 		$banner = $dom->find('comment')->[0]->content;
 		$dom->find('comment')->[0]->remove;
@@ -182,21 +230,18 @@ my $action = shift;
 	$htpart->add('X-Comment' => 'HTML-formatted message');
 	$msg->attach( $htpart );
 
-	if ( $Drive::sys{'smtp_host'} ) {			# sysd.conf settings
-		my ($usr, $pwd) = split(/:/, $Drive::sys{'smtp_login'} );
+	if ( $sys{'smtp_host'} ) {			# sysd.conf settings
+		my ($usr, $pwd) = split(/:/, $sys{'smtp_login'} );
 		if ( $usr && $pwd ) {
-			$msg->send('smtp', $Drive::sys{'smtp_host'}, Debug=>1, AuthUser=>$usr, AuthPass=>$pwd );	# Send via Authorized smtp
+			$msg->send('smtp', $sys{'smtp_host'}, Debug=>1, AuthUser=>$usr, AuthPass=>$pwd );	# Send via Authorized smtp
 		} else {
-			$msg->send('smtp', $Drive::sys{'smtp_host'}, Debug=>1 );			# Send via free smtp
+			$msg->send('smtp', $sys{'smtp_host'}, Debug=>1 );			# Send via free smtp
 		}
 	} else {
-# open(my $fh, "> $Drive::sys_root/mail.out");
-# $msg->print($fh);
-# close $fh;
 		$msg->send();			# Send via sendmail
 	}
-
 	$self->dbh->do("UPDATE users SET _hash='$hash',_ip='$udata->{'ip'}' WHERE $where");
+
 	return $banner;
 }
 #############################
