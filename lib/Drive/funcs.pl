@@ -295,7 +295,7 @@ my ($hashref, $xml_file, $root) = @_;
 #############################
 sub read_xml {				# Read XML file
 #############################
-my ($xml_file, $root ) = @_;
+my ($xml_file, $root, $enc ) = @_;
 	my $hash;
 	unless ($root) {
 		$root = substr( $xml_file, rindex($xml_file, '/')+1 );
@@ -305,6 +305,7 @@ my ($xml_file, $root ) = @_;
 		my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );
 		open(my $fh, "< $xml_file");
 		my $xml = join('',<$fh>);
+		$xml = encode_utf8( $xml ) if $enc;
 		close( $fh );
 		
 		my $sig_die = $SIG{'__DIE__'};

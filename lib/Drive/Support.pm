@@ -241,6 +241,7 @@ sub utable {		# User registration tuneup
 				} else {
 					my $hasCol = Drive::find_first( $struct, sub { my $r = shift; return $r->{'field'} eq $def->{'name'}} );
 					unless ( $hasCol < 0 ) {
+						$def->{'default'} = $struct->[$hasCol]->{'default'};
 						if ( $def->{'type'} ne $struct->[$hasCol]->{'type'} ) {
 							$def->{'type'} = $struct->[$hasCol]->{'type'};
 							$deftype->( $def );			# Compose fields 'typet' and 'len'
@@ -252,8 +253,9 @@ sub utable {		# User registration tuneup
 			}
 
 			foreach my $def ( @$struct) {			# Actualize database to XML
-				my $has = Drive::find_first( $ret->{'struct'}, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
-				if ( $has < 0) {
+				my $hasCol = Drive::find_first( $ret->{'struct'}, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
+				if ( $hasCol < 0) {
+					$def->{'default'} = $struct->[$hasCol]->{'default'};
 					$deftype->( $def );			# Compose fields 'typet' and 'len'
 					$def->{'scr'} = ['1'];
 					push( @{$ret->{'struct'}}, $def);
@@ -308,7 +310,15 @@ sub utable {		# User registration tuneup
 		foreach my $def ( @$struct ) {			# Find for deleted fields
 			my $has = Drive::find_first( $define, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
 			if ( $has < 0 ) {
-				push( @$sql_stack, {'name'=>$def->{'field'}, 'sql'=>"ALTER TABLE users DROP COLUMN $def->{'field'}"});
+				my $renamed = Drive::find_first( $sql_stack, sub { my $sq = shift; 
+																if ( $sq->{'sql'} =~ / CHANGE $def->{'name'} (\w+) / ) {
+																	return 1 if $1 ne $def->{'name'};
+																}
+																return 0;
+															} );
+				if ( $renamed < 0 ) {
+					push( @$sql_stack, {'name'=>$def->{'field'}, 'sql'=>"ALTER TABLE users DROP COLUMN $def->{'field'}"});
+				}
 			}
 		}
 
@@ -417,11 +427,11 @@ my $sql;
 					}
 					if ( $upd ) {
 						$sql = "ALTER TABLE users CHANGE $old->{'field'} $new->{'field'} $new->{'type'}";
-						$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
+						$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || length($new->{'default'}) > 0;
 					}
 				} else {
 					$sql = "ALTER TABLE users ADD COLUMN $new->{'field'} $new->{'type'}";
-					$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || $new->{'default'};
+					$sql .= " DEFAULT '$new->{'default'}'" if $new->{'type'} =~ /^char/ || length($new->{'default'}) > 0;
 				}
 			}
 			return $sql;

@@ -203,10 +203,28 @@ ul li { list-style-type:none; }
 	line-height:1.5;
 }
 .upload_block {
-	padding:1em 0px;
-	margin:1em 0px;
+	padding:0px 0px 1em 0px;
+	margin:0px 0px 0.5em 0px;
 	border-bottom:1px solid var(--body-text-lt,'#999999');
 }
+.upload_block button.add {
+	border-radius:4px;
+	padding:0.2em 1em;
+	background:var(--btn-bg-green);
+	color:var(--panel-back);
+}
+.upload_block button.add:active {
+	background:var(--btn-bg-green-alt);
+}
+.upload_block button.rm {
+	border-radius:4px;
+	background:var(--btn-bg-red);
+	color:var(--btn-fg-red);
+}
+.upload_block button.rm:active {
+	background:var(--btn-bg-red-alt);
+}
+
 .upload_block details {
 	margin-bottom:20px;
 }
@@ -218,11 +236,31 @@ ul li { list-style-type:none; }
 	margin: 10px 0px;
 	cursor: pointer;
 }
+.upload_block .pgbar {
+	display: none;
+	border: 1px solid var(--body-text-alt);
+	width: 50%;
+	float: right;
+	border-radius: 1em;
+	text-align: center;
+	color: var(--body-text);
+	background-image: url('/img/progress_bar.png');
+	background-repeat: no-repeat;
+	background-position: -1em center;
+	background-size: 5% 110%;
+}
+
 .optrow input[type="checkbox"],
 .optrow input[type="radio"] {
 	width:18px;
 	height:18px;
 	margin-right:1em;
+}
+
+input.udata.fail {
+	border-color:var(--red-dk, '#660000');
+	background-color:var(--red, '#990000');
+	color:var(--panel-text,'#ffffff');
 }
 
 .upload_block >.span-title__info {
@@ -443,8 +481,4 @@ div.optrow div.quant {
 }
 .charmark.green {
 	color:#000099
-}
-.error {
-	margin:30px;
-	color:var(--body-text,'#333333');
 }

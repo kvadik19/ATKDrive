@@ -6,6 +6,7 @@ _login CHAR(128) DEFAULT '',
 _pwd CHAR(32) DEFAULT '',
 _ustate TINYINT DEFAULT 0,
 _umode TINYINT DEFAULT 0,
+_usubj TINYINT DEFAULT 0,
 _ip BIGINT DEFAULT 0,
 _rtime INT(10) DEFAULT 0,
 _ltime INT(10) DEFAULT 0,
@@ -17,6 +18,7 @@ KEY login (_login),
 KEY pwd (_pwd),
 KEY ustate (_ustate),
 KEY umode (_umode),
+KEY usubj (_subj),
 KEY hash (_hash)
 ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 

@@ -83,14 +83,16 @@
 	.header .opmenu {
 		width:30px;
 	}
+	.field .opmenu {
+		background-color:var(--head-back);
+		color:var(--head-text);
+	}
 	.opmenu span {
 		width:30px;
 		height:30px;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		background-color:var(--head-back);
-		color:var(--head-text);
 		cursor:context-menu;
 	}
 	.onedit {

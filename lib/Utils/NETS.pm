@@ -99,6 +99,7 @@ sub ask_inet {		# Process inet transactions
 #########################
 sub email_good {			# Precheck email address fnd fix possible miss
 #########################
+	my $self = shift;
 	my $aref = shift;
 	my $text = $$aref;
 	$$aref =~ s/\s//g;

@@ -10,6 +10,7 @@ use Cwd 'abs_path';
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape b64_encode  trim md5_sum);
+use File::Path qw(make_path mkpath remove_tree rmtree);
 use Time::HiRes;
 use HTML::Template;
 use MIME::Lite;
@@ -128,18 +129,59 @@ my $self = shift;
 sub register {		# User registration/personal data form
 #################
 my $self = shift;
-my $param = $self->{'qdata'}->{'http_params'};
+my $out;
+	my $param = $self->{'qdata'}->{'http_params'};
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}");
+	my $conf_file = "$conf_dir/config.xml";
 
-	$param->{'email'} = $param->{'login'} if $param->{'login'} =~ /\w+@\w+/;
-	foreach my $sparam ( qw(user_mode user_type) ) {
-		while( my($p,$v) = each( %{$sys{$sparam}} ) ) {
-			$param->{$p} = $v->{'value'};
+	my $struct = [];
+	$struct = Drive::read_xml( $conf_file, 'config', 'to_encode' )->{'utable'};
+
+	if ( $param->{'code'} ) {
+		$out = {'json' => {'code' => 0}};
+
+		if ( $param->{'code'} eq 'checkmail'  
+				&& $self->{'qdata'}->{'user_state'}->{'fp'} eq $param->{'data'}->{'fp'} ) {
+			$out->{'json'}->{'data'} = {'email' => $param->{'data'}->{'email'}};
+			$out->{'json'}->{'code'} = Utils::NETS->email_good( \$out->{'json'}->{'data'}->{'email'} );
+		} elsif( $param->{'code'} eq 'upload' 
+				&& $self->{'qdata'}->{'user_state'}->{'fp'} eq $param->{'fp'} ) {
+
+			my $up_dir = "$Drive::sys_root$sys{'user_dir'}/$param->{'session'}/$param->{'name'}";
+# $self->logger->dump(Dumper($param));
+			mkpath( $up_dir, { mode => 0775 } ) unless -d( $up_dir );		# Prepare storage, if need
+			my $done = $self->getUpload($up_dir);
+# $self->logger->dump(Dumper($done));
+			if ( ref($done) eq 'ARRAY' ) {
+				foreach my $frow ( @$done ) {			# Some postflights
+					$frow->{'field'} = $param->{'name'};
+					$frow->{'url'} = $sys{'user_dir'};
+					$frow->{'url'} =~ s/^$sys{'url_prefix'}//;
+					$frow->{'url'} = "$frow->{'url'}/$param->{'session'}/$param->{'name'}/$frow->{'filename'}";
+				}
+				$out->{'json'}->{'data'} = $done ;
+				$out->{'json'}->{'code'} = scalar(@$done);
+			} else {
+				$out->{'json'}->{'fail'} = $done;
+			}
 		}
-	}
 
-	$templates->{'register'}->param($param);
-	$templates->{'register'}->param($self->{'qdata'}->{'user_state'});
-	my $out = decode_utf8($templates->{'register'}->output());
+	} else {
+		$param->{'uploads'} = [ grep { $_->{'type'} eq 'file' } @$struct ];
+
+
+		$param->{'email'} = $param->{'login'} if $param->{'login'} =~ /\w+@\w+/;
+		foreach my $sparam ( qw(user_mode user_type) ) {
+			while( my($p,$v) = each( %{$sys{$sparam}} ) ) {
+				$param->{$p} = $v->{'value'};
+			}
+		}
+
+		$templates->{'register'}->param($param);
+		$templates->{'register'}->param($self->{'qdata'}->{'user_state'});
+		$out = decode_utf8($templates->{'register'}->output());
+
+	}
 	return $out
 }
 #############################
@@ -264,6 +306,41 @@ my $self = shift;
 		$ret_state = 2;
 	}
 	return $ret_state;
+}
+#############################
+sub getUpload {				# Decompose file uploads
+#############################
+my $self = shift;
+my $path = shift;
+my $res;
+	if ( $self->req->{'finished'} ) {
+		foreach my $part ( @{$self->req->content->parts} ) {
+			my $finfo;
+			my $descriptor = $part->headers->content_disposition;
+			foreach my $data ( (split(/;/, $descriptor)) ) {
+				next unless $data =~ /=/;
+				my ($name, $value) = split(/=/, $data);
+				$name =~ s/^\s+|\s+$//g;
+				$value =~ s/^["']|["']$//g;
+				$finfo->{$name} = decode_utf8($value);
+			}
+
+			if ( $finfo->{'filename'} ) {
+				eval { $part->asset->move_to("$path/$finfo->{'filename'}") };
+				if ( $@ ) {
+					$res = $@;
+					last;
+				}
+				chmod(0666, "$path/$finfo->{'filename'}");
+				push( @$res, {'filename' => $finfo->{'filename'}, 'size'=> $part->asset->size(),
+							'mime' => $part->headers->content_type} );
+			}
+		}		# For each parts
+
+	} else {
+		$res = "Upload not finished";
+	}
+	return $res;
 }
 #############################
 sub get_login {				# Query user id by some user information

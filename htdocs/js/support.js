@@ -1,6 +1,11 @@
 var d = document;
 var ontime;
-var djson;
+
+const httpStatus = {'403':'Доступ запрещен', '413':'Файл слишком велик', 
+				'502':'Не работает обработчик', '500':'Сбой программы сервера',
+				'503':'Сервер временно не может обрабатывать запросы',
+				'301':'Ресрурс перемещен',
+			};
 
 const mimeTypes = {'ttf':'application/x-font-ttf', 'ttc':'application/x-font-ttf', 'otf':'application/x-font-opentype', 
 				'woff':'application/font-woff', 'woff2':'application/font-woff2', 'svg':'image/svg+xml',
@@ -221,3 +226,93 @@ function setCookie(name, value, options) {		// https://learn.javascript.ru/cooki
 	}
 	document.cookie = updatedCookie;
 }
+
+var uploaderObject = function(params) {
+/*
+ * Объект-загрузчик файла на сервер.
+ * Передаваемые параметры:
+ * file	   - объект File (обязателен)
+ * url		- строка, указывает куда загружать (обязателен)
+ * fieldName  - имя поля, содержащего файл (как если задать атрибут name тегу input)
+ * onprogress - функция обратного вызова, вызывается при обновлении данных
+ *			  о процессе загрузки, принимает один параметр: состояние загрузки (в процентах)
+ * oncopmlete - функция обратного вызова, вызывается при завершении загрузки, принимает два параметра:
+ *			  uploaded - содержит true, в случае успеха и false, если возникли какие-либо ошибки;
+ *			  data - в случае успеха в него передается ответ сервера
+ *			  
+ *			  если в процессе загрузки возникли ошибки, то в свойство lastError объекта помещается
+ *			  объект ошибки, содержащий два поля: code и text
+ */
+
+	if( !(params.file && params.url) ) {
+		return false;
+	}
+
+	this.xhr = new XMLHttpRequest();
+	this.reader = new FileReader();
+	this.progress = 0;
+	this.uploaded = false;
+	this.successful = false;
+	this.lastError = false;
+	
+	let self = this;	
+	self.reader.onload = function() {
+			self.xhr.upload.addEventListener("progress", function(e) {
+				if (e.lengthComputable) {
+					self.progress = (e.loaded * 100) / e.total;
+					if(params.onprogress instanceof Function) {
+						params.onprogress.call(self, Math.round(self.progress));
+					}
+				}
+			}, false);
+
+			self.xhr.upload.addEventListener("load", function(){
+				self.progress = 100;
+				self.uploaded = true;
+			}, false);
+
+			self.xhr.upload.addEventListener("error", function(){			
+				self.lastError = {
+					code: 1,
+					text: 'Error uploading on server'
+				};
+			}, false);
+
+			self.xhr.onreadystatechange = function () {
+				let callbackDefined = params.oncomplete instanceof Function;
+				if (this.readyState == 4) {
+					if(this.status == 200) {
+						if(!self.uploaded) {
+							if(callbackDefined) {
+								params.oncomplete.call(self, false);
+							}
+						} else {
+							self.successful = true;
+							if(callbackDefined) {
+								params.oncomplete.call(self, true, this.responseText);
+							}
+						}
+					} else {
+						self.lastError = {
+							code: this.status,
+							text: 'HTTP response code is not OK ('+this.status+' - '+httpStatus[this.status]+')'
+						};
+						if(callbackDefined) {
+							params.oncomplete.call(self, false);
+						}
+					}
+				}
+			};
+
+			self.xhr.open("POST", params.url);
+
+			let formData = new FormData();
+			formData.append(params.fieldName, params.file, params.file.name);
+			for ( let fld in params.formData ) {
+				formData.append( fld, params.formData[fld] );
+			};
+			self.xhr.send(formData);
+		};
+
+	self.reader.readAsBinaryString(params.file);
+};

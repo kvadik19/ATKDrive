@@ -7,7 +7,7 @@
 	</user_mode>
 	<user_type>
 		<individual title="физическое лицо" value="1" name="individual" />
-		<entity title="юридическое лицо" value="2" name="entity" />
+		<entity title="юридическое лицо" value="0" name="entity" />
 	</user_type>
 
 	<user_state>
