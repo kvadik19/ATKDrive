@@ -1,5 +1,5 @@
 <div class="container">
-	<div class="panel">
+	<div id="login-body" class="panel">
 		<h1>Добро пожаловать<br>в личный кабинет АЛВЕ&nbsp;ТрансКарго</h1>
 		<div class="opts">
 		<div class="optgroup" id="regdata">

@@ -1,5 +1,5 @@
 <div class="container">
-	<form id="registration-body">
+	<form id="registration-body" class="panel">
 		<h1 class="registration__form--title">Регистрация</h1>
 		<p class="comment">* обозначены поля, обязательные для заполнения</p>
 
@@ -11,13 +11,13 @@
 		<div class="optgroup">
 			<label for="phone">Телефон*</label>
 			<input type="tel" name="phone" id="phone" class="udata form__input" 
-					placeholder="+7 (_ _ _) _ _ _ - _ _ - _ _" required/>
+						placeholder="+7 (_ _ _) _ _ _ - _ _ - _ _" required/>
 		</div>
 
 		<div class="optgroup">
 			<label for="email">E-mail*</label>
-			<input type="email" name="email" id="email" class="udata form__input" 
-					value="<TMPL_VAR NAME="email">" required/>
+			<input type="email" name="_email" id="_email" class="udata form__input" 
+						value="<TMPL_VAR NAME="email">" required/>
 		</div>
 
 		<div class="optgroup">
@@ -25,11 +25,11 @@
 				<label>Роль пользователя*</label>
 				<div class="optrow">
 					<div class="quant">
-					<input type="checkbox" name="umode" id="customer" class="udata" value="<TMPL_VAR NAME="customer">" checked />
+					<input type="checkbox" name="_umode" id="customer" class="udata" value="<TMPL_VAR NAME="customer">" required checked />
 					<label for="role-customer">Заказчик</label>
 					</div>
 					<div class="quant">
-					<input type="checkbox" name="umode" id="carrier" class="udata" value="<TMPL_VAR NAME="carrier">" />
+					<input type="checkbox" name="_umode" id="carrier" class="udata" value="<TMPL_VAR NAME="carrier">" required />
 					<label for="role-carrier">Перевозчик</label>
 					</div>
 				</div>
@@ -41,11 +41,11 @@
 				<label>Субъект гражданского права*</label>
 				<div class="optrow">
 					<div class="quant">
-					<input type="radio" name="usubj" id="entity" class="udata" value="<TMPL_VAR NAME="entity">" checked />
+					<input type="radio" name="_usubj" id="entity" class="udata" value="<TMPL_VAR NAME="entity">" required checked />
 					<label for="entity-radio">Юридическое лицо</label>
 					</div>
 					<div class="quant">
-					<input type="radio" name="usubj" id="individual" class="udata" value="<TMPL_VAR NAME="individual">" />
+					<input type="radio" name="_usubj" id="individual" class="udata" value="<TMPL_VAR NAME="individual">" required />
 					<label for="individual-radio">Физическое лицо</label>
 					</div>
 				</div>
@@ -60,10 +60,12 @@
 				<div class="fileholder" data-parent="<TMPL_VAR NAME="name">">
 				</div>
 				<div class="optrow">
-				<button class="add" type="button">Добавить файл</button>
+				<button id="up_<TMPL_VAR NAME="name">progr" class="pgbar add" type="button">Добавить файл</button>
 				</div>
 			</div>
 </TMPL_LOOP>
+		</div>
+
 		<p class="span-title__info">Нажимая кнопку Зарегистрировать, вы соглашаетесь с
 			<a href="#">условиями обработки персональных данных</a>
 		</p>
@@ -71,9 +73,24 @@
 			<button id="register" type="button" class="form__btn">Зарегистрировать</button>
 		</div>
 	</form>
+	<div id="alert" class="alert" style="display:none">
+		<h1>Внимание!</h1>
+		<p>Адрес электронной почты <span class="email"></span> уже зарегистрирован в системе.<br>
+			Вы можете продолжить регистрацию с этим адресом, но в этом случае позаботьтесь о том, 
+			чтобы у Ваших учетных записей были разные имена (login) для входа в систему.<br>
+			Если Вы попросту забыли пароль от учетной записи, воспользуйтесь кнопкой:
+		</p>
+		<div class="buttonbar">
+			<button type="button" class="form__btn" id="reset">Восстановить пароль</button>
+		</div>
+		<p>
+			Щелкните по окну, чтобы закрыть его.
+		</p>
+	</div>
 </div>
+
 <script type="text/javascript">
-let session = Date.now().toString();
+const session = '<TMPL_VAR NAME="session">';
 
 let comments = {
 		'director': {'summary': 'Примечание',
@@ -107,25 +124,55 @@ let comments = {
 	};
 
 let phoneFmt = function(i) {
-		i.value = i.value.replace(/^8/,'+7 ');
+		i.value = i.value.replace(/\D/g,'');
+		i.value = i.value.replace(/^[78]/,'+7 ');
 		i.value = i.value.replace(/^9/,'+7 9');
 		i.value = i.value.replace(/^\+7\s*\(?(\d{3})\)?/,'+7 ($1) ');
 		i.value = i.value.replace(/^\+7\s*\(?(\d{3})\)?\s*(\d{3})([^\-])/,'+7 ($1) $2-$3');
-		i.value = i.value.replace(/^\+7\s*\(?(\d{3})\)?\s*(\d{3})[\-\s](\d{2})([^\-])/,'+7 ($1) $2-$3-$4');
+		i.value = i.value.replace(/^\+7\s*\(?(\d{3})\)?\s*(\d{3})[\-\s](\d{2})([^\-]+)/,'+7 ($1) $2-$3-$4');
 		i.value = i.value.replace(/^\+7\s*\(?(\d{3})\)?\s*(\d{3})[\-\s](\d{2})[\-\s](\d{2}).+/,'+7 ($1) $2-$3-$4');
 	};
 
+let fadd = function(data) {
+		data.data.forEach( f =>{
+				let box = document.querySelector( 'div.fileholder[data-parent="'+f.field+'"]' );
+				let frow = box.querySelector('.filerow.optrow[data-name="'+f.filename+'"]');
+				if (frow) frow.parentNode.removeChild(frow);
+				frow = createObj('div',{'className':'filerow optrow','title':f.filename,
+											'data-field':f.field,'data-name':f.filename});
+				frow.appendChild(createObj('a',{'href':f.url,'innerText':f.filename,'target':'_blank'}));
+				frow.appendChild(createObj('button',{'type':'button','innerHTML':'&#10005;','className':'rm',
+						'onclick':function(e) { 
+								if ( confirm('Удалить '+f.filename+'?') ) {
+									flush({'code':'rm','session':session,'field':f.field,'filename':f.filename,'fp':getCookie('fp')},
+											document.location.origin+document.location.pathname, function(res) {
+													if ( res.match(/^[\{\[]/) ) {
+														res = JSON.parse(res);
+														if ( res.code == 1 ) {
+															frow.parentNode.removeChild(frow);
+														}
+													} else {
+														alert('Не удалось: '+res);
+													}
+												});
+								}
+							}
+					}));
+				box.appendChild(frow);
+			});
+	};
+
 function traceFile (host) {
-	let pBar = host.parentNode.querySelector('#'+host.id+'progr');
+	let pBar = document.getElementById(host.id+'progr');
 
 	let to_url = host.dataset.url;
-	pBar.style.display = 'block';
+	pBar.style.backgroundImage = "url('/img/progress_bar.png')";
+	pBar.style.backgroundSize = "5% 110%";
+	pBar.style.backgroundRepeat = "no-repeat";
+	pBar.style.backgroundPosition = "-1em center";
+
 	let updateProgress = function(bar, value) {
-							let width = bar.offsetWidth;
-							let bgrValue = value + 10;
-							bar.rel = value;
-							bar.style.backgroundSize = bgrValue+'% 110%';
-							bar.innerText = value+'%';
+							bar.style.backgroundSize = (value+10)+'% 110%';
 						};
 
 	let formData = {};			// Some special translations
@@ -142,7 +189,7 @@ function traceFile (host) {
 			
 			oncomplete: function(done, res) {
 				updateProgress(pBar, 100);
-				setTimeout( function() {updateProgress(pBar, 0); pBar.style.display='none'}, 2000 );
+				setTimeout( function() {updateProgress(pBar, 0); pBar.removeAttribute('style')}, 1500 );
 				let box = host.parentNode;
 				if( done && res.match(/^[\{\[]/) ) {
 					let data = JSON.parse(res);
@@ -169,6 +216,26 @@ function traceFile (host) {
 }
 
 document.addEventListener('DOMContentLoaded', function(e) {
+	document.getElementById('alert').onclick = function(e) {document.getElementById('alert').style.display = "none"};
+	document.getElementById('reset').onclick = function(e) {
+			document.getElementById('alert').style.display = "none";
+			let formData = { 'action':'reset', 'login':document.getElementById('_email').value,'fp':getCookie('fp') };
+			flush({'code':'checkin','data':formData}, document.location.origin+'/', function(resp) {
+					if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+					if ( resp.data.action === 'reset') {
+						if (resp.data.html_code ) {
+							let alrt = document.getElementById('ralert');
+							if ( !alrt ) {
+								alrt = createObj('div',{'id':'ralert','className':'alert','style.display':'none',
+												'onclick':function(e){ alrt.style.display = 'none' }});
+								document.querySelector('#main div.container').appendChild(alrt);
+							}
+							alrt.innerHTML = resp.data.html_code;
+							alrt.style.display = 'block';
+						}
+					}
+				});
+		};
 	document.querySelector('input[type="tel"]').onkeypress = function(e) {
 			if ( e.code.match(/^Key/) ) e.preventDefault();
 			phoneFmt(e.target);
@@ -191,6 +258,11 @@ document.addEventListener('DOMContentLoaded', function(e) {
 									res = JSON.parse(res);
 									if (res.code == 1) {
 										e.target.value = res.data.email;
+										if ( res.data.warn ) {
+											let alrt = document.getElementById('alert');
+											alrt.querySelector('span.email').innerText = res.data.email;
+											alrt.style.display = "block";
+										}
 									} else {
 										e.target.className += ' fail';
 									}
@@ -198,17 +270,59 @@ document.addEventListener('DOMContentLoaded', function(e) {
 							});
 		};
 
-	let fadd = function(data) {
-console.log(data.data);
-			data.data.forEach( f =>{
-					let box = document.querySelector( 'div.fileholder[data-parent="'+f.field+'"]' );
-					let frow = createObj('div',{'className':'filerow'});
-					frow.appendChild(createObj('a',{'href':f.url,'innerText':f.filename,'target':'_blank'}));
-					frow.appendChild(createObj('button',{'type':'button','innerHTML':'&#10005;','className':'rm'}));
-					box.appendChild(frow);
-				});
+	document.getElementById('register').onclick = function(e) {
+			let inpts = document.querySelectorAll('.udata');
+			let invalid;
+			let formData = {'files':[],'session':session,'fp':getCookie('fp')};
+			for ( nI=0; nI<inpts.length; nI++ ) {
+				let ui = inpts[nI];
+				if ( ui.type.match(/radio/i) ) {
+					formData[ui.name] = ui.form.elements[ui.name].value;
+				} else if ( ui.type.match(/check/i) ) {
+					formData[ui.name] = (formData[ui.name] ? formData[ui.name] : 0) + (ui.checked ? ui.value*1 : 0);
+				} else if( ui.value.replace(/\s/g,'').length == 0 ) {
+					invalid = ui;
+				} else if( ui.className.match(/fail/) ) {
+					invalid = ui;
+				} else {
+					formData[ui.name] = ui.value;
+				}
+			}
+			if ( invalid ) {
+				invalid.scrollIntoView(false);
+				invalid.focus();
+				return false;
+			} else {
+				document.querySelectorAll('.filerow').forEach( fr =>{
+						let row = {};
+						Object.keys(fr.dataset).forEach( k => {
+								row[k] = fr.dataset[k];
+							});
+						formData.files.push(row);
+					});
+				flush({'code':'register','data':formData}, document.location.origin+document.location.pathname, function(resp) {
+						if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+						if ( resp.code === '1') {
+							if (resp.data.html_code ) {
+								let alrt = document.getElementById('ralert');
+								if ( !alrt ) {
+									alrt = createObj('div',{'id':'ralert','className':'alert','style.display':'none',
+												'onclick':function(e) { document.location = document.location.origin+'/' }});
+									document.querySelector('#main div.container').appendChild(alrt);
+								}
+								alrt.scrollIntoView(false);
+								alrt.innerHTML = resp.data.html_code;
+								alrt.style.display = 'block';
+							}
+						} else {
+							console.log(resp.fail);
+							console.log(resp.warn);
+						}
+					});
+			}
 		};
-	document.querySelectorAll('div.upload_block').forEach( b =>{
+
+	document.querySelectorAll('div.upload_block').forEach( b => {
 			if ( comments[b.id] && comments[b.id].detail.length > 0 ) {
 				let det = createObj('details',{'open':true});
 				det.appendChild( createObj('summary',{'innerText':comments[b.id].summary}));
@@ -227,13 +341,13 @@ console.log(data.data);
 														this.dataset.url = document.location.origin+document.location.pathname;
 														traceFile(this) }, 
 												});
-				let pgbar = createObj('div',{'id':'up_'+b.id+'progr','className':'pgbar','innerText':'0%',
-												'style.width':'60%','style.fontSize':'80%' });
 				b.appendChild(uploader);
-				b.querySelector('button.add').parentNode.appendChild(pgbar);
 			}	
 			b.querySelector('button.add').onclick = function(e) {b.querySelector('input[type="file"]').click()};
 		});
+	if ( document.location.search ) {
+		try { history.pushState(null, null, document.location.origin+document.location.pathname) } catch(e) {};
+	}
 });
 
 //	U+2715	MULTIPLICATION X	&#10005;
