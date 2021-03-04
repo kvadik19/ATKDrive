@@ -5,6 +5,7 @@
 		<customer title="заказчик" value="2" name="customer" />
 		<both title="перевозчик/заказчик" value="3" name="both" />
 	</user_mode>
+
 	<user_type>
 		<individual title="физическое лицо" value="1" name="individual" />
 		<entity title="юридическое лицо" value="0" name="entity" />
@@ -13,11 +14,9 @@
 	<user_state>
 		<register allow="cabinet" title="В процессе регистрации" value="0" name="register" />
 		<confirm allow="none" title="Проверяется eMail" value="1" name="confirm" />
-		<signout allow="none" title="Клиент отписался" value="2" name="signout" />
-		<verify allow="cabinet" title="Проверяется администратором" value="3" name="verify" />
+		<verify allow="cabinet" title="Проверяется администратором" value="2" name="verify" />
+		<signout allow="none" title="Клиент отписался" value="3" name="signout" />
 		<rejected allow="cabinet" title="Отклонен администратором" value="4" name="rejected" />
 		<accepted allow="all" title="Утвержден администратором" value="5" name="accepted" />
 	</user_state>
-
-	<media_role import="1" logo="2" item="3" poster="4" thumbnail="5" comment="6" stuff="7" seealso="8" />
 </sys>

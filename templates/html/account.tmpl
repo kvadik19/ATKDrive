@@ -1,0 +1,29 @@
+<div class="container">
+	<h1 class="page__title">Настройки профиля</h1>
+	<div id="account-body" class="panel light wide">
+		<span class="section__title">Контактные данные</span>
+		<div class="opts">
+			<div class="optgroup wide">
+				<label for="compname">Наименование организации/ИП</label>
+				<input type="text" id="compname" class="form__input udata" value="<TMPL_VAR NAME="compname">" />
+			</div>
+			<div class="optgroup">
+				<label>Роль в перевозке*</label>
+				<div class="optrow">
+					<div class="quant">
+					<input type="checkbox" name="_umode" id="customer" class="udata" value="<TMPL_VAR NAME="customer">" required checked />
+					<label for="role-customer">Заказчик</label>
+					</div>
+					<div class="quant">
+					<input type="checkbox" name="_umode" id="carrier" class="udata" value="<TMPL_VAR NAME="carrier">" required />
+					<label for="role-carrier">Перевозчик</label>
+					</div>
+				</div>
+			</div>
+			<div class="optgroup">
+				<label for="corpname">ФИО представителя</label>
+				<input type="text" id="fullname" class="form__input udata" value="<TMPL_VAR NAME="fullname">" />
+			</div>
+		</div>
+	</div>
+</div>

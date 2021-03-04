@@ -27,7 +27,7 @@ our $dbh;
 sub startup {
 #################
 	my $self = shift;
-# kill( 'SIGUSR2', $mypid)
+# kill( 'SIGUSR2', getppid() )
 	$self->config( hypnotoad => { listen => [ "http://127.0.0.1:9210",
 											"https://127.0.0.1:9209" ],	# Need to be set in nginx map directive
 								workers => 2,		# two worker processes per CPU core

@@ -1,25 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-  <connect htlogin="exchangesite" host="https://atk.alvetk.ru/alve_test/hs/atk-api/getTest" js_wsocket="&lt;script type=&quot;text/javascript&quot;&gt;&#10;&#9;// Не забудьте указать данные для авторизации&#10;&#9;const URL = 'ws://username:password@atk.onpoz.ru/channel';&#10;&#10;&#9;let ask_ws = function(msg, callbk) {&#10;&#9;&#9;&#9;if (typeof(msg) === 'object') msg = JSON.stringify(msg);&#10;&#9;&#9;&#9;let agent = new WebSocket(URL);&#10;&#9;&#9;&#9;agent.onerror = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;console.log('WS Closed on error: ', evt);&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onclose = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;if ( evt.code != 1005 ) console.log('Something wrong with WS')&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onopen = function() {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.send( msg );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onmessage = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;let msg = evt.data;&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( msg.match(/^[\{\[].+[\]\}]$/s) ) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;try { msg = JSON.parse( evt.data );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;} catch(e) { console.log(e) };&#10;&#9;&#9;&#9;&#9;&#9;&#9;}&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( callbk ) callbk(msg);&#10;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;};&#10;&#10;&#9;let whenGotResponse = function(data) {&#10;&#9;&#9;&#9;console.log(data);&#10;&#9;&#9;&#9;console.log('При получении ответа он будет передан в функцию');&#10;&#9;&#9;};&#10;&#10;&#9;document.addEventListener('DOMContentLoaded', function(e) {&#10;&#9;&#9;&#9;// Подразумевается, что в странице есть элемент класса '.wsquery' для отправки ws-запроса&#10;&#9;&#9;&#9;document.querySelector('.wsquery').onclick = function(e) {&#10;&#9;&#9;&#9;&#9;&#9;let msg = {'description':'В этой переменной можно текст либо объект'};&#10;&#9;&#9;&#9;&#9;&#9;ask_ws( msg, whenGotResponse );&#10;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;});&#10;&lt;/script&gt;&#10;" port="25202" ping_msg="{&quot;code&quot;:&quot;GET_USERS&quot;,&quot;data&quot;:&quot;635543&quot;}" htpasswd="000000"/>
-  <utable name="_uid" scr="" type="int(11)" title="Внутренний идентификатор для шлюза"/>
+  <utable name="_uid" type="int(11)" scr="" title="Внутренний идентификатор для шлюза"/>
   <utable name="_fp" scr="" type="char(32)" title="Идентификатор сесии клиента"/>
-  <utable name="_ip" scr="" type="bigint(20)" title="IP-адрес последнего запроса клиента"/>
-  <utable name="_hash" scr="" type="char(64)" title="Идентификатор для входа по ссылке"/>
-  <utable type="tinyint(4)" title="Состояние регистрации клиента" name="_ustate" scr=""/>
-  <utable name="_ltime" scr="" title="Время последнего запроса, unixtime" type="int(10)"/>
-  <utable name="_rtime" scr="" title="Время регистрации, unixtime" type="int(10)"/>
-  <utable type="char(32)" title="MD5 пароля клиента" name="_pwd" scr=""/>
-  <utable scr="1" name="_login" type="char(128)" title="Login при регистрации"/>
-  <utable name="_email" scr="1" type="char(128)" title="eMail при регистрации"/>
-  <utable title="Субъект гражданского права" type="tinyint(4)" name="_usubj" scr="1"/>
-  <utable scr="1" name="_umode" title="Тип клиента 1С" type="tinyint(4)"/>
-  <utable type="char(128)" title="Фамилия, имя, отчество" scr="1" name="fullname"/>
-  <utable title="Основной номер телефона" type="char(20)" scr="1" name="phone"/>
-  <utable type="file" title="Скан паспорта" scr="1" name="passport"/>
-  <utable type="file" title="Документ о назначении руководителя" scr="1" name="director"/>
-  <utable name="ustav" scr="1" title="Устав в последней редакции" type="file"/>
-  <utable title="Свидетельство о государственной регистрации" type="file" scr="1" name="ogrn"/>
-  <utable type="file" title="Свидетельство о постановке на учет в налоговом органе (ИНН)" scr="1" name="inn"/>
-  <utable scr="1" name="egrul" title="Выписка из Единого государственного реестра юридических лиц (ЕГРЮЛ)" type="file"/>
-  <utable title="Уведомление Территориального органа Федеральной службы государственной статистики" type="file" scr="1" name="stat"/>
+  <utable name="_ip" title="IP-адрес последнего запроса клиента" scr="" type="bigint(20)"/>
+  <utable scr="" type="char(64)" title="Идентификатор для входа по ссылке" name="_hash"/>
+  <utable name="_ustate" scr="" type="tinyint(4)" title="Состояние регистрации клиента"/>
+  <utable type="int(10)" scr="" title="Время последнего запроса, unixtime" name="_ltime"/>
+  <utable name="_rtime" type="int(10)" scr="" title="Время регистрации, unixtime"/>
+  <utable name="_pwd" type="char(32)" scr="" title="MD5 пароля клиента"/>
+  <utable title="Login при регистрации" scr="1" type="char(128)" name="_login"/>
+  <utable scr="1" type="char(128)" title="eMail при регистрации" name="_email"/>
+  <utable name="_usubj" title="Субъект гражданского права" type="tinyint(4)" scr="1"/>
+  <utable name="_umode" title="Тип клиента 1С" type="tinyint(4)" scr="1"/>
+  <utable name="_setup" title="Какие-то личные настройки клиента, JSON" scr="1" type="char(255)"/>
+  <utable type="char(128)" scr="1" title="Фамилия, имя, отчество" name="fullname"/>
+  <utable scr="1" type="char(128)" title="Наименование организации/ИП" name="compname"/>
+  <utable name="phone" title="Основной номер телефона" scr="1" type="char(20)"/>
+  <utable name="passport" title="Скан паспорта" type="file" scr="1"/>
+  <utable name="director" type="file" scr="1" title="Документ о назначении руководителя"/>
+  <utable title="Устав в последней редакции" scr="1" type="file" name="ustav"/>
+  <utable name="ogrn" scr="1" type="file" title="Свидетельство о государственной регистрации"/>
+  <utable scr="1" type="file" title="Свидетельство о постановке на учет в налоговом органе (ИНН)" name="inn"/>
+  <utable title="Выписка из Единого государственного реестра юридических лиц (ЕГРЮЛ)" type="file" scr="1" name="egrul"/>
+  <utable title="Уведомление Территориального органа Федеральной службы государственной статистики" scr="1" type="file" name="stat"/>
+  <connect port="25202" ping_msg="{&quot;code&quot;:&quot;GET_USERS&quot;,&quot;data&quot;:&quot;635543&quot;}" htpasswd="000000" host="https://atk.alvetk.ru/alve_test/hs/atk-api/getTest" htlogin="exchangesite" js_wsocket="&lt;script type=&quot;text/javascript&quot;&gt;&#10;&#9;// Не забудьте указать данные для авторизации&#10;&#9;const URL = 'ws://username:password@atk.onpoz.ru/channel';&#10;&#10;&#9;let ask_ws = function(msg, callbk) {&#10;&#9;&#9;&#9;if (typeof(msg) === 'object') msg = JSON.stringify(msg);&#10;&#9;&#9;&#9;let agent = new WebSocket(URL);&#10;&#9;&#9;&#9;agent.onerror = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;console.log('WS Closed on error: ', evt);&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onclose = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;if ( evt.code != 1005 ) console.log('Something wrong with WS')&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onopen = function() {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.send( msg );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onmessage = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;let msg = evt.data;&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( msg.match(/^[\{\[].+[\]\}]$/s) ) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;try { msg = JSON.parse( evt.data );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;} catch(e) { console.log(e) };&#10;&#9;&#9;&#9;&#9;&#9;&#9;}&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( callbk ) callbk(msg);&#10;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;};&#10;&#10;&#9;let whenGotResponse = function(data) {&#10;&#9;&#9;&#9;console.log(data);&#10;&#9;&#9;&#9;console.log('При получении ответа он будет передан в функцию');&#10;&#9;&#9;};&#10;&#10;&#9;document.addEventListener('DOMContentLoaded', function(e) {&#10;&#9;&#9;&#9;// Подразумевается, что в странице есть элемент класса '.wsquery' для отправки ws-запроса&#10;&#9;&#9;&#9;document.querySelector('.wsquery').onclick = function(e) {&#10;&#9;&#9;&#9;&#9;&#9;let msg = {'description':'В этой переменной можно текст либо объект'};&#10;&#9;&#9;&#9;&#9;&#9;ask_ws( msg, whenGotResponse );&#10;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;});&#10;&lt;/script&gt;&#10;"/>
 </config>

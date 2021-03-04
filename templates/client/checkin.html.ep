@@ -1,6 +1,8 @@
+%# Mojolicious template
+
 <div class="container">
 	<div id="login-body" class="panel">
-		<h1>Добро пожаловать<br>в личный кабинет АЛВЕ&nbsp;ТрансКарго</h1>
+		<h1 class="form__title">Добро пожаловать<br>в личный кабинет АЛВЕ&nbsp;ТрансКарго</h1>
 		<div class="opts">
 		<div class="optgroup" id="regdata">
 			<label for="login" data-type="text" data-ph="логин или eMail">Логин</label>
@@ -27,6 +29,14 @@
 	}
 	button.if {
 		display:none;
+	}
+	button.alter {
+		background-color: var(--panel-back);
+		border: 1px solid var(--panel-text);
+	}
+	button.alter:hover {
+		background: var(--panel-back-dk);
+		border-color: var(--panel-back-dk);
 	}
 </style>
 <script type="text/javascript">
@@ -102,6 +112,7 @@
 									}
 									alrt.innerHTML = resp.data.html_code;
 									alrt.style.display = 'block';
+									alrt.scrollIntoView(false);
 								}
 							}
 						} else {
@@ -115,13 +126,14 @@
 		};
 
 	let btns = [{'text':'Войти','action':'login'},
-				{'text':'Зарегистрироваться','action':'register'},
+				{'text':'Зарегистрироваться','action':'register','class':'alter'},
 				{'text':'Не помню пароль','action':'reset','class':'if'},
 			];
 	btns.forEach( d => {
 			let btn = createObj('button',{'type':'button','id':d.action,'innerText':d.text,
 										'className':'form__btn'+(d.class ? ' '+d.class : ''), 'onclick':lgAction } );
-			let bar = document.querySelector('#buttonbar .optrow'+(d.class ? '.'+d.class : ''));
+			let bar = document.querySelector('#buttonbar .optrow'+(d.class ? '.'+d.class : '')) 
+							|| document.querySelector('#buttonbar .optrow');
 			bar.appendChild(btn);
 		});
 </script>

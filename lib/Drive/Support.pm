@@ -255,7 +255,6 @@ sub utable {		# User registration tuneup
 			foreach my $def ( @$struct) {			# Actualize database to XML
 				my $hasCol = Drive::find_first( $ret->{'struct'}, sub { my $r = shift; return $r->{'name'} eq $def->{'field'}} );
 				if ( $hasCol < 0) {
-					$def->{'default'} = $struct->[$hasCol]->{'default'};
 					$deftype->( $def );			# Compose fields 'typet' and 'len'
 					$def->{'scr'} = ['1'];
 					push( @{$ret->{'struct'}}, $def);

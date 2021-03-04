@@ -1,6 +1,6 @@
 <div class="container">
-	<form id="registration-body" class="panel">
-		<h1 class="registration__form--title">Регистрация</h1>
+	<form id="registration-body" class="panel light">
+		<h1 class="form__title">Регистрация</h1>
 		<p class="comment">* обозначены поля, обязательные для заполнения</p>
 
 		<div class="optgroup">
@@ -22,7 +22,7 @@
 
 		<div class="optgroup">
 			<div class="registration__form--role">
-				<label>Роль пользователя*</label>
+				<label>Роль в перевозке*</label>
 				<div class="optrow">
 					<div class="quant">
 					<input type="checkbox" name="_umode" id="customer" class="udata" value="<TMPL_VAR NAME="customer">" required checked />
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 					});
 				flush({'code':'register','data':formData}, document.location.origin+document.location.pathname, function(resp) {
 						if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
-						if ( resp.code === '1') {
+						if ( resp.code == 1 ) {
 							if (resp.data.html_code ) {
 								let alrt = document.getElementById('ralert');
 								if ( !alrt ) {
@@ -310,9 +310,9 @@ document.addEventListener('DOMContentLoaded', function(e) {
 												'onclick':function(e) { document.location = document.location.origin+'/' }});
 									document.querySelector('#main div.container').appendChild(alrt);
 								}
-								alrt.scrollIntoView(false);
 								alrt.innerHTML = resp.data.html_code;
 								alrt.style.display = 'block';
+								alrt.scrollIntoView(false);
 							}
 						} else {
 							console.log(resp.fail);

@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
 					let menuW = this.popup.offsetWidth;
 					let menuH = this.popup.offsetHeight;
 					if (posX + menuW > window.innerWidth) posX = window.innerWidth - menuW - 20;
-					if (posY + menuH > window.outerHeight) posY = window.outerHeight - menuH - 20;
+					if (posY + menuH > window.scrollY+window.innerHeight) posY = window.scrollY+window.innerHeight - menuH - 20;
 					this.popup.style.left = posX+'px';
 					this.popup.style.top = posY+'px';
 					document.addEventListener('click', this.clickMenu);

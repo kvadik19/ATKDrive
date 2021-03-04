@@ -22,78 +22,142 @@ our %sys = %Drive::sys;
 
 use Data::Dumper;
 
-#########################
-sub checkin {		# 
-#########################
+#####################
+sub checkin {		#		Operations without authorization
+#####################
 my $self = shift;
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $param = $self->{'qdata'}->{'http_params'};
+	return $self->checked() if $udata->{'logged'} == 1;
 
+	my $logtime = time;
 	my $template = 'client/checkin';
-	$template = 'client/cabinet' if $udata->{'logged'} == 1;
+	$self->{'qdata'}->{'tags'}->{'page_title'} = '';
 
-	if ( $param->{'code'} ) {
+	if ( $param->{'code'} ) {			# Login panel buttons operations
 		unless ( $param->{'data'}->{'fp'} eq $udata->{'fp'} ) {
 			$self->redirect_to( 'cabinet', query => $param );
 			return;
 		}
-		my $json = {'code' => $param->{'code'}, 'data' => $param->{'data'} };
+		my $json = {'code' => $param->{'code'}, 'data' => { %{$param->{'data'}} } };		# Copy, not reference!
 		$json->{'data'}->{'state'} = 0;
-		if ( $param->{'code'} eq 'checkin' ) {
+
+		if ( $param->{'code'} eq 'checkin' ) {				# Buttons on login panel
 			if ( $param->{'data'}->{'action'} eq 'login' ) {
 				$json->{'data'}->{'state'} = $self->login_status();
+
 			} elsif( $param->{'data'}->{'action'} eq 'register' ) {
 				$json->{'data'}->{'point'} = $self->url_with('/register')->query($param->{'data'})->to_abs;
+
 			} elsif( $param->{'data'}->{'action'} eq 'reset' ) {
 				$json->{'data'}->{'html_code'} = $self->hash_door( $param->{'data'}->{'action'} );
 			}
-			$self->{'qdata'}->{'tags'}->{'page_title'} = "Under construction";
+
+		} elsif( $param->{'code'} eq 'apply') {			# Store user defined login/password
+			my $verify_state = $sys{'user_state'}->{'verify'}->{'value'};
+			my $sql = "UPDATE users SET ".
+						"_login='".Drive::mysqlmask($param->{'data'}->{'login'})."',".
+						"_pwd='".md5_sum($param->{'data'}->{'pwd'})."',".
+						"_fp='$udata->{'cookie'}->{'fp'}',".
+						"_ltime='$logtime',".
+						"_hash='',".
+						"_ustate=IF(_ustate>$verify_state,_ustate,$verify_state) ".
+					"WHERE _uid='$param->{'data'}->{'uid'}'";
+
+			eval { $self->dbh->do( $sql ) };
+			if ( $@ ) {
+				$self->logger->dump($sql, 2, 1);
+				$json->{'data'}->{'success'} = 0;
+				$json->{'fail'} = $@;
+			} else {
+				$json->{'data'}->{'success'} = 1;
+				$udata->{'logged'} = 1;
+				$udata->{'cookie'}->{'uid'} = $param->{'data'}->{'uid'};		# Mark as logged in
+			}
+
+		} elsif( $param->{'code'} eq 'find') {				# Search something in `users`
+			$json->{'data'} = {};
+			my $qry;
+			my $got;
+			while( my ($fld,$val) = each( %{$param->{'data'}}) ) {
+				next if $fld eq 'fp';		# Omit special parameter
+				$qry .= " AND $fld='$val'";
+			}
+			$qry =~ s/^ AND //;
+			eval { $got = $self->dbh->selectrow_arrayref("SELECT _uid FROM users WHERE $qry LIMIT 0,1") };
+			$json->{'data'} = {'got' => scalar(@$got) } if $got;
+			$json->{'fail'} = $@ if $@;
 		}
+
 		$self->render( type => 'application/json', json => $json );
 		return;
 
-	} else {
-		$self->render( template => $template, status => $self->stash('http_state') );
+	} elsif ( $param->{'h'} && $param->{'t'} ) {			# `Secret url` is used to set/restore login/password
+		my $urec;
+		my $time = Time::HiRes::time();
+		$time -= $sys{'reg_timeout'} * 60 * 60;
+
+		my $ustate;
+		while ( my ($key, $val) = each( %{$sys{'user_state'}} ) ) {
+			$ustate->{$key} = $val->{'value'};
+		}
+		if ($time <= $param->{'t'}) {			# Check for link actuality
+			my $hash = $param->{'h'}.md5_sum($param->{'t'});
+			$urec = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE _hash='$hash'", {Slice=>{}})->[0];
+			$urec->{'reject'} = $param->{'r'} if $param->{'r'};
+										# User has rejected our registration. SOME ACTIONS ALSO MUST BE HERE!
+		}
+		$self->stash( 'udata' => $urec,
+					'ustate' => $ustate,
+					'sys' => \%sys,
+					);
+		$template = 'client/hashref'
 	}
+
+	$self->render( template => $template, status => $self->stash('http_state') );
 }
 #################
-sub checked {	# All of operations dispatcher
+sub checked {	# All of operations dispatcher for authorized user
 #################
 my $self = shift;
-# $self->logger->dump("Do Checked",2,1);
-# $self->logger->dump(Dumper($self->{'qdata'}),2,1);
-# 
-	unless ( length($self->{'qdata'}->{'user_state'}->{'fp'}) == 32 ) {
-		$self->redirect_to( 'cabinet', query => $self->{'qdata'}->{'http_params'} );
+	my $udata = $self->{'qdata'}->{'user_state'};
+	my $param = $self->{'qdata'}->{'http_params'};
+
+	unless ( $udata->{'logged'} == 1 ) {
+		$self->redirect_to( 'cabinet', query => $param );
 		return;
 	}
 
-	my $action = shift( @{$self->{'qdata'}->{'stack'}} );
+	my $urec = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE _uid='$udata->{'cookie'}->{'uid'}'", {Slice=>{}})->[0];
+	$udata->{'setup'} = decode_json( $urec->{'_setup'} ) if $urec->{'_setup'} =~ /^\{.+\}$/;
+
+	my $action = $udata->{'setup'}->{'start'};
+	$action =~ s/^\///g;
+	$action = shift( @{$self->{'qdata'}->{'stack'}} ) || $action || 'account';		# Default user path
 
 	my $template = 'main';
-	my $out = "404 : Page $action not found yet";
 	unless ( $templates->{$action} ) {
-		my $templ;
-		eval {
-			$templ = HTML::Template->new(
-					filename => "$Drive::sys_root$sys{'html_dir'}/$action.tmpl",
-					die_on_bad_params => 0,
-					die_on_missing_include => 0,
-				);
-			};
-		if ( $@ ) {
-			$self->logger->dump("Template $action: $@");
-		} else {
-			$templates->{$action} = $templ;
-		}
+		if ( -e("$Drive::sys_root$sys{'html_dir'}/$action.tmpl") ) {
+			my $templ;
+			eval {
+				$templ = HTML::Template->new(
+						filename => "$Drive::sys_root$sys{'html_dir'}/$action.tmpl",
+						die_on_bad_params => 0,
+						die_on_missing_include => 0,
+					);
+				};
+			if ( $@ ) {
+				$self->logger->dump("Template $action: $@");
+			} else {
+				$templates->{$action} = $templ;
+			}
+		}		# .tmpl found?
 	}
 
+	my $out = "404 : Page $action not found yet";
 	eval { $out = $self->$action };
-	if ( $@) {			# sub is not defined (yet?)
-		$self->logger->dump("$action : $@", 3);
-		$self->stash( 'http_state' => 404 );
-		$self->{'qdata'}->{'tags'}->{'page_title'} = $out;
-		$template = 'exception';
+	if ( $@) {			# Special sub is not defined (yet?)
+		$out = $self->process($action);		# Process queries based on template
 	}
 
 	if ( ref($out) eq 'HASH' ) {
@@ -121,9 +185,45 @@ my $self = shift;
 	return {'redirect' => 'cabinet'};
 }
 #################
-sub cabinet {	# Main user operations form
+sub process {	# Main user operations form
 #################
 my $self = shift;
+my $action = shift;
+my $out = {'html_code' => "<h1>Process $action</h1>"};
+	my $param = $self->{'qdata'}->{'http_params'};
+	my $udata = $self->{'qdata'}->{'user_state'};
+
+	if ( $templates->{$action} ) {
+		$templates->{$action}->param($param);
+		$templates->{$action}->param($udata);
+		$out = decode_utf8($templates->{$action}->output());
+		my $dom = Mojo::DOM->new( $out );
+		my $title = $dom->find('h1')->[0];
+		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
+	} else {
+		$self->logger->dump("Undefined processor for '$action'", 3);
+	}
+
+	return $out;
+}
+#################
+sub account {	# Setup user account form
+#################
+my $self = shift;
+my $out;
+
+	my $param = $self->{'qdata'}->{'http_params'};
+	my $udata = $self->{'qdata'}->{'user_state'};
+
+	$templates->{'account'}->param($param);
+	$templates->{'account'}->param($udata);
+	$out = decode_utf8($templates->{'account'}->output());
+
+	my $dom = Mojo::DOM->new( $out );
+	my $title = $dom->find('h1')->[0];
+	$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
+
+	return $out;
 }
 #################
 sub register {		# User registration/personal data form
@@ -186,9 +286,10 @@ my $out;
 
 		} elsif( $param->{'code'} eq 'register' 
 				&& $udata->{'fp'} eq $param->{'data'}->{'fp'} ) {
+
 			my $fields = '_ustate,_fp,_rtime,_ltime,_ip';
 			my $values = "'$sys{'user_state'}->{'register'}->{'value'}','$udata->{'fp'}',$now,$now,$udata->{'ip'}";
-			foreach my $fld ( @$struct ) {
+			foreach my $fld ( @$struct ) {				# Store only storable values!
 				if ( exists( $param->{'data'}->{$fld->{'name'}}) ) {
 					$fields .= ",$fld->{'name'}";
 					my $val = $param->{'data'}->{$fld->{'name'}};
@@ -196,13 +297,16 @@ my $out;
 					$values .= ",'$val'";
 				}
 			}
-			eval { $self->dbh->do("INSERT INTO users ($fields) VALUES ($values)") };
+			my $uid;		# Newly added user ID
+			eval {	$self->dbh->do("INSERT INTO users ($fields) VALUES ($values)");
+					$uid = $self->dbh->selectrow_arrayref( "SELECT _uid FROM users WHERE _fp='$udata->{'fp'}'")->[0];
+				};
+
 			if ( $@ ) {
 				$out->{'json'}->{'fail'} = $@;
 				$self->logger->dump("New user: $@", 2);
-			} else {
-				my $uid = $self->dbh->{'mysql_insertid'};
-$self->logger->dump("Got uid $uid");
+
+			} elsif( $uid ) {			# Only when successed
 
 				$out->{'json'}->{'data'}->{'html_code'} = $self->hash_door( $param->{'code'}, $uid );
 				$out->{'json'}->{'code'} = 1;
@@ -218,34 +322,36 @@ $self->logger->dump("Got uid $uid");
 				my $values;
 				my $cnt = 0;
 				foreach my $file ( @{$param->{'data'}->{'files'}} ) {			# Move newly uploaded files onto place
-					my $fname = $file->{'name'};
-					if ( -e( "$up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$fname" ) ) {
+					if ( -e( "$up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$file->{'name'}" ) ) {
+						my $rfname = encode_utf8($file->{'name'});			# For use cyrillic in RegExp
 						my $idx = Drive::find_first( $mimes, sub { my $fr = shift;
-													return $fr =~ /^$file->{'field'}\/$fname/;
+													return $fr =~ /^$file->{'field'}\/$rfname/;
 												} );
 						if ( $idx > -1 ) {				# Ignore files without mimetype
 							chomp( $mimes->[$idx] );
 							$values .= "($uid,'$file->{'field'}',$cnt,$now,'"
-											.Drive::mysqlmask( $fname )
+											.Drive::mysqlmask( $file->{'name'} )
 											."','"
 											.substr( $mimes->[$idx], rindex($mimes->[$idx], "\t")+1 )
 											."'),";
 							mkpath( "$up_dir/$uid/$file->{'field'}", { mode => 0775 } ) unless -d( "$up_dir/$uid/$file->{'field'}" );
-							rename("$up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$fname",
-												"$up_dir/$uid/$file->{'field'}/$fname");
+							rename("$up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$file->{'name'}",
+												"$up_dir/$uid/$file->{'field'}/$file->{'name'}");
 							$cnt++;
 						}
-					} else {
-$self->logger->dump("Not -e $up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$fname");
 					}
 				}
-				if ( $values ) {
+				if ( $values ) {				# Have something to store?
 					$values =~ s/,$//;
 					eval { $self->dbh->do("INSERT INTO media ($fields) VALUES $values") };
 					if ( $@ ) {
 						$out->{'json'}->{'warn'} = $@;
 						$self->logger->dump("Media store: $@", 2);
 						$out->{'json'}->{'code'} = 0;
+					} else {
+						rmtree("$up_dir/$param->{'data'}->{'session'}", {error => \my $rm_err} );
+						$self->logger->dump( "rmtree : $up_dir/$param->{'data'}->{'session'}"
+												.join(', ', @$rm_err) ) if scalar( @$rm_err);
 					}
 				}
 			}			# Success users table update?
@@ -260,10 +366,12 @@ $self->logger->dump("Not -e $up_dir/$param->{'data'}->{'session'}/$file->{'field
 				$param->{$p} = $v->{'value'};
 			}
 		}
-
 		$templates->{'register'}->param($param);
 		$templates->{'register'}->param($self->{'qdata'}->{'user_state'});
 		$out = decode_utf8($templates->{'register'}->output());
+		my $dom = Mojo::DOM->new( $out );
+		my $title = $dom->find('h1')->[0];
+		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
 
 	}
 	return $out
@@ -281,7 +389,7 @@ my $uid = shift;
 
 	my $timestamp = Time::HiRes::time();
 	my $hash = $udata->{'fp'}.md5_sum($timestamp);
-	my $hashlink = "$udata->{'proto'}://$udata->{'host'}/cabinet?h=$udata->{'fp'}&t=$timestamp";
+	my $hashlink = "$udata->{'proto'}://$udata->{'host'}?h=$udata->{'fp'}&t=$timestamp";
 
 	my $mdata = {'link_accept' => $hashlink, 'link_reject' => "$hashlink&r=1",
 					'site_name' => $sys{'our_site'}, 'site_url' => $sys{'our_host'},
@@ -291,6 +399,7 @@ my $uid = shift;
 	if ( $uid ) {
 		$where = "_uid='$uid'";
 		$mdata->{'_email'} = $param->{'_email'};
+		$mdata->{'_ustate'} = $sys{'user_state'}->{'confirm'}->{'value'};
 		$mdata->{'_login'} = '';
 	} else {
 		my $urec = $self->get_login( $param->{'login'}, $param->{'pwd'} );
@@ -299,6 +408,7 @@ my $uid = shift;
 		} elsif( $urec->{'state'} == 4 ) {			# email match
 			$where = "_email='$param->{'login'}'";
 		}
+		$mdata->{'_ustate'} = $urec->{'_ustate'};
 		$mdata->{'_email'} = $urec->{'_email'};
 		$mdata->{'_login'} = $urec->{'_login'};
 	}
@@ -375,7 +485,7 @@ my $uid = shift;
 	} else {
 		$msg->send();			# Send via sendmail
 	}
-	$self->dbh->do("UPDATE users SET _hash='$hash',_ip='$udata->{'ip'}' WHERE $where");
+	$self->dbh->do("UPDATE users SET _hash='$hash',_ip='$udata->{'ip'}',_ustate='$mdata->{'_ustate'}' WHERE $where");
 
 	return $banner;
 }
@@ -439,9 +549,11 @@ my $res;
 sub get_login {				# Query user id by some user information
 #############################
 my ($self, $login, $pwd) = @_;
-	my $flist = '_uid,_fp,_email,_login,_pwd';
-	my $sql = "SELECT 1 AS state,$flist FROM users WHERE _login='$login' AND _pwd=MD5('$pwd')";
-	$sql .= " UNION SELECT 2 AS state,$flist FROM users WHERE _email='$login' AND _pwd=MD5('$pwd')";
+	$login = Drive::mysqlmask( $login);
+	$pwd = md5_sum( $pwd);
+	my $flist = '_uid,_fp,_email,_login,_pwd,_ustate';
+	my $sql = "SELECT 1 AS state,$flist FROM users WHERE _login='$login' AND _pwd='$pwd'";
+	$sql .= " UNION SELECT 2 AS state,$flist FROM users WHERE _email='$login' AND _pwd='$pwd'";
 	$sql .= " UNION SELECT 3 AS state,$flist FROM users WHERE _login='$login'";
 	$sql .= " UNION SELECT 4 AS state,$flist FROM users WHERE _email='$login'";
 	my $urec = $self->dbh->selectall_arrayref($sql, {Slice=>{}});

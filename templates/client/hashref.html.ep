@@ -1,0 +1,168 @@
+%# Mojolicious template
+
+<div class="container">
+	<div id="login-body" class="panel">
+% my $url = '/account';
+% my $uid;
+% if ( $udata->{'_uid'} && $udata->{'reject'} == 1 ) {
+% $url = '/';
+		<h1 class="form__title">Почтовый адрес будет игнорирован</h1>
+		<p>
+		Спасибо за понимание!<br>Мы никому более не позволим использовать этот почтовый адрес для обратной связи.<br>
+		При необходимости это изменить, <a href="mailto:<%== $sys->{'our_email'} %>">свяжитесь с нами любым способом</a>.
+		<p>
+% } elsif ( $udata->{'_uid'} && $udata->{'_ustate'} == $ustate->{'confirm'}) {
+% $uid = 1;
+		<h1 class="form__title">Завершение регистрации<br>в личном кабинете АЛВЕ&nbsp;ТрансКарго</h1>
+		<p>
+		Пожалуйста, придумайте оригинальное имя для входа в систему (логин) и надежный пароль
+		<p>
+		<div class="optgroup">
+			<label for="login">Логин</label>
+			<div class="optrow">
+				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" />
+			</div>
+			<label for="pwd">Пароль</label>
+			<div class="optrow">
+				<input id="pwd" type="password" class="form__input udata passwd" placeholder="Введите пароль" required />
+			</div>
+			<label for="pwd2">Пароль (еще раз)</label>
+			<div class="optrow">
+				<input id="pwd2" type="password" class="form__input udata passwd" placeholder="Повторите пароль" required />
+			</div>
+		</div>
+% } elsif ( $udata->{'_uid'} && $udata->{'_ustate'} > $ustate->{'confirm'} ) {
+% $uid = 1;
+		<h1 class="form__title">Восстановление пароля<br>в личном кабинете АЛВЕ&nbsp;ТрансКарго</h1>
+		<p>
+		Пожалуйста, придумайте надежный, но хорошо запоминающийся пароль.
+		<p>
+		<div class="optgroup">
+			<label for="login">Логин (не меняется)</label>
+			<div class="optrow">
+				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" value="<%== $udata->{'_login'} %>" disabled />
+			</div>
+			<label for="pwd">Пароль</label>
+			<div class="optrow">
+				<input id="pwd" type="password" class="form__input udata passwd" placeholder="Введите пароль" required />
+			</div>
+			<label for="pwd2">Пароль (еще раз)</label>
+			<div class="optrow">
+				<input id="pwd2" type="password" class="form__input udata passwd" placeholder="Повторите пароль" required />
+			</div>
+		</div>
+% } else {
+% $url = '/';
+		<h1 class="form__title">Данная ссылка недействительна</h1>
+% }
+		<div class="buttonbar" id="buttonbar">
+			<button id="done" class="form__btn">Продолжить</button>
+		</div>
+	</div>
+</div>
+% if ( $uid ) {
+	<div id="alert" class="alert" style="display:none">
+		<h1>Пожалуйста!</h1>
+		<p>Проверьте правильность заполнения всех полей
+		</p>
+		<p>
+			Щелкните по окну, чтобы закрыть его.
+		</p>
+	</div>
+<script type="text/javascript">
+const usr = '<%== $udata->{'_uid'} %>';
+document.addEventListener('DOMContentLoaded', function() {
+	document.querySelectorAll('input.passwd').forEach( inp => {
+			let vswitch = createObj('div',{'id':'vswitch','className':'pwd-vis','innerHTML':'&nbsp;',
+										'onclick':function(e){
+												let sw = 0;
+												let par = [
+															{'cIn':'hid$','cOut':'vis','iTyp':'password'},
+															{'cIn':'vis$','cOut':'hid','iTyp':'text'}
+														];
+												if ( e.target.className.match(/vis$/) ) sw = 1;
+												document.querySelectorAll('input.passwd').forEach( inp => {
+														let b = inp.nextElementSibling;
+														inp.type = par[sw].iTyp;
+														b.className = b.className.replace(RegExp(par[sw].cIn),par[sw].cOut);
+													});
+												e.target.previousElementSibling.focus();
+											}});
+			inp.parentNode.appendChild(vswitch);
+		});
+
+	let exists = function(e) {
+			let olen = e.target.value.length;
+			e.target.value = e.target.value.replace(/[\s%;]/g,'');
+			if ( e.target.value.length == 0 ) {
+				e.target.className = e.target.className.replace(/\s*warn/g,'');
+				e.target.title = null;
+				return;
+			} else if (e.target.value.length < olen ) {
+				return;
+			}
+
+			let formData = {'_login':e.target.value,'fp':getCookie('fp')};
+			flush( {'code':'find','data':formData}, document.location.origin, function(resp) {
+						if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+						if ( resp.code === 'find') {
+							if ( resp.fail ) {
+								console.log( resp.fail);
+							} else if( resp.data.got > 0 ) {
+								if ( !e.target.className.match(/warn/) ) {
+									e.target.className += ' warn';
+									e.target.title = 'Это имя уже кем-то используется';
+								}
+							} else {
+								e.target.className = e.target.className.replace(/\s*warn/g,'');
+								e.target.title = null;
+							}
+						}
+					});
+		};
+	document.getElementById('login').oninput = exists;
+	document.getElementById('login').onchange = exists;
+	document.getElementById('login').onpaste = exists;
+
+	document.getElementById('alert').onclick = function(e) { document.getElementById('alert').style.display = 'none'};
+	document.getElementById('done').onclick = function(e) {
+			e.stopImmediatePropagation();
+			let ok = ( document.getElementById('pwd').value.length > 0 );
+			ok = (ok && document.getElementById('pwd').value === document.getElementById('pwd2').value);
+			ok = (ok && !document.getElementById('login').className.match(/warn/));
+			if ( ok ) {
+				let formData = {'login':document.getElementById('login').value,
+								'pwd':document.getElementById('pwd').value,
+								'uid':usr,
+								'fp':getCookie('fp')};
+				flush( {'code':'apply','data':formData}, document.location.origin, function(resp) {
+							if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+							if ( resp.code === 'apply') {
+								if ( resp.fail ) {
+									alert('Сохранение не удалось!');
+									console.log( resp.fail);
+								} else if( resp.data.success == 1 ) {
+									document.location = '<%== $url %>';
+								} else {
+									alert('Сохранение не удалось!');
+									console.log( resp);
+								}
+							} else {
+								alert('Сохранение не удалось!');
+								console.log( resp);
+							}
+						});
+			} else {
+				document.getElementById('alert').style.display = 'block';
+				document.getElementById('alert').scrollIntoView(false);
+			}
+		};
+});
+</script>
+% } else {
+<script type="text/javascript">
+	document.getElementById('done').onclick = function(e) {
+			document.location = '<%== $url %>';
+		};
+</script>
+% }
