@@ -15,10 +15,11 @@ use Time::HiRes;
 use HTML::Template;
 use MIME::Lite;
 use Utils::NETS;
+use Drive::Media;
 
 our $templates;
 our $my_name = 'client';
-our %sys = %Drive::sys;
+our $sys = \%Drive::sys;
 
 use Data::Dumper;
 
@@ -54,7 +55,7 @@ my $self = shift;
 			}
 
 		} elsif( $param->{'code'} eq 'apply') {			# Store user defined login/password
-			my $verify_state = $sys{'user_state'}->{'verify'}->{'value'};
+			my $verify_state = $sys->{'user_state'}->{'verify'}->{'value'};
 			my $sql = "UPDATE users SET ".
 						"_login='".Drive::mysqlmask($param->{'data'}->{'login'})."',".
 						"_pwd='".md5_sum($param->{'data'}->{'pwd'})."',".
@@ -95,10 +96,10 @@ my $self = shift;
 	} elsif ( $param->{'h'} && $param->{'t'} ) {			# `Secret url` is used to set/restore login/password
 		my $urec;
 		my $time = Time::HiRes::time();
-		$time -= $sys{'reg_timeout'} * 60 * 60;
+		$time -= $sys->{'reg_timeout'} * 60 * 60;
 
 		my $ustate;
-		while ( my ($key, $val) = each( %{$sys{'user_state'}} ) ) {
+		while ( my ($key, $val) = each( %{$sys->{'user_state'}} ) ) {
 			$ustate->{$key} = $val->{'value'};
 		}
 		if ($time <= $param->{'t'}) {			# Check for link actuality
@@ -109,7 +110,7 @@ my $self = shift;
 		}
 		$self->stash( 'udata' => $urec,
 					'ustate' => $ustate,
-					'sys' => \%sys,
+					'sys' => $sys,
 					);
 		$template = 'client/hashref'
 	}
@@ -123,40 +124,36 @@ my $self = shift;
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $param = $self->{'qdata'}->{'http_params'};
 
-	unless ( $udata->{'logged'} == 1 ) {
+	while ( my($dir, $stat) = each( %{$udata->{'stats'}}) ) {
+		$sys->{$dir} = $stat;					# Some extra data to transfer into template
+	}
+
+	if ( $udata->{'logged'} == 1 ) {
+		my $urec = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE _uid='$udata->{'cookie'}->{'uid'}'", {Slice=>{}})->[0];
+		$urec->{'_setup'} = decode_json( $urec->{'_setup'} ) if $urec->{'_setup'} =~ /^\{.+\}$/;
+		while ( my ($fld, $val) = each( %$urec) ) {
+			$urec->{$fld} = Drive::mysqlmask( $val, 1) if $val =~ /\D/;
+		}
+		$udata->{'record'} = $urec;
+		my $upath = $urec->{'_setup'}->{'start'};		# Personal start page for root of site
+		$upath =~ s/^\///g;
+		$upath = [ split(/\//, $upath) ];
+		push( @{$self->{'qdata'}->{'stack'}}, @$upath) unless scalar( @{$self->{'qdata'}->{'stack'}} );
+
+	} elsif( $self->{'qdata'}->{'stack'}->[0] ne 'register' ) {
 		$self->redirect_to( 'cabinet', query => $param );
 		return;
 	}
 
-	my $urec = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE _uid='$udata->{'cookie'}->{'uid'}'", {Slice=>{}})->[0];
-	$udata->{'setup'} = decode_json( $urec->{'_setup'} ) if $urec->{'_setup'} =~ /^\{.+\}$/;
-
-	my $action = $udata->{'setup'}->{'start'};
-	$action =~ s/^\///g;
-	$action = shift( @{$self->{'qdata'}->{'stack'}} ) || $action || 'account';		# Default user path
-
+	my $action = shift( @{$self->{'qdata'}->{'stack'}} ) || 'account';		# Default user path
 	my $template = 'main';
-	unless ( $templates->{$action} ) {
-		if ( -e("$Drive::sys_root$sys{'html_dir'}/$action.tmpl") ) {
-			my $templ;
-			eval {
-				$templ = HTML::Template->new(
-						filename => "$Drive::sys_root$sys{'html_dir'}/$action.tmpl",
-						die_on_bad_params => 0,
-						die_on_missing_include => 0,
-					);
-				};
-			if ( $@ ) {
-				$self->logger->dump("Template $action: $@");
-			} else {
-				$templates->{$action} = $templ;
-			}
-		}		# .tmpl found?
-	}
+
+	$self->prepare_tmpl($action);
 
 	my $out = "404 : Page $action not found yet";
 	eval { $out = $self->$action };
 	if ( $@) {			# Special sub is not defined (yet?)
+		$self->logger->dump($@, 3);
 		$out = $self->process($action);		# Process queries based on template
 	}
 
@@ -178,6 +175,39 @@ my $self = shift;
 	$self->render( template => $template, status => $self->stash('http_state') );
 }
 #################
+sub prepare_tmpl {	# Prepare template
+#################
+my $self = shift;
+my $tmpname = shift;
+	my $tmpl_load = sub  { my $tfile = shift;
+							open( my $th, "< $tfile");
+							my $ttxt = decode_utf8(join('', <$th>));
+							close( $th);
+							my $templ;
+							eval {
+								$templ = HTML::Template->new(
+										scalarref => \$ttxt,
+										die_on_bad_params => 0,
+										die_on_missing_include => 0,
+									);
+								};
+							if ( $@ ) {
+								$self->logger->dump("Template $tmpname: $@");
+							} else {
+								$templates->{$tmpname} = {'tmpl' => $templ, 'upd' => (stat($tfile))[9]};
+							}
+						};
+
+	my $tmplfile = "$Drive::sys_root$sys->{'html_dir'}/$tmpname.tmpl";
+	if ( $templates->{$tmpname} ) {
+		if ( $templates->{$tmpname}->{'upd'} < (stat($tmplfile))[9] ) {			# Is too old template?
+			$tmpl_load->($tmplfile);
+		}
+	} elsif( -e( $tmplfile ) ) {
+		$tmpl_load->($tmplfile);
+	}
+}
+#################
 sub logout {	# Close user connection
 #################
 my $self = shift;
@@ -193,10 +223,12 @@ my $out = {'html_code' => "<h1>Process $action</h1>"};
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 
-	if ( $templates->{$action} ) {
-		$templates->{$action}->param($param);
-		$templates->{$action}->param($udata);
-		$out = decode_utf8($templates->{$action}->output());
+	if ( $templates->{$action} && $templates->{$action}->{'tmpl'} ) {
+		$templates->{$action}->{'tmpl'}->param($param);
+		$templates->{$action}->{'tmpl'}->param($udata);
+		$templates->{$action}->{'tmpl'}->param($sys);
+		$templates->{$action}->{'tmpl'}->param($udata->{'record'});
+		$out = $templates->{$action}->{'tmpl'}->output();
 		my $dom = Mojo::DOM->new( $out );
 		my $title = $dom->find('h1')->[0];
 		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
@@ -215,14 +247,152 @@ my $out;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 
-	$templates->{'account'}->param($param);
-	$templates->{'account'}->param($udata);
-	$out = decode_utf8($templates->{'account'}->output());
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+	my $conf_file = "$conf_dir/config.xml";
 
-	my $dom = Mojo::DOM->new( $out );
-	my $title = $dom->find('h1')->[0];
-	$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
+	my $struct = [];
+	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
 
+	if ( $param->{'code'} ) {
+		$out = { 'json' => {'code' => $param->{'code'}} };
+		if ( $param->{'code'} eq 'rpwd' ) {
+			my $pwold = md5_sum($param->{'data'}->{'pwd'});
+			my $pwnew = md5_sum($param->{'data'}->{'pwd1'});
+			my $res = $self->dbh->do("UPDATE users SET _pwd=? WHERE _uid=? AND _pwd=?",
+													undef, $pwnew, $udata->{'cookie'}->{'uid'}, $pwold  );
+			$out->{'json'}->{'data'} = {'success' => $res};
+
+		} elsif ( $param->{'code'} eq 'checkmail' ) {		# Precheck email address
+			$out->{'json'} = $self->check_email( $param->{'data'}->{'email'});
+
+		} elsif( $param->{'code'} eq 'commit' ) {
+			$out->{'json'} = $self->udata_commit( $udata->{'cookie'}->{'uid'} );
+		}
+
+	} else {
+		foreach my $sparam ( qw(user_mode user_type) ) {		# Add some defined codes
+			while( my($p,$v) = each( %{$sys->{$sparam}} ) ) {
+				$param->{$p} = $v->{'value'};
+			}
+		}
+		if ( $udata->{'record'}->{'_umode'} == $sys->{'user_mode'}->{'both'}->{'value'} ) {
+			$param->{"carrier_mark"} = 'checked';
+			$param->{"customer_mark"} = 'checked';			## Markup checkboxes
+		} else {
+			while ( my($mod, $def) =  each( %{$sys->{'user_mode'}} ) ) {
+				if ( $udata->{'record'}->{'_umode'} == $def->{'value'} ) {
+					$param->{"$mod\_mark"} = 'checked';
+				}
+			}
+		}
+
+		my $umedia = Drive::Media->medialist( qdata => $self->{'qdata'}, dbh => $self->dbh, logger => $self->logger );
+		$param->{'uploads'} = [grep { $_->{'type'} eq 'file' } @$struct];
+		$param->{'session'} = $udata->{'fp'};
+
+		foreach my $row ( @{$param->{'uploads'}} ) {
+			$row->{'list'} = [grep { $_->{'owner_field'} eq $row->{'name'} } @$umedia];
+		}
+		$templates->{'account'}->{'tmpl'}->param($param);
+		$templates->{'account'}->{'tmpl'}->param($sys);
+		$templates->{'account'}->{'tmpl'}->param($udata->{'record'});
+		$out = $templates->{'account'}->{'tmpl'}->output();
+
+		my $dom = Mojo::DOM->new( $out );
+		my $title = $dom->find('h1')->[0];
+		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
+
+
+	}
+	return $out;
+}
+#################
+sub udata_commit {		# Save registration/personal data form
+#################
+my $self = shift;
+my $uid = shift;
+	my $out = {'code' => 0};			# JSON will be returned
+	my $now = time;
+	my $exists = ( $uid > 0);
+
+	my $param = $self->{'qdata'}->{'http_params'};
+	my $udata = $self->{'qdata'}->{'user_state'};
+
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+	my $conf_file = "$conf_dir/config.xml";
+
+	my $struct = [];
+	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
+
+	my $db_update = {'_ustate' => $sys->{'user_state'}->{'register'}->{'value'},
+					'_fp' => $udata->{'fp'},
+					'_rtime' => $now,
+					'_ltime' => $now,
+					'_ip' => $udata->{'ip'}
+					};
+	foreach my $fld ( @$struct ) {				# Store only storable values!
+		if ( exists( $param->{'data'}->{$fld->{'name'}}) ) {
+			my $val = $param->{'data'}->{$fld->{'name'}};
+			$val = Drive::mysqlmask( $val ) if $fld->{'type'} =~ /^char/;
+			$db_update->{$fld->{'name'}} = $val;
+		}
+	}
+
+	my $sql;
+	if ( $exists) {
+		delete( $db_update->{'_fp'});
+		delete( $db_update->{'_rtime'});
+		my $updata;
+		while ( my($fld, $val) = each(%$db_update) ) {
+			$updata .= ",$fld='$val'";
+		}
+		$updata =~ s/^,//;
+		$sql = "UPDATE users SET $updata WHERE _uid=$uid";
+	} else {
+		my $fields = '';
+		my $values = '';
+		while ( my($fld, $val) = each(%$db_update) ) {
+			$fields .= ",$fld";
+			$values .= ",'$val'";
+		}
+		$fields =~ s/^,//;
+		$values =~ s/^,//;
+		$sql = "INSERT INTO users ($fields) VALUES ($values)";
+	}
+
+	eval {	$self->dbh->do($sql);
+			$uid = $self->dbh->selectrow_arrayref( "SELECT _uid FROM users WHERE _fp='$udata->{'fp'}'")->[0] unless $exists;
+		};
+
+	if ( $@ ) {
+		$out->{'fail'} = $@;
+		$self->logger->dump("Update user data: $@", 2);
+
+	} elsif( $uid > 0 ) {			# Only when successed
+		$out->{'data'}->{'html_code'} = $self->hash_door( 'register', $uid ) unless $exists;
+		$out->{'code'} = 1;
+
+		my $mres = Drive::Media->filesync( qdata => $self->{'qdata'}, dbh => $self->dbh, logger => $self->logger );
+		if ( $mres ) {
+			$out->{'code'} = 0;
+			while ( my($k,$v) = each(%$mres) ) {
+				$out->{$k} = $v;
+			}
+		}
+
+	}			# Success users table update?
+	return $out;
+}
+#################
+sub check_email {		# Chack email availability
+#################
+my $self = shift;
+my $email = shift;
+	my $out = {'data' => {'email' => lc($email) } };
+	$out->{'code'} = Utils::NETS->email_good( \$out->{'data'}->{'email'} );
+	my $exists = $self->dbh->selectcol_arrayref("SELECT _uid FROM users WHERE _email='$out->{'data'}->{'email'}'"
+										." AND NOT _uid='$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'}'");
+	$out->{'data'}->{'warn'} = 'exists '.scalar(@$exists) if $exists;		# Check early used email
 	return $out;
 }
 #################
@@ -232,143 +402,44 @@ my $self = shift;
 my $out;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}");
+
+	if ( $udata->{'logged'} == 1 ) {
+		$self->prepare_tmpl('account');			# If Not loaded yet
+		return $self->account();
+	}
+
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";
 	my $now = time();
 
 	my $struct = [];
-	$struct = Drive::read_xml( $conf_file, 'config', 'to_encode' )->{'utable'};
+	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
 
 	if ( $param->{'code'} ) {			# AJAX request received?
 		$out = {'json' => {'code' => 0}};			# JSON will be returned
+		my $param_fp = $param->{'fp'} || $param->{'data'}->{'fp'};			# Must have 2-way fingerprint
+		return $out unless $udata->{'fp'} eq $param_fp;
 
-		if ( $param->{'code'} eq 'checkmail'  
-				&& $udata->{'fp'} eq $param->{'data'}->{'fp'} ) {		# Precheck email address
-			$out->{'json'}->{'data'} = {'email' => $param->{'data'}->{'email'}};
-			$out->{'json'}->{'code'} = Utils::NETS->email_good( \$out->{'json'}->{'data'}->{'email'} );
-			my $exists = $self->dbh->selectrow_arrayref("SELECT _uid FROM users WHERE _email='$out->{'json'}->{'data'}->{'email'}'");
-			$out->{'json'}->{'data'}->{'warn'} = 'exists' if $exists;		# Check early used email
+		if ( $param->{'code'} eq 'checkmail' ) {		# Precheck email address
+			$out->{'json'} = $self->check_email( $param->{'data'}->{'email'});
 
-		} elsif( $param->{'code'} eq 'rm' 
-				&& $udata->{'fp'} eq $param->{'fp'} ) {		# Remove uploaded
-			$out->{'json'}->{'filename'} = $param->{'filename'};
-			my $fname = "$Drive::sys_root$sys{'user_dir'}/$param->{'session'}/$param->{'field'}/$param->{'filename'}";
-			if ( -e($fname) ) {
-				if ( unlink($fname) ) {
-					$out->{'json'}->{'code'} = 1;
-				} else {
-					$out->{'json'}->{'fail'} = $!;
-				}
-			} else {
-				$out->{'json'}->{'fail'} = "File not found";
-			}
-			
-		} elsif( $param->{'code'} eq 'upload' 
-				&& $udata->{'fp'} eq $param->{'fp'} ) {
-			my $up_dir = "$Drive::sys_root$sys{'user_dir'}/$param->{'session'}/$param->{'name'}";
-			mkpath( $up_dir, { mode => 0775 } ) unless -d( $up_dir );		# Prepare storage, if need
-			my $done = $self->getUpload($up_dir);
-			if ( ref($done) eq 'ARRAY' ) {
-				open( my $fh, "+>> $Drive::sys_root$sys{'user_dir'}/$param->{'session'}/mime.types" );
-				foreach my $frow ( @$done ) {			# Some postflights
-					print $fh "$param->{'name'}/$frow->{'filename'}\t$frow->{'mime'}\n";
-					$frow->{'field'} = $param->{'name'};
-					$frow->{'url'} = $sys{'user_dir'};
-					$frow->{'url'} =~ s/^$sys{'url_prefix'}//;
-					$frow->{'url'} = "$frow->{'url'}/$param->{'session'}/$param->{'name'}/$frow->{'filename'}";
-				}
-				close($fh);
-				$out->{'json'}->{'data'} = $done ;
-				$out->{'json'}->{'code'} = scalar(@$done);
-			} else {
-				$out->{'json'}->{'fail'} = $done;
-			}
-
-		} elsif( $param->{'code'} eq 'register' 
-				&& $udata->{'fp'} eq $param->{'data'}->{'fp'} ) {
-
-			my $fields = '_ustate,_fp,_rtime,_ltime,_ip';
-			my $values = "'$sys{'user_state'}->{'register'}->{'value'}','$udata->{'fp'}',$now,$now,$udata->{'ip'}";
-			foreach my $fld ( @$struct ) {				# Store only storable values!
-				if ( exists( $param->{'data'}->{$fld->{'name'}}) ) {
-					$fields .= ",$fld->{'name'}";
-					my $val = $param->{'data'}->{$fld->{'name'}};
-					$val = Drive::mysqlmask( $val ) if $fld->{'type'} =~ /^char/;
-					$values .= ",'$val'";
-				}
-			}
-			my $uid;		# Newly added user ID
-			eval {	$self->dbh->do("INSERT INTO users ($fields) VALUES ($values)");
-					$uid = $self->dbh->selectrow_arrayref( "SELECT _uid FROM users WHERE _fp='$udata->{'fp'}'")->[0];
-				};
-
-			if ( $@ ) {
-				$out->{'json'}->{'fail'} = $@;
-				$self->logger->dump("New user: $@", 2);
-
-			} elsif( $uid ) {			# Only when successed
-
-				$out->{'json'}->{'data'}->{'html_code'} = $self->hash_door( $param->{'code'}, $uid );
-				$out->{'json'}->{'code'} = 1;
-
-				my $up_dir = "$Drive::sys_root$sys{'user_dir'}";
-				my $mimes;
-				if ( -e("$up_dir/$param->{'data'}->{'session'}/mime.types") ) {
-					open( my $fh, "< $up_dir/$param->{'data'}->{'session'}/mime.types" );
-					$mimes = [<$fh>];
-					close( $fh);
-				}
-				my $fields = 'owner_id,owner_field,ord,uptime,filename,mime';
-				my $values;
-				my $cnt = 0;
-				foreach my $file ( @{$param->{'data'}->{'files'}} ) {			# Move newly uploaded files onto place
-					if ( -e( "$up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$file->{'name'}" ) ) {
-						my $rfname = encode_utf8($file->{'name'});			# For use cyrillic in RegExp
-						my $idx = Drive::find_first( $mimes, sub { my $fr = shift;
-													return $fr =~ /^$file->{'field'}\/$rfname/;
-												} );
-						if ( $idx > -1 ) {				# Ignore files without mimetype
-							chomp( $mimes->[$idx] );
-							$values .= "($uid,'$file->{'field'}',$cnt,$now,'"
-											.Drive::mysqlmask( $file->{'name'} )
-											."','"
-											.substr( $mimes->[$idx], rindex($mimes->[$idx], "\t")+1 )
-											."'),";
-							mkpath( "$up_dir/$uid/$file->{'field'}", { mode => 0775 } ) unless -d( "$up_dir/$uid/$file->{'field'}" );
-							rename("$up_dir/$param->{'data'}->{'session'}/$file->{'field'}/$file->{'name'}",
-												"$up_dir/$uid/$file->{'field'}/$file->{'name'}");
-							$cnt++;
-						}
-					}
-				}
-				if ( $values ) {				# Have something to store?
-					$values =~ s/,$//;
-					eval { $self->dbh->do("INSERT INTO media ($fields) VALUES $values") };
-					if ( $@ ) {
-						$out->{'json'}->{'warn'} = $@;
-						$self->logger->dump("Media store: $@", 2);
-						$out->{'json'}->{'code'} = 0;
-					} else {
-						rmtree("$up_dir/$param->{'data'}->{'session'}", {error => \my $rm_err} );
-						$self->logger->dump( "rmtree : $up_dir/$param->{'data'}->{'session'}"
-												.join(', ', @$rm_err) ) if scalar( @$rm_err);
-					}
-				}
-			}			# Success users table update?
+		} elsif( $param->{'code'} eq 'commit' ) {
+			$out->{'json'} = $self->udata_commit(0);
 		}
 
 	} else {			# Prepare html for page
+		$param->{'_uid'} = 0;
 		$param->{'session'} = $udata->{'fp'};
 		$param->{'uploads'} = [ grep { $_->{'type'} eq 'file' } @$struct ];
 		$param->{'email'} = $param->{'login'} if $param->{'login'} =~ /\w+@\w+/;
 		foreach my $sparam ( qw(user_mode user_type) ) {
-			while( my($p,$v) = each( %{$sys{$sparam}} ) ) {
+			while( my($p,$v) = each( %{$sys->{$sparam}} ) ) {
 				$param->{$p} = $v->{'value'};
 			}
 		}
-		$templates->{'register'}->param($param);
-		$templates->{'register'}->param($self->{'qdata'}->{'user_state'});
-		$out = decode_utf8($templates->{'register'}->output());
+		$templates->{'register'}->{'tmpl'}->param($param);
+		$templates->{'register'}->{'tmpl'}->param($self->{'qdata'}->{'user_state'});
+		$out = $templates->{'register'}->{'tmpl'}->output();
 		my $dom = Mojo::DOM->new( $out );
 		my $title = $dom->find('h1')->[0];
 		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
@@ -385,21 +456,21 @@ my $uid = shift;
 	my $param = $self->{'qdata'}->{'http_params'}->{'data'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $message;
-	return $message unless -e("$Drive::sys_root$sys{'mail_dir'}/$action.tmpl");
+	return $message unless -e("$Drive::sys_root$sys->{'mail_dir'}/$action.tmpl");
 
 	my $timestamp = Time::HiRes::time();
 	my $hash = $udata->{'fp'}.md5_sum($timestamp);
 	my $hashlink = "$udata->{'proto'}://$udata->{'host'}?h=$udata->{'fp'}&t=$timestamp";
 
 	my $mdata = {'link_accept' => $hashlink, 'link_reject' => "$hashlink&r=1",
-					'site_name' => $sys{'our_site'}, 'site_url' => $sys{'our_host'},
-					'timeout' => $sys{'reg_timeout'}, 
+					'site_name' => $sys->{'our_site'}, 'site_url' => $sys->{'our_host'},
+					'timeout' => $sys->{'reg_timeout'}, 
 				};
 	my $where;
 	if ( $uid ) {
 		$where = "_uid='$uid'";
 		$mdata->{'_email'} = $param->{'_email'};
-		$mdata->{'_ustate'} = $sys{'user_state'}->{'confirm'}->{'value'};
+		$mdata->{'_ustate'} = $sys->{'user_state'}->{'confirm'}->{'value'};
 		$mdata->{'_login'} = '';
 	} else {
 		my $urec = $self->get_login( $param->{'login'}, $param->{'pwd'} );
@@ -416,7 +487,7 @@ my $uid = shift;
 	my $banner;
 	my $letter;
 	eval {
-		$letter = HTML::Template->new( filename => "$Drive::sys_root$sys{'mail_dir'}/$action.tmpl",
+		$letter = HTML::Template->new( filename => "$Drive::sys_root$sys->{'mail_dir'}/$action.tmpl",
 						die_on_bad_params => 0,
 						die_on_missing_include => 0,
 					);
@@ -475,12 +546,12 @@ my $uid = shift;
 	$htpart->add('X-Comment' => 'HTML-formatted message');
 	$msg->attach( $htpart );
 
-	if ( $sys{'smtp_host'} ) {			# sysd.conf settings
-		my ($usr, $pwd) = split(/:/, $sys{'smtp_login'} );
+	if ( $sys->{'smtp_host'} ) {			# sysd.conf settings
+		my ($usr, $pwd) = split(/:/, $sys->{'smtp_login'} );
 		if ( $usr && $pwd ) {
-			$msg->send('smtp', $sys{'smtp_host'}, Debug=>1, AuthUser=>$usr, AuthPass=>$pwd );	# Send via Authorized smtp
+			$msg->send('smtp', $sys->{'smtp_host'}, Debug=>1, AuthUser=>$usr, AuthPass=>$pwd );	# Send via Authorized smtp
 		} else {
-			$msg->send('smtp', $sys{'smtp_host'}, Debug=>1 );			# Send via free smtp
+			$msg->send('smtp', $sys->{'smtp_host'}, Debug=>1 );			# Send via free smtp
 		}
 	} else {
 		$msg->send();			# Send via sendmail
@@ -511,41 +582,6 @@ my $self = shift;
 	return $ret_state;
 }
 #############################
-sub getUpload {				# Decompose file uploads
-#############################
-my $self = shift;
-my $path = shift;
-my $res;
-	if ( $self->req->{'finished'} ) {
-		foreach my $part ( @{$self->req->content->parts} ) {
-			my $finfo;
-			my $descriptor = $part->headers->content_disposition;
-			foreach my $data ( (split(/;/, $descriptor)) ) {
-				next unless $data =~ /=/;
-				my ($name, $value) = split(/=/, $data);
-				$name =~ s/^\s+|\s+$//g;
-				$value =~ s/^["']|["']$//g;
-				$finfo->{$name} = decode_utf8($value);
-			}
-
-			if ( $finfo->{'filename'} ) {
-				eval { $part->asset->move_to("$path/$finfo->{'filename'}") };
-				if ( $@ ) {
-					$res = $@;
-					last;
-				}
-				chmod(0666, "$path/$finfo->{'filename'}");
-				push( @$res, {'filename' => $finfo->{'filename'}, 'size'=> $part->asset->size(),
-							'mime' => $part->headers->content_type} );
-			}
-		}		# For each parts
-
-	} else {
-		$res = "Upload not finished";
-	}
-	return $res;
-}
-#############################
 sub get_login {				# Query user id by some user information
 #############################
 my ($self, $login, $pwd) = @_;
@@ -553,9 +589,9 @@ my ($self, $login, $pwd) = @_;
 	$pwd = md5_sum( $pwd);
 	my $flist = '_uid,_fp,_email,_login,_pwd,_ustate';
 	my $sql = "SELECT 1 AS state,$flist FROM users WHERE _login='$login' AND _pwd='$pwd'";
-	$sql .= " UNION SELECT 2 AS state,$flist FROM users WHERE _email='$login' AND _pwd='$pwd'";
+	$sql .= " UNION SELECT 2 AS state,$flist FROM users WHERE LOWER(_email)='".lc($login)."' AND _pwd='$pwd'";
 	$sql .= " UNION SELECT 3 AS state,$flist FROM users WHERE _login='$login'";
-	$sql .= " UNION SELECT 4 AS state,$flist FROM users WHERE _email='$login'";
+	$sql .= " UNION SELECT 4 AS state,$flist FROM users WHERE LOWER(_email)='".lc($login)."'";
 	my $urec = $self->dbh->selectall_arrayref($sql, {Slice=>{}});
 	return shift( @$urec );
 }

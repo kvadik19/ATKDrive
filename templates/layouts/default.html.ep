@@ -42,7 +42,7 @@
 		}
 		window.on_mobile = <%= ($user->{'on_mobile'}) ? 'true' : 'false' %>;
 	</script>
-	<script type="text/javascript" src="/js/support.js?<%= $stats->{'js'} %>"></script>
+	<script type="text/javascript" src="/js/support.min.js?<%= $stats->{'js'} %>"></script>
 </head>
 <body>
 <header class="header">

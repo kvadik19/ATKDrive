@@ -27,7 +27,7 @@ our $dbh;
 sub startup {
 #################
 	my $self = shift;
-# kill( 'SIGUSR2', getppid() )
+# kill( 'SIGUSR2', $mypid)
 	$self->config( hypnotoad => { listen => [ "http://127.0.0.1:9210",
 											"https://127.0.0.1:9209" ],	# Need to be set in nginx map directive
 								workers => 2,		# two worker processes per CPU core
@@ -45,6 +45,9 @@ sub startup {
 	$r->websocket('/channel')->to( controller => 'support', action => 'wsocket', )->name('wsocket');
 	$r->any('/channel')->to( controller => 'support', action => 'hsocket', )->name('hsocket');
 
+	$r->route('/media')->to(controller => 'media', action => 'operate');
+	$r->route('/media/*path')->to(controller => 'media', action => 'operate');
+
 	$r->route('/drive')->to(controller => 'support', action => 'hello')->name('admin');
 	$r->route('/drive/*path')->to(controller => 'support', action => 'support');
 
@@ -53,6 +56,17 @@ sub startup {
 
 	%sys = readcnf("$sys_root/lib/Drive/sysd.conf");
 	add_xml( \%sys, "$sys_root/$sys{'conf_dir'}/dict.xml", 'sys');		# Some dictionaries
+
+	our $mimeTypes = {
+				'ttf'=>'application/x-font-ttf', 'ttc'=>'application/x-font-ttf', 'otf'=>'application/x-font-opentype', 
+				'woff'=>'application/font-woff', 'woff2'=>'application/font-woff2', 'svg'=>'image/svg+xml',
+				'tif'=>'image/tiff', 'tiff'=>'image/tiff', 'bmp'=>'image/x-ms-bmp',
+				'jpg'=>'image/jpeg', 'jpeg'=>'image/jpeg', 'jpe'=>'image/jpeg', 'png'=>'image/png', 'gif'=>'image/gif',
+				'sfnt'=>'application/font-sfnt', 'eot'=>'application/vnd.ms-fontobject','zip'=>'application/zip', 
+				};
+	while ( my($ext, $type) = each(%$mimeTypes) ) {		# Add mime types for render
+		$self->types->type( $ext => $type );
+	}
 
 	$logger = LOGGY->new(
 			filename => "$sys_root$sys{log_dir}/drive.log",
@@ -178,7 +192,7 @@ sub query_data {	#		Collect query data as hash
 	my $user_state = {};
 	$user_state = Drive::get_user( $self, );
 
-	my $stack = [ grep { $_ } split(/\//, lc($user_state->{'query'})) ];
+	my $stack = [ grep { $_ } split(/\//, $user_state->{'query'}) ];
 
 	return { 'http_params' => $http_params, 'user_state' => $user_state, 'stack' => $stack, 'method' => $self->req->method };
 }

@@ -41,7 +41,7 @@
 	@media screen and (min-width:1200px) {
 		#struct { font-size:14pt; }
 		.name { width:300px; }
-		.title { width:350px; }
+		.title { width:450px; }
 		.default { width:250px; }
 	}
 	.type {
@@ -74,6 +74,7 @@
 		flex-flow:row;
 		justify-content:flex-end;
 		width:100%;
+		margin:auto;
 	}
 	.screen {
 		width:30px;

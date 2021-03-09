@@ -7,23 +7,116 @@
 				<label for="compname">Наименование организации/ИП</label>
 				<input type="text" id="compname" class="form__input udata" value="<TMPL_VAR NAME="compname">" />
 			</div>
+
 			<div class="optgroup">
 				<label>Роль в перевозке*</label>
 				<div class="optrow">
 					<div class="quant">
-					<input type="checkbox" name="_umode" id="customer" class="udata" value="<TMPL_VAR NAME="customer">" required checked />
+					<input type="checkbox" name="_umode" id="customer" class="udata" value="<TMPL_VAR NAME="customer">" <TMPL_VAR NAME="customer_mark"> />
 					<label for="role-customer">Заказчик</label>
 					</div>
 					<div class="quant">
-					<input type="checkbox" name="_umode" id="carrier" class="udata" value="<TMPL_VAR NAME="carrier">" required />
+					<input type="checkbox" name="_umode" id="carrier" class="udata" value="<TMPL_VAR NAME="carrier">" <TMPL_VAR NAME="carrier_mark"> />
 					<label for="role-carrier">Перевозчик</label>
 					</div>
 				</div>
 			</div>
+
 			<div class="optgroup">
-				<label for="corpname">ФИО представителя</label>
+				<label for="fullname">ФИО представителя</label>
 				<input type="text" id="fullname" class="form__input udata" value="<TMPL_VAR NAME="fullname">" />
 			</div>
+
+			<div class="optgroup">
+				<label for="phone">Телефон</label>
+				<input type="tel" name="phone" id="phone" class="udata form__input" value="<TMPL_VAR NAME="phone">" 
+							placeholder="+7 (_ _ _) _ _ _ - _ _ - _ _" required/>
+			</div>
+
+			<div class="optgroup">
+				<label for="email">E-mail</label>
+				<input type="email" name="_email" id="_email" class="udata form__input" 
+							value="<TMPL_VAR NAME="_email">" required/>
+			</div>
+			<div class="optgroup">
+				<label for="login">Имя для входа&nbsp;(login)&nbsp;&#8212; не меняется</label>
+				<input type="text" name="_login" id="_login" class="form__input" 
+							value="<TMPL_VAR NAME="_login">" disabled/>
+			</div>
+			<div class="optgroup">
+				<label for="rpwd">&nbsp;</label>
+				<button type="button" id="rpwd" class="form__btn small">Сменить пароль</button> 
+			</div>
+		</div>
+
+		<br clear="all">
+		<span class="section__title">Копии документов</span>
+		<div id="upload_section">
+<TMPL_LOOP NAME="uploads">
+			<div class="upload_block" id="<TMPL_VAR NAME="name">">
+				<span class="block_header"><TMPL_VAR NAME="title"></span>
+				<div class="fileholder" data-parent="<TMPL_VAR NAME="name">">
+	<TMPL_LOOP NAME="list">
+				<div class="filerow optrow" title="<TMPL_VAR NAME="filename">" data-name="<TMPL_VAR NAME="filename">"
+								data-id="<TMPL_VAR NAME="id">" data-field="<TMPL_VAR NAME="owner_field">">
+					<a href="/media/<TMPL_VAR NAME="owner_field">/<TMPL_VAR NAME="filename">" target="_blank">
+							<TMPL_VAR NAME="filename"></a>
+					<input type="text" class="form__input" data-role="title" value="<TMPL_VAR NAME="title">"
+							placeholder="Добавьте описание, если нужно" />
+					<button type="button" class="rm">&#10005;</button>
+				</div>
+	</TMPL_LOOP>
+				</div>
+				<div class="optrow">
+				<button id="up_<TMPL_VAR NAME="name">progr" class="pgbar add" type="button">Добавить файл</button>
+				</div>
+			</div>
+</TMPL_LOOP>
+		</div>
+
+		<p class="span-title__info">Нажимая кнопку Сохранить, вы соглашаетесь с
+			<a href="#">условиями обработки персональных данных</a>
+		</p>
+		<div class="buttonbar">
+			<button id="commit" type="button" class="form__btn">Сохранить</button>
 		</div>
 	</div>
 </div>
+<div id="alert" class="alert" style="display:none">
+	<h1>Внимание!</h1>
+	<p>Адрес электронной почты <span class="email"></span> используется уже несколько раз.<br>
+		Чтобы при входе в систему попасть в нужную учетную запись, 
+		используйте соответствующие имена (login) для входа.<br>
+	</p>
+	<p>
+		Щелкните по окну, чтобы закрыть его.
+	</p>
+</div>
+<div class="panelmask" style="display:none">
+	<div id="login-body" class="panel bulb">
+		<h1>Смена пароля</h1>
+		<div class="optgroup wide">
+			<label for="pwd">Текущий пароль</label>
+			<div class="optrow">
+				<input id="pwd" type="password" class="form__input passwd" placeholder="Текущий пароль" required />
+			</div>
+			<label for="pwd1">Новый пароль</label>
+			<div class="optrow">
+				<input id="pwd1" type="password" class="form__input passwd" placeholder="Новый пароль" required />
+			</div>
+			<label for="pwd2">Новый пароль (еще раз)</label>
+			<div class="optrow">
+				<input id="pwd2" type="password" class="form__input passwd" placeholder="Повторите пароль" required />
+			</div>
+		</div>
+		<div class="buttonbar optrow" id="buttonbar">
+			<button id="nopwd" class="form__btn small">Отмена</button>
+			<button id="savepwd" class="form__btn small">Сохранить</button>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+const session = '<TMPL_VAR NAME="session">';
+const uid = '<TMPL_VAR NAME="_uid">';
+</script>
+<script type="text/javascript" src="/js/account.min.js?<TMPL_VAR NAME="js">"></script>

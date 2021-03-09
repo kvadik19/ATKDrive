@@ -4,7 +4,7 @@
 	<div id="login-body" class="panel">
 		<h1 class="form__title">Добро пожаловать<br>в личный кабинет АЛВЕ&nbsp;ТрансКарго</h1>
 		<div class="opts">
-		<div class="optgroup" id="regdata">
+		<div class="optgroup wide" id="regdata">
 			<label for="login" data-type="text" data-ph="логин или eMail">Логин</label>
 			<div class="optrow">
 			</div>
@@ -12,7 +12,7 @@
 			<div class="optrow">
 			</div>
 		</div>
-		<div class="optgroup" id="buttonbar">
+		<div class="optgroup wide" id="buttonbar">
 			<div class="optrow">
 			</div>
 			<div class="optrow if">

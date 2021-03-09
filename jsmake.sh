@@ -2,9 +2,9 @@
 home=/var/www/atk/htdocs/js
 if [ $# -ne 1 ]
 then
-	for scr in support
+	for scr in support account
 	do
-		if [ "$home/$scr.js" -nt "$home/$scr.min.js" ]
+		if [ ! -f "$home/$scr.min.js" ] || [ "$home/$scr.js" -nt "$home/$scr.min.js" ]
 		then
 			echo "Compile ${scr}.js -> $home/$scr.min.js..."
 			closure-compiler $home/$scr.js > $home/$scr.min.js

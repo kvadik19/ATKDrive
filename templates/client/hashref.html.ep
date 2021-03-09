@@ -17,10 +17,10 @@
 		<p>
 		Пожалуйста, придумайте оригинальное имя для входа в систему (логин) и надежный пароль
 		<p>
-		<div class="optgroup">
+		<div class="optgroup wide">
 			<label for="login">Логин</label>
 			<div class="optrow">
-				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" />
+				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" required />
 			</div>
 			<label for="pwd">Пароль</label>
 			<div class="optrow">
@@ -37,7 +37,7 @@
 		<p>
 		Пожалуйста, придумайте надежный, но хорошо запоминающийся пароль.
 		<p>
-		<div class="optgroup">
+		<div class="optgroup wide">
 			<label for="login">Логин (не меняется)</label>
 			<div class="optrow">
 				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" value="<%== $udata->{'_login'} %>" disabled />
