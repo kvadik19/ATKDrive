@@ -11,20 +11,30 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use File::Path qw(make_path mkpath remove_tree rmtree);
+use IO::Socket;
+use IO::Select;
+use POSIX;
 
 use Utils::NETS;
 use Time::HiRes qw( usleep );
 use HTML::Template;
 
-our $templates;
-our %sys = %Drive::sys;
+our $intercom;
+my $templates;
+my $sys = \%Drive::sys;
+my $use_fail = '';
+eval( 'use Class::Unload;use Class::Inspector' );
+$use_fail = $@ if $@;
+
 use Data::Dumper;
+
 
 #############################
 sub hello {					# Operations root menu
 #############################
 my $self = shift;
 	$self->{'qdata'}->{'layout'} = 'support';
+	$self->{'qdata'}->{'tags'}->{'page_title'} = '';
 	$self->render( template => 'drive/splash', status => $self->stash('http_state') );
 }
 #############################
@@ -68,7 +78,7 @@ my $self = shift;
 sub access {				# .htaccess file editor
 #############################
 my $self = shift;
-	my $auth_file = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}/.admin");
+	my $auth_file = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/.admin");
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = {'users' => [], 'auth_file' => $auth_file, 'magic_mask' => 8};
 
@@ -120,7 +130,7 @@ sub access_write {			# htpasswd operations
 	print $fh $fout;
 	close( $fh );
 	foreach my $usr ( @$assign ) {					# Generate and update passwords
-		my $fs = system($sys{'call_htpasswd'},'-b', $fn, $usr->{'name'}, $usr->{'pwd'});
+		my $fs = system($sys->{'call_htpasswd'},'-b', $fn, $usr->{'name'}, $usr->{'pwd'});
 		if ( $fs > 0 ) {
 			$self->logger->dump("Passwd operation '$usr->{'name'}' at '$fn':$!",2);
 			return $!;
@@ -129,11 +139,96 @@ sub access_write {			# htpasswd operations
 	return undef;
 }
 #####################
+sub query {			# Setup query translation tables
+#####################
+my $self = shift;
+	my $param = $self->{'qdata'}->{'http_params'};
+	my $ret = {'to_gate' => [], 'to_office' => []};
+
+	if ( $param->{'code'} ) {			# Some AJAX received
+		if ( $param->{'code'} eq 'watchdog' ) {		# Await incoming query for administrative purposes
+			$ret->{'json'} = {'code' => 'watching'};
+			if ( -e("$Drive::sys_root/watchgod") && -s("$Drive::sys_root/watchgod") ) {
+				open( my $fh, "< $Drive::sys_root/watchgod" );		# Read message reported by wsocket/hsocket
+				$ret->{'json'}->{'data'} = join('', <$fh>);
+				$ret->{'json'}->{'code'} = 'received';
+				close($fh);
+				unlink( "$Drive::sys_root/watchgod" );
+
+			} elsif ( $param->{'data'}->{'cleanup'} ) {
+				unlink( "$Drive::sys_root/watchgod" ) if -e("$Drive::sys_root/watchgod");
+			} else {
+				open( my $fh, "> $Drive::sys_root/watchgod" );		# Zeroing buffer file
+				close($fh);
+			}
+		}
+
+	} else {			# Prepare static page
+		my $qw_dir = "$Drive::sys_root/lib/Query";
+		if ( -d($qw_dir) ) {			#### Collect available <fromOfficeToGate> QueryDispatcher libs
+			opendir( my $dh, $qw_dir );
+			while (my $qw_lib = readdir($dh) ) {
+				next if $qw_lib =~ /^\./ || $qw_lib !~ /\.pm$/;
+				$qw_lib =~ s/\.pm$//;
+				$qw_lib = "Query::$qw_lib";
+				eval( "use $qw_lib" );
+				$self->logger->debug($@, 2) if $@;
+				my $module;
+				my $qw_info;
+				eval{ $module = $qw_lib->new(  dbh => $self->dbh, 
+												logger => $self->logger, 
+												qdata => $self->{'qdata'} );
+						$qw_info = $module->describe;
+					};
+				if ( $@ ) {
+					$self->logger->debug($@, 2);
+					push( @{$ret->{'to_gate'}}, {'fail' => $@} );
+				} else {
+					push( @{$ret->{'to_gate'}}, $qw_info );
+					$module->DESTROY();
+					Class::Unload->unload( $qw_lib ) unless $use_fail;
+				}
+			}
+			closedir( $dh );
+			push( @{$ret->{'to_gate'}}, {'fail' => 'No modules found'} ) unless scalar( @{$ret->{'to_gate'}});
+		} else {			# Gathering available libraries
+			push( @{$ret->{'to_gate'}}, {'fail' => "$qw_dir not exists"} );
+		}
+
+		$qw_dir = "$Drive::sys_root$sys->{'html_dir'}";			#### Collect available <fromUserPageToOffice> templates
+		if ( -d($qw_dir) ) {
+			opendir( my $dh, $qw_dir );
+			while (my $qw_tmpl = readdir($dh) ) {
+				next if $qw_tmpl =~ /^\./ || $qw_tmpl !~ /\.tmpl$/;
+				my $qw_info = {'name' => $qw_tmpl, 'title' => $qw_tmpl};
+
+				open( my $fh, "< $qw_dir/$qw_tmpl");
+				my $templ = decode_utf8( join('', <$fh>));
+				close( $fh);
+				next if $templ =~ /<!--\s*local\s*-->/i;
+
+				my $dom = Mojo::DOM->new( $templ );
+				my $title = $dom->find('h1')->[0];
+
+				$qw_info->{'name'} =~ s/\.tmpl$//;
+				$qw_info->{'title'} = $title->text() if $title;
+				push( @{$ret->{'to_office'}}, $qw_info );
+			}
+			closedir( $dh );
+			push( @{$ret->{'to_office'}}, {'fail' => 'No modules found'} ) unless scalar( @{$ret->{'to_gate'}});
+		} else {
+			push( @{$ret->{'to_office'}}, {'fail' => "$qw_dir not exists"} );
+		}
+	}
+
+	return $ret;
+}
+#####################
 sub connect {		# Setup interconnect settings
 #####################
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}");
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
@@ -200,7 +295,7 @@ sub utable {		# User registration tuneup
 	my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $ret = { 'struct'=>[], 'scr_num'=>1, };
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys{'conf_dir'}");
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";
 
 	my $config = {};
@@ -324,7 +419,7 @@ sub utable {		# User registration tuneup
 		my @date = Drive::timestr();			# Date (y,m,d,h,m,s,ms) for creating filenames
 		my $sql_text = '';
 		if ( scalar( @$sql_stack ) ) {
-			my $bkup_dir = Drive::upper_dir("$Drive::sys_root$sys{'bkup_dir'}");		# Backup tables
+			my $bkup_dir = Drive::upper_dir("$Drive::sys_root$sys->{'bkup_dir'}");		# Backup tables
 			my $bkup_file = "$date[0]-$date[1]-$date[2]_$date[3]-$date[4].dump";
 			mkpath( $bkup_dir, { mode => 0775 } ) unless -d( $bkup_dir );		# Prepare storage, if need
 
@@ -338,8 +433,8 @@ sub utable {		# User registration tuneup
 			}
 			
 			my $host = '';
-			$host = "-h $sys{'db_host'}" if $sys{'db_host'};
-			my $fs = `mysqldump $host -B $sys{'db_base'} -q -u $sys{'db_usr'} -p$sys{'db_pwd'} > $bkup_dir/$bkup_file`;
+			$host = "-h $sys->{'db_host'}" if $sys->{'db_host'};
+			my $fs = `mysqldump $host -B $sys->{'db_base'} -q -u $sys->{'db_usr'} -p$sys->{'db_pwd'} > $bkup_dir/$bkup_file`;
 			if ( $fs ) {
 				push( @{$ret->{'json'}->{'warn'}}, "Backup to $bkup_file: $fs");
 				$self->logger->dump("Backup to $bkup_dir/$bkup_file: $fs", 3) ;
@@ -384,6 +479,7 @@ sub utable {		# User registration tuneup
 		foreach my $def ( @$define ) {				# Prepare data to strore in XML
 			$def->{'_screen'} = join(',', @{$def->{'_screen'}}) if ref($def->{'_screen'}) eq 'ARRAY';
 			my $row = {'name'=>$def->{'name'}, 'type'=>$def->{'type'}, 'title'=>$def->{'title'}, 'scr'=>$def->{'_screen'}};
+			$row->{'link'} = $def->{'link'} if exists( $def->{'link'});
 			push( @{$config->{'utable'}}, $row);
 		}
 		my $res = Drive::write_xml( $config, $conf_file );
@@ -462,6 +558,12 @@ sub hsocket {		# Process http admin queries
 # $self->logger->dump(Dumper($self->req->content->asset),1,1);
 	my $msg_recv = $self->req->content->asset->{'content'};
 
+	if ( -e("$Drive::sys_root/watchgod") && -z("$Drive::sys_root/watchgod") ) {
+		open( my $fh, "> $Drive::sys_root/watchgod" );
+		print $fh $msg_recv;
+		close($fh);
+	}
+
 	if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 		my $qry;
 		eval{ $qry = decode_json( encode_utf8($msg_recv) )};
@@ -486,6 +588,12 @@ sub wsocket {		# Process websocket queries
 	$self->on( message => sub { my ( $ws, $msg_recv ) = @_;
 						my $msg_send = {'fail' => "418 : I'm a teapot"};
 
+	if ( -e("$Drive::sys_root/watchgod") && -z("$Drive::sys_root/watchgod") ) {
+		open( my $fh, "> $Drive::sys_root/watchgod" );
+		print $fh $msg_recv;
+		close($fh);
+	}
+
 						if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 							my $qry;
 							eval{ $qry = decode_json( encode_utf8($msg_recv) )};
@@ -507,6 +615,38 @@ sub wsocket {		# Process websocket queries
 	$self->on( finish => sub { my ( $ws, $code, $reason ) = @_;
 						$self->{'messenger'}->terminate() if $self->{'messenger'};
 					});
+}
+#####################
+sub listen {		# Open and listen socket
+#####################
+my ($self, $socket_name, $timeout) = @_;
+	my $msg;
+	my $socket = "$Drive::sys_root/$socket_name\_$$";
+
+	my $insock = IO::Socket::UNIX->new(
+		Local => $socket, 
+		Proto => 0, 
+		Type => SOCK_DGRAM, 
+		Listen => 3 );		# Create socket
+
+	if ( $@ ) {			# Check if SERVER socket success
+		$self->logger->debug("Create IN socket:$@", 1);
+	} else {
+		my $socks = IO::Select->new( $insock );
+		my ($ready, ) = $socks->can_read( $timeout );
+		if ( $ready ) {
+			$ready->recv($msg, $sys->{'inet_buffer'});
+			$msg =~ s/\n$//;
+		}
+		if ( $insock ) {
+			$insock->shutdown(0);
+			$insock->close();
+			undef $insock;
+		}
+		unlink( $socket ) if -e( $socket );
+	}			# Check if IN socket success
+
+	return $msg;
 }
 #####################
 sub reboot {		# Manually reboot backserver

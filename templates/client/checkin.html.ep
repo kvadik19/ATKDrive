@@ -55,13 +55,24 @@
 
 	document.querySelectorAll('#regdata >label').forEach( l => {
 			let inpt = createObj('input',{'type':l.dataset.type,'placeholder':'Введите '+l.dataset.ph,
-										'className':'form__input udata','id':l.htmlFor, 'required':true});
+										'className':'form__input udata','id':l.htmlFor, 'required':true,
+										'onkeypress':function(e) { 
+												if (e.key === 'Enter') {
+													let inpts = document.querySelectorAll('#regdata input.udata');
+													if ( e.target.isSameNode( inpts[inpts.length-1] ) ) {
+														lgAction( document.getElementById('login') );
+													} else {
+														inpts[inpts.length-1].focus();
+													}
+												}
+											} });
 			l.nextElementSibling.appendChild(inpt);
 			if ( inpt.type === 'password' ) l.nextElementSibling.appendChild(vswitch);
 			document.querySelector('input.udata').focus();
 		});
-	let lgAction = function(e) {
-			let btn = e.target;
+
+	let lgAction = function(btn) {
+			if ( btn.target ) btn = btn.target;
 			let formData = { 'action':btn.id, 'fp':getCookie('fp') };
 			document.querySelectorAll('input.udata').forEach( i => { formData[i.id] = i.value });
 			if ( btn.id != 'register' ) {
@@ -78,7 +89,7 @@
 				}
 			}
 			flush({'code':'checkin','data':formData}, document.location.href, function(resp) {
-					try { resp = JSON.parse(resp) } catch(e) { console.log(e); return };
+					try { resp = JSON.parse(resp) } catch(err) { console.log(err); return };
 					if ( resp.data.fail ) {
 						console.log(resp.data.fail);
 					} else if( resp.code === 'checkin' ) {

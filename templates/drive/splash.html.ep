@@ -2,8 +2,8 @@
 	<h4>Настройки</h4>
 	<div class="opts">
 		<a href="<%= url_for('admin') %>/connect" id="net" class="hlp">Коммуникация с офисом</a>
-		<a href="<%= url_for('admin') %>/templ" id="tmpl" class="hlp">Шаблоны экранов</a>
-		<a href="<%= url_for('admin') %>/dict" id="dict" class="hlp">Таблицы трансляции запросов</a>
+		<a href="<%= url_for('admin') %>/template" id="tmpl" class="hlp">Шаблоны экранов</a>
+		<a href="<%= url_for('admin') %>/query" id="qry" class="hlp">Таблицы трансляции запросов</a>
 		<a href="<%= url_for('admin') %>/utable" id="tbl" class="hlp">Структура регистрации клиента</a>
 		<a href="<%= url_for('admin') %>/access" id="acc" class="hlp">Доступ к настройкам</a>
 		<a href="<%= url_for('admin') %>/reboot" id="rbt" class="hlp">Перезагрузить интерфейс</a>

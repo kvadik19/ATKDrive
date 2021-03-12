@@ -226,6 +226,43 @@ function setCookie(name, value, options) {		// https://learn.javascript.ru/cooki
 	}
 	document.cookie = updatedCookie;
 }
+// Tab switching support
+function tabSwitch(tab) {		// Tab switcher 
+	if ( tab && tab.matches('.active') ) return false;
+	let switcher = document.querySelector('#Tabs');
+// 	let switcher = document.querySelectorAll('.Tabs');
+	if ( switcher.length == 0 ) return false;
+	let page = document.location.pathname.split('/')[2] || document.location.pathname.split('/')[1];
+	let cooks = document.cookie.split(';');
+	let doClick = true;
+	let def = {};
+	let num = cooks.findIndex( function(cook,num) { return cook.match(/^\s*acTab/i)});
+	if ( num >-1 ) {
+		def = cooks.splice(num, 1)[0];
+		def = JSON.parse(decodeURIComponent(def.split('=')[1]));
+	}
+	if ( !def[page] ) def[page] = 0;
+	let check = function(num) { return def[page] == num };
+	if ( tab ) {
+		check = function(num) { return switcher.children[num].isSameNode(tab) };
+		doClick = false;
+	}
+	for ( let num=0; num < switcher.children.length; num++ ) {
+		if ( check(num) ) {
+			switcher.children[num].className += ' active';
+			document.getElementById('tab_'+num).className += ' shown';
+			def[page] = num;
+		} else {
+			switcher.children[num].className = switcher.children[num].className.replace(/\s*active/ig,'');
+			document.getElementById('tab_'+num).className = document.getElementById('tab_'+num).className.replace(/\s*shown/ig,'');
+		}
+	}
+
+	if (switcher.children[def[page]].onclick && doClick) switcher.children[def[page]].onclick();
+	document.cookie = 'acTab='+encodeURIComponent(JSON.stringify(def))
+					+';max-age='+(60*60*24*365)+';path=/;domain='+document.location.host;
+	return false;
+}
 
 var uploaderObject = function(params) {
 /*

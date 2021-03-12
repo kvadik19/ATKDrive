@@ -51,6 +51,7 @@
 		width:80px;
 		justify-content:flex-end;
 	}
+	.link input[type="radio"],
 	.screen input[type="checkbox"] {
 		width:18px;
 		height:18px;
@@ -76,6 +77,7 @@
 		width:100%;
 		margin:auto;
 	}
+	.link,
 	.screen {
 		width:30px;
 		text-align:left;
@@ -109,6 +111,7 @@
 	<div class="options">
 <div id="struct" class="optgroup">
 	<div class="optrow header">
+		<div class="link">Линк</div>
 		<div class="name">Имя поля (переменной)</div>
 		<div class="type">Тип</div>
 		<div class="len">Длина</div>
@@ -128,6 +131,8 @@
 % foreach my $row ( @$struct ) {
 	<div class="optrow field<%= $row->{'field'} =~ /^_/ ? ' locked' : '' %>" 
 			data-name="<%== $row->{'field'} %>" data-type="<%== $row->{'type'} %>" data-default="<%== $row->{'default'} %>">
+		<div class="link"><input type="radio" name="link"  title="Значение поля используется для связи с таблицей 1С" 
+				value="<%== $row->{'field'} %>" <%== $row->{'link'} ? 'checked': '' %>/></div>
 		<div class="edo name<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>"><%== $row->{'field'} %></div>
 		<div class="edo type<%= $row->{'field'} =~ /^_/ ? ' lock' : '' %>"><%== $row->{'typet'} %></div>
 		<div class="edo len<%= $row->{'typet'} eq 'file' ? ' lock' : '' %>"><%== $row->{'len'} %></div>
@@ -172,6 +177,9 @@
 			document.querySelectorAll('.field .screen input[type="checkbox"]').forEach( ch =>{
 						snap += (ch.checked ? '1' : '0');
 					});
+			document.querySelectorAll('.field input[type="radio"]').forEach( ch =>{
+						snap += (ch.checked ? '1' : '0');
+					});
 			return snap;
 		};
 
@@ -200,6 +208,8 @@ document.addEventListener('DOMContentLoaded', function(e) {
 								let key = d.className.replace(/(\s*edo\s*)|(\s*lock\s*)/g,'');
 								rowData[key] = d.innerText 
 							});
+						if ( r.querySelector('.link input[type="radio"][name="link"]').checked ) rowData.link = 1;
+
 						let snum = 1;
 						r.querySelectorAll('.screen').forEach( s => {
 									if ( s.firstElementChild.checked ) rowData._screen.push(snum);

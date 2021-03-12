@@ -9,7 +9,7 @@ use warnings;
 use Cwd 'abs_path';
 use Mojo::Base 'Mojolicious::Controller';
 use File::Path qw(make_path mkpath remove_tree rmtree);
-use Data::Dumper;
+# use Data::Dumper;
 
 our $my_name = 'media';
 our $sys = \%Drive::sys;

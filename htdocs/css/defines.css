@@ -54,6 +54,14 @@
 	src:url('/css/fonts/MyriadPro-CondIt.woff');
 }
 @font-face {
+	font-family:SansCond;
+	src:url('/css/fonts/MyriadPro-Cond.woff');
+}
+@font-face {
+	font-family:SansCondBold;
+	src:url('/css/fonts/MyriadPro-BoldCond.woff');
+}
+@font-face {
 	font-family:SansCaps;
 	src:url('/css/fonts/MyriadPro-BlackCond.woff');
 }

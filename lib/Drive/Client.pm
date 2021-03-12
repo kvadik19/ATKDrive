@@ -219,7 +219,7 @@ sub process {	# Main user operations form
 #################
 my $self = shift;
 my $action = shift;
-my $out = {'html_code' => "<h1>Process $action</h1>"};
+my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implemented yet</h1></div>", 'http_state' => 404 };
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 
@@ -324,7 +324,7 @@ my $uid = shift;
 	my $struct = [];
 	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
 
-	my $db_update = {'_ustate' => $sys->{'user_state'}->{'register'}->{'value'},
+	my $db_update = {'_ustate' => $udata->{'record'}->{'_ustate'} || $sys->{'user_state'}->{'register'}->{'value'},
 					'_fp' => $udata->{'fp'},
 					'_rtime' => $now,
 					'_ltime' => $now,
@@ -392,7 +392,7 @@ my $email = shift;
 	$out->{'code'} = Utils::NETS->email_good( \$out->{'data'}->{'email'} );
 	my $exists = $self->dbh->selectcol_arrayref("SELECT _uid FROM users WHERE _email='$out->{'data'}->{'email'}'"
 										." AND NOT _uid='$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'}'");
-	$out->{'data'}->{'warn'} = 'exists '.scalar(@$exists) if $exists;		# Check early used email
+	$out->{'data'}->{'warn'} = 'exists '.scalar(@$exists) if scalar(@$exists);		# Check early used email
 	return $out;
 }
 #################

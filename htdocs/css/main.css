@@ -310,7 +310,7 @@ ul li { list-style-type:none; }
 .upload_block {
 	padding:0px 0px 1em 0px;
 	margin:0px 0px 0.5em 0px;
-	border-bottom:1px solid var(--panel-text-dk, '#b7bfc3');
+	border-bottom:1px solid var(--body-gray-dk, '#eaeaea');
 }
 .upload_block button.add {
 	border-radius:4px;

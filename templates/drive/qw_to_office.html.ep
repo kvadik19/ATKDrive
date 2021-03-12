@@ -1,0 +1,13 @@
+<div class="qw_define">
+	<ol class="subTabs">
+% foreach my $mod ( @$to_office ) {
+%	if ( $mod->{'fail'} ) {
+		<li class="subTab fail" title="<%= $mod->{'fail'}%>"><%= $mod->{'fail'}%></li>
+%	} else {
+		<li class="subTab" title="<%= $mod->{'descr'}%>">/<%= $mod->{'name'}%> <br>(<%= $mod->{'title'}%>)</li>
+%	}
+% }
+	</ol>
+	<div class=subHolder>
+	</div>
+</div>

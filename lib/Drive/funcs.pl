@@ -10,8 +10,6 @@
 use Fcntl qw(:flock SEEK_END);
 use Time::HiRes;
 use Encode;
-use Date::Handler;
-# use XML::Simple;
 use XML::XML2JSON;
 use File::Copy;
 use Mojo::JSON qw(j decode_json encode_json);
