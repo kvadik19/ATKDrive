@@ -19,4 +19,12 @@
 		<rejected allow="cabinet" title="Отклонен администратором" value="4" name="rejected" />
 		<accepted allow="all" title="Утвержден администратором" value="5" name="accepted" />
 	</user_state>
+
+	<media_keys>
+		<filename title="Оригинальное имя файла" />
+		<mime title="MIME-тип файла" />
+		<title title="Описание файла, данное клиентом" />
+		<ord title="Порядковый номер файла в списке" />
+		<uptime title="Дата и время загрузки файла" />
+	</media_keys>
 </sys>

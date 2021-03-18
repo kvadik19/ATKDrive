@@ -1,13 +1,49 @@
 <div class="qw_define">
-	<ol class="subTabs">
+	<ol class="subTabs"  data-type="ext">
 % foreach my $mod ( @$to_gate ) {
 %	if ( $mod->{'fail'} ) {
-		<li class="subTab fail" title="<%= $mod->{'fail'}%>"><%= $mod->{'fail'}%></li>
+		<li class="subTab fail" data-name="fail" title="<%= $mod->{'fail'}%>"><%= $mod->{'fail'}%></li>
 %	} else {
-		<li class="subTab" title="<%= $mod->{'descr'}%>"><%= $mod->{'title'}%></li>
+		<li class="subTab" title="<%= $mod->{'descr'}%>" data-name="<%= $mod->{'name'}%>" data-type="<%= $mod->{'type'}%>">
+			<%= $mod->{'title'}%>
+		</li>
 %	}
 % }
 	</ol>
 	<div class=subHolder>
+		<div class="message qw_recv">
+			<h4>Получаемый запрос</h4>
+			<div class="qw_body">
+				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <code></code></div>
+				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
+				<div class="qw_data">
+				</div>
+		<div class="buttonbar">
+			<p class="comment">Ожидание входящего запроса в течение <span id="tout">3</span>&nbsp;<span id="tunit">минут</span>
+			</p>
+			<button type="button" id="listen">Принять запрос</button>
+			<button type="button" id="abort" style="display:none;">Стоп</button>
+		</div>
+			</div>
+		</div>
+		<div class="message qw_send">
+			<h4>Передаваемый ответ</h4>
+			<div class="qw_body">
+				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <input type="text" id="code" class="udata" />
+					<span class="inbtn" id="codeSync" title="Установить такой же, как в полученном">&#9851;</span>
+				</div>
+				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
+				<div class="qw_data">
+				</div>
+				<div class="buttonbar">
+					<p class="comment">Управление элементами сообщения
+					</p>
+					<button class="dataDo" type="button" data-action="list">Массив</button>
+					<button class="dataDo" type="button" data-action="hash">Объект</button>
+					<button class="dataDo" type="button" data-action="key">Ключ</button>
+					<button class="dataDo" type="button" data-action="del" data-skip="*!.jsonItem.active" disabled>Удалить</button>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>

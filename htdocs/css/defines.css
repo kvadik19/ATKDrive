@@ -39,13 +39,13 @@
 	--balloon-sel-back:#6699aa;
 	--balloon-sel-text:#ffffff;
 	--balloon-h-back:#996600;
-	--balloon-h-text:#e5e5e5;
+	--balloon-h-text:#ffffff;
 	
-	--balloon-border:1px solid #999999;
+	--balloon-border:#999999;
 
 	--pop-back:#ffffff;
 	--pop-sel-back:#e5e5e5;
-	--pop-sel-text:#d71921;
+	--pop-sel-text:#ffff00;
 	--pop-font:Roboto, Verdana, sans-serif;
 }
 

@@ -148,22 +148,38 @@ my $self = shift;
 	if ( $param->{'code'} ) {			# Some AJAX received
 		if ( $param->{'code'} eq 'watchdog' ) {		# Await incoming query for administrative purposes
 			$ret->{'json'} = {'code' => 'watching'};
-			if ( -e("$Drive::sys_root/watchgod") && -s("$Drive::sys_root/watchgod") ) {
-				open( my $fh, "< $Drive::sys_root/watchgod" );		# Read message reported by wsocket/hsocket
-				$ret->{'json'}->{'data'} = join('', <$fh>);
+			if ( -e("$Drive::sys_root/watchdog") && -s("$Drive::sys_root/watchdog") ) {
+				open( my $fh, "< $Drive::sys_root/watchdog" );		# Read message reported by wsocket/hsocket
+				$ret->{'json'}->{'data'} = decode_utf8(join('', <$fh>));
 				$ret->{'json'}->{'code'} = 'received';
 				close($fh);
-				unlink( "$Drive::sys_root/watchgod" );
+				unlink( "$Drive::sys_root/watchdog" );
 
 			} elsif ( $param->{'data'}->{'cleanup'} ) {
-				unlink( "$Drive::sys_root/watchgod" ) if -e("$Drive::sys_root/watchgod");
+				unlink( "$Drive::sys_root/watchdog" ) if -e("$Drive::sys_root/watchdog");
 			} else {
-				open( my $fh, "> $Drive::sys_root/watchgod" );		# Zeroing buffer file
+				open( my $fh, "> $Drive::sys_root/watchdog" );		# Zeroing buffer file
 				close($fh);
 			}
 		}
 
 	} else {			# Prepare static page
+		my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+		my $conf_file = "$conf_dir/config.xml";
+		my $config = Drive::read_xml( $conf_file );
+
+		my $media_keys = [];
+		while ( my ($k, $v) = each( %{$sys->{'media_keys'}}) ) {
+			push( @$media_keys, {'name'=>$k, 'title'=>$v->{'title'}});
+		}
+		$ret->{'media_keys'} = $media_keys;
+
+		my $struct = [];
+		foreach my $def ( @{$config->{'utable'}} ) {
+			push( @$struct, {'name'=>$def->{'name'}, 'title'=>$def->{'title'}, 'list'=>($def->{'type'} eq 'file') });
+		}
+		$ret->{'struct'} = $struct;
+
 		my $qw_dir = "$Drive::sys_root/lib/Query";
 		if ( -d($qw_dir) ) {			#### Collect available <fromOfficeToGate> QueryDispatcher libs
 			opendir( my $dh, $qw_dir );
@@ -558,8 +574,8 @@ sub hsocket {		# Process http admin queries
 # $self->logger->dump(Dumper($self->req->content->asset),1,1);
 	my $msg_recv = $self->req->content->asset->{'content'};
 
-	if ( -e("$Drive::sys_root/watchgod") && -z("$Drive::sys_root/watchgod") ) {
-		open( my $fh, "> $Drive::sys_root/watchgod" );
+	if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
+		open( my $fh, "> $Drive::sys_root/watchdog" );
 		print $fh $msg_recv;
 		close($fh);
 	}
@@ -588,11 +604,11 @@ sub wsocket {		# Process websocket queries
 	$self->on( message => sub { my ( $ws, $msg_recv ) = @_;
 						my $msg_send = {'fail' => "418 : I'm a teapot"};
 
-	if ( -e("$Drive::sys_root/watchgod") && -z("$Drive::sys_root/watchgod") ) {
-		open( my $fh, "> $Drive::sys_root/watchgod" );
-		print $fh $msg_recv;
-		close($fh);
-	}
+						if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
+							open( my $fh, "> $Drive::sys_root/watchdog" );
+							print $fh $msg_recv;
+							close($fh);
+						}
 
 						if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 							my $qry;

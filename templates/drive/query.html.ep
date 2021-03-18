@@ -1,3 +1,7 @@
+% # Mojolicious template
+% use Encode;
+% use Mojo::JSON qw(j decode_json encode_json);
+
 <div class="action">
 	<h4>Таблицы трансляции внутрисистемных запросов</h4>
 	<p class="comment">&#9899;&nbsp;Запросы данных со страниц &laquo;Личного кабинета&raquo; к модулю 1С определяются 
@@ -16,80 +20,45 @@
 		<div id="tab_1" class="tabContent">
 %= include 'drive/qw_to_gate'
 		</div><!--Tab Users-->
-		<div class="buttonbar">
-			<p class="comment">
-			Ожидание входящего запроса в течение <span id="tout">3</span> <span id="tunit">минут</span>
-			<button type="button" id="listen" style="margin-left:1em;">Принять запрос</button>
-			<button type="button" id="abort" style="display:none;">Стоп</button>
-			</p>
-		</div>
 	</div>
 	<div class="buttonbar">
 		<a href="<%= url_for('admin') %>" class="button esc">Выход</a>
 <!-- 		<a href="#" id="save" class="button sav">Сохранить</a> -->
 	</div>
+	<div id="keySelect" class="floatbar over-panel" style="display:none;">
+		<div class="dragbar">
+			<h>Выберите ключ-значение</h>
+		</div>
+		<div id="keyHolder">
+			<div class="optgroup">
+			<label>Ключ</label>
+				<input type="text" id="keyName" class="form__input"/>
+			</div>
+			<div class="optgroup">
+				<label>Доступные значения</label>
+				<ul>
+% foreach my $fld ( @$struct ) {
+					<li data-name="<%= $fld->{'name'} %>" data-list="<%= $fld->{'list'} %>" title="<%= $fld->{'title'} %>">
+						<%= $fld->{'name'} %>
+					</li>
+%}
+				</ul>
+			</div>
+		</div>
+		<div class="buttonbar">
+			<button type="button" class="ok" >Ok</button>
+			<button type="button" class="esc">Отмена</button>
+		</div>
+	</div>
 </div>
+<script type="text/javascript" src="/js/query.js?<%== $stats->{'js'} %>"></script>
 <script type="text/javascript">
 	const period = 5;			// Secs between requests
 	const timeout = 3;		// Mins to wait
+	const media = <%== decode_utf8( encode_json($media_keys)) %>;
 	let url = document.location.origin+document.location.pathname;
-	let tick = 0;
-
-document.addEventListener('DOMContentLoaded', function() {
-	tabSwitch();
-	document.getElementById('tout').innerText = timeout;
-
-	let tabs = document.querySelectorAll('.subTab:not(.fail)');
-	tabs.forEach( st =>{
-			st.onclick = function(e) { if (e.target.matches('.active')) return;
-						let tab = e.target;
-						let list = tab.parentNode;
-						list.querySelectorAll('.subTab').forEach( t =>{t.className = t.className.replace(/\s*active/,'')});
-						tab.className += ' active';
-					};
-		});
-
-	let qState = function(state) {
-			if (state == 1) {
-				document.getElementById('listen').disabled = true;
-				document.getElementById('abort').style.display = 'initial';
-			} else {
-				window.clearTimeout(tick);
-				flush({'code':'watchdog', 'data':{'cleanup':1}}, url);
-				document.getElementById('listen').disabled = false;
-				document.getElementById('abort').style.display = 'none';
-				document.getElementById('tunit').innerText = 'минут';
-				document.getElementById('tout').innerText = timeout;
-			}
-		};
-	document.getElementById('abort').onclick = qState;
-	document.getElementById('listen').onclick = function(e) {
-			let btn = this;
-			qState(1);
-			let tstart = Date.now();
-			let msg_send = {'code':'watchdog', 'data':{'timeout':period}};
-
-			let msgGot = function(msg) {
-					if ( msg.match(/^[\{\[]/) ) msg = JSON.parse(msg);
-					if ( msg.data ) {
-						console.log(msg);
-						qState(0);
-					} else if( Date.now() > tstart+timeout*60000 ) {
-						qState(0);
-					} else {
-						let left = timeout*60 - Math.round( (Date.now()-tstart)/1000 );
-						if (left < 60) {
-							document.getElementById('tunit').innerText = 'секунд';
-						} else {
-							left = Math.round(left/60);
-						}
-						document.getElementById('tout').innerText = left;
-						tick = window.setTimeout( function() { flush(msg_send, url, msgGot) }, period*1000);
-					}
-				};
-			flush(msg_send, url, msgGot);
-
-		};
-});
-
+	document.addEventListener('DOMContentLoaded', function() {
+		tabSwitch();
+		document.getElementById('tout').innerText = timeout;
+	});
 </script>
