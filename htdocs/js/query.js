@@ -130,17 +130,25 @@ let keyTool = {			// Add key-value floating window operations
 			},
 		fire: function( callbk ) {
 				this.callbk = callbk;
-				if ( !this.panel.style.top ) {
-					this.panel.style.top = bodyOut.offsetTop+'px';
-					this.panel.style.left = bodyOut.offsetLeft+'px';
-				}
 				document.querySelectorAll('#keySelect li.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
 				document.querySelector('#keySelect input[type="text"]').value = '';
 				document.documentElement.onclick = this.keyTrap;
 				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
 				bodyOut.querySelector('button[data-action="key"]').setAttribute('disabled',1);
+
+				if ( !this.panel.style.top ) {
+					this.panel.style.top = bodyOut.offsetTop+'px';
+					this.panel.style.left = bodyOut.offsetLeft+'px';
+				}
 				this.panel.style.display = 'block';
-// 				elementInViewport(this.panel)
+				let [X, Y, W, H] = [this.panel.offsetLeft, this.panel.offsetTop,
+									this.panel.offsetWidth, this.panel.offsetHeight];
+				if (X < 0) { X = 20 } 
+				else if (X + W > window.innerWidth) { X = window.innerWidth - W - 20 }
+				if (Y < window.scrollY) { Y = window.scrollY + 20 }
+				else if (Y + H > window.scrollY+window.innerHeight) { Y = window.scrollY+window.innerHeight - H - 20 }
+				this.panel.style.left = X+'px';
+				this.panel.style.top = Y+'px';
 			},
 		result: function() {
 				let key = document.querySelector('#keySelect input[type="text"]');
@@ -185,7 +193,7 @@ let rollUp = function(evt) {		// Rollup JSON divs
 		}
 	};
 
-var keyEdit = {
+let keyEdit = {
 		action: function(evt) {
 				this.target = evt.target;
 				let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
@@ -205,6 +213,13 @@ var keyEdit = {
 				host.removeChild(evt.target);
 				if ( value.replace(/\s+/g,'').length > 0) {
 					host.innerText = value;
+					let preset = host.closest('.preset');
+					if ( preset ) {
+						let keyVal = host.parentNode;
+						let sel = preset.className.replace(/ +/g,'.');
+						sel = '.'+sel+' .'+keyVal.className.replace(/ +/g,'.')+'[data-name="'+keyVal.dataset.name+'"] .keyName';
+						bodyOut.querySelectorAll(sel).forEach( el =>{ el.innerText = value});
+					}
 				} else {
 					host.innerText = keyEdit.preval;
 				}
@@ -241,13 +256,20 @@ let jsonEdit = {			// Json elements buttons operations
 								let keyVal = createObj('span',{'className':'keyVal','innerText':text});
 								if ( val.dataset.list == '1') {
 									reClass = el.className.replace(/\s*value/g,'');
-									keyVal = createObj('div',{'className':'domItem array preset shorten','onclick':rollUp});		// Unchangeable item
+									keyVal = createObj('div',
+												{'className':'domItem array preset shorten','onclick':rollUp});	// Unchangeable item
 									let mBox = createObj('div',{'className':'domItem'});
 									let mDef = createObj('div',{'className':'object media','data-name':text});
 									media.forEach( m =>{
-										let mFile = createObj('div',{'className':'domItem value media',
-																	'data-name':m.name,'title':m.title});
-										let mName = createObj('span',{'className':'keyName','innerText':m.name,'ondblclick':keyEdit.action});
+										let keyName = m.name;
+										let keySample = bodyOut.querySelector('.domItem.array.preset '
+															+'.domItem.value.media[data-name="'
+															+m.name+'"] .keyName');	// Obtain changed name
+										if ( keySample ) keyName = keySample.innerText;
+										let mFile = createObj('div',
+														{'className':'domItem value media','data-name':m.name,'title':m.title});
+										let mName = createObj('span',
+														{'className':'keyName','innerText':keyName,'ondblclick':keyEdit.action});
 										let mVal = createObj('span',{'className':'keyVal','innerText':'$'+m.name});
 										mFile.appendChild(mName);
 										mFile.insertAdjacentText('beforeend',':');
