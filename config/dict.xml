@@ -12,19 +12,20 @@
 	</user_type>
 
 	<user_state>
-		<register allow="cabinet" title="В процессе регистрации" value="0" name="register" />
+		<register allow="account" title="В процессе регистрации" value="0" name="register" />
 		<confirm allow="none" title="Проверяется eMail" value="1" name="confirm" />
-		<verify allow="cabinet" title="Проверяется администратором" value="2" name="verify" />
+		<verify allow="account" title="Проверяется администратором" value="2" name="verify" />
 		<signout allow="none" title="Клиент отписался" value="3" name="signout" />
-		<rejected allow="cabinet" title="Отклонен администратором" value="4" name="rejected" />
+		<rejected allow="account" title="Отклонен администратором" value="4" name="rejected" />
 		<accepted allow="all" title="Утвержден администратором" value="5" name="accepted" />
 	</user_state>
 
 	<media_keys>
-		<filename title="Оригинальное имя файла" />
-		<mime title="MIME-тип файла" />
-		<title title="Описание файла, данное клиентом" />
-		<ord title="Порядковый номер файла в списке" />
-		<uptime title="Дата и время загрузки файла" />
+		<filename title="Оригинальное имя файла" ord="0" />
+		<title title="Описание файла, данное клиентом" ord="1" />
+		<url title="URL файла на сервере шлюза" ord="2" />
+		<mime title="MIME-тип файла" ord="3" />
+		<uptime title="Дата и время загрузки файла" ord="4" />
+		<ord title="Порядковый номер файла в списке" ord="5" />
 	</media_keys>
 </sys>

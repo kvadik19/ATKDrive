@@ -402,13 +402,9 @@ my ( $array, $test, @args ) = @_;
 #########################
 sub find_hash {				#	Find hash element by condition
 #########################
-my ( $hash, $cmp, $test ) = @_;
-	while ( my($key, $val) = each( %$hash ) ) {
-		if ( &$test( $val ) eq $cmp ) {
-			my $ret = { %$val };
-			$ret->{'_key'} = $key;
-			return $ret;
-		}
+my ( $hash, $test, @args ) = @_;
+	while ( my($k, $val) = each( %$hash ) ) {
+		return $k if $test->( $k, @args );
 	}
 	return undef;
 }

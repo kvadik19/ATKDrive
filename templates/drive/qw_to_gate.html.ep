@@ -38,10 +38,10 @@
 				<div class="buttonbar">
 					<p class="comment">Управление элементами сообщения
 					</p>
-					<button class="dataDo" type="button" data-action="list">Массив</button>
-					<button class="dataDo" type="button" data-action="hash">Объект</button>
-					<button class="dataDo" type="button" data-action="key">Ключ</button>
-					<button class="dataDo" type="button" data-action="del" data-skip="*!.jsonItem.active" disabled>Удалить</button>
+					<button class="dataDo" type="button" data-action="list" data-skip=".domItem && !.jsonItem.value.active">Массив</button>
+					<button class="dataDo" type="button" data-action="hash" data-skip=".domItem && !.jsonItem.array.active && !.jsonItem.value.active">Объект</button>
+					<button class="dataDo" type="button" data-action="key" data-skip="!.jsonItem.object.active && !.jsonItem.array.active">Ключ</button>
+					<button class="dataDo" type="button" data-action="del" data-skip="!.jsonItem.active" disabled>Удалить</button>
 				</div>
 			</div>
 		</div>

@@ -252,6 +252,38 @@ function getCoords(elem) {
 	}
 }
 
+function elementInViewport(el,parent) {
+	var top = el.offsetTop;
+	var left = el.offsetLeft;
+	var width = el.offsetWidth;
+	var height = el.offsetHeight;
+
+	var offY = window.pageYOffset;
+	var offX = window.pageXOffset;
+	var offH = window.innerHeight;
+	var offW = window.innerWidth;
+
+	while(el.offsetParent) {
+		el = el.offsetParent;
+		top += el.offsetTop;
+		left += el.offsetLeft;
+	}
+
+	if (parent) {
+		offY = parent.offsetTop
+		offX = parent.offsetLeft;
+		offH = parent.offsetHeight;
+		offW = parent.offsetWidth;
+	}
+	return (
+		top >= offY &&
+		left >= offX &&
+		(top + height) <= (offY + offH) &&
+		(left + width) <= (offX + offW)
+	);
+}
+
+
 document.addEventListener('DOMContentLoaded', function() {
 
 		document.querySelectorAll('.closebox').forEach( b => {

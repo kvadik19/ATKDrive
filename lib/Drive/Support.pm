@@ -170,9 +170,9 @@ my $self = shift;
 
 		my $media_keys = [];
 		while ( my ($k, $v) = each( %{$sys->{'media_keys'}}) ) {
-			push( @$media_keys, {'name'=>$k, 'title'=>$v->{'title'}});
+			push( @$media_keys, {'name'=>$k, 'title'=>$v->{'title'}, 'ord'=>$v->{'ord'}});
 		}
-		$ret->{'media_keys'} = $media_keys;
+		$ret->{'media_keys'} = [ sort { $a->{'ord'}<=>$b->{'ord'} } @$media_keys ];
 
 		my $struct = [];
 		foreach my $def ( @{$config->{'utable'}} ) {

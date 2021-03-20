@@ -124,23 +124,41 @@ my $self = shift;
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $param = $self->{'qdata'}->{'http_params'};
 
-	while ( my($dir, $stat) = each( %{$udata->{'stats'}}) ) {
-		$sys->{$dir} = $stat;					# Some extra data to transfer into template
-	}
-
 	if ( $udata->{'logged'} == 1 ) {
 		my $urec = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE _uid='$udata->{'cookie'}->{'uid'}'", {Slice=>{}})->[0];
 		$urec->{'_setup'} = decode_json( $urec->{'_setup'} ) if $urec->{'_setup'} =~ /^\{.+\}$/;
 		while ( my ($fld, $val) = each( %$urec) ) {
 			$urec->{$fld} = Drive::mysqlmask( $val, 1) if $val =~ /\D/;
 		}
+
+		#### Check user permissions, defined at conf_dir/dict.xml
+		my $refstate = { %{$sys->{'user_state'}} };			# Modifying test will be processed, need to use a copy!
+		my $permission = Drive::find_hash( $refstate, sub { my $key = shift; 
+												return ($refstate->{$key}->{'value'} == $urec->{'_ustate'}); # Modifying hashref!
+											});
+		$permission = $sys->{'user_state'}->{$permission}->{'allow'};
+		if ( $permission eq 'all') {
+			# All pages permitted, leave query stack unchanged
+		} elsif( $permission eq 'none') {		# Drop logged state, redirect to sign in
+			unshift( @{$self->{'qdata'}->{'stack'}}, 'logout');		# Call logging out.
+
+		} elsif( $permission =~ /\b$self->{'qdata'}->{'stack'}->[0]\b/i ) {
+			# Permitted page requested, leave query unchanged
+		} elsif( $permission ) {			# Only One allowed? Modify query to retrieve permitted page
+			$self->{'qdata'}->{'stack'}->[0] = [split(/,/, $permission)]->[0];
+# 			unshift( @{$self->{'qdata'}->{'stack'}}, $permission);		# To add may be better? See later...
+
+		} else {				# Undescribed cases
+			unshift( @{$self->{'qdata'}->{'stack'}}, 'logout');		# Call logging out.
+		}		#### Addreesing Users depending on their permissions 
+
 		$udata->{'record'} = $urec;
 		my $upath = $urec->{'_setup'}->{'start'};		# Personal start page for root of site
 		$upath =~ s/^\///g;
 		$upath = [ split(/\//, $upath) ];
 		push( @{$self->{'qdata'}->{'stack'}}, @$upath) unless scalar( @{$self->{'qdata'}->{'stack'}} );
 
-	} elsif( $self->{'qdata'}->{'stack'}->[0] ne 'register' ) {
+	} elsif( $self->{'qdata'}->{'stack'}->[0] ne 'register' ) {		# Not logged can go to registration page, otherwise
 		$self->redirect_to( 'cabinet', query => $param );
 		return;
 	}
@@ -148,6 +166,9 @@ my $self = shift;
 	my $action = shift( @{$self->{'qdata'}->{'stack'}} ) || 'account';		# Default user path
 	my $template = 'main';
 
+	while ( my($dir, $stat) = each( %{$udata->{'stats'}}) ) {
+		$sys->{$dir} = $stat;					# Some extra data to transfer into template
+	}
 	$self->prepare_tmpl($action);
 
 	my $out = "404 : Page $action not found yet";

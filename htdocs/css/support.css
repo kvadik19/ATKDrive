@@ -344,7 +344,7 @@ div.options {
 	padding:0px 0.5em 0px 1.2em;
 	line-height:1.5;
 }
-.popup-do.mark:before {
+.popup-do.mark::before {
 	content:'\2714';
 	width:1em;
 	margin-left:-1em;
@@ -435,6 +435,7 @@ span.inbtn {
 }
 .message h4 {
 	background-color:var(--balloon-sel-back,'#6699aa');
+	border-radius: 0.5em 0.5em 0px 0px;
 }
 .qw_body {
 	margin:1em 2em;
@@ -504,10 +505,17 @@ span.inbtn {
 	padding: 1em 0px;
 	border-radius:0.3em;
 }
-.keyName:before,
-.keyName:after {
+.keyName::before,
+.keyName::after {
 	content:'"';
 }
+
+.jsonKeyEdit {
+	font-size:100%;
+	padding:0px 0.2em;
+	line-height:1;
+}
+
 .keyVal {
 	background-color: var(--balloon-back,'#ffffcc');
 	color: var(--balloon-text,'#663333');
@@ -515,15 +523,37 @@ span.inbtn {
 	border-radius: 0.3em;
 	line-height:1.2;
 }
+.preset {
+/* 	zoom-out */
+	cursor:n-resize !important;
+}
+.preset.shorten {
+	font-weight:bold;
+	color:var(--panel-back-lt,'#00b171');
+/* 	color:var(--panel-back,'#016B45'); */
+/* 	color:var(--pop-sel-text,'#ffff00'); */
+/* 	background-color:var(--panel-back-lt,'#00b171'); */
+/* 	zoom-in */
+	cursor:copy !important;
+}
+.preset.shorten > * {
+	display:none !important;
+}
+
 .jsonItem {
 	cursor:default;
 }
 .jsonItem.active {
+	background-color: var(--body-back-dk,'#f5f5f5');
+	margin-right:1em;
+}
+.jsonItem.active .jsonItem.active {
 	background-color:var(--body-gray-dk,'#eaeaea');
 }
 .domItem {
 	font-family:SansMono, monospace;
 	margin-left:1.5em;
+	cursor:default;
 }
 .array {
 	border-left:1px dashed var(--balloon-sel-back,'#6699aa');
@@ -542,26 +572,26 @@ span.inbtn {
 	line-height:1.2;
 	cursor:help;
 }
-.domItem.array:before {
+.domItem.array::before {
 	content:'[';
 }
-.domItem.array:after {
+.domItem.array::after {
 	content:']';
 }
-.domItem .object:before {
+.domItem .object::before {
 	content:'{';
 }
-.domItem .object:after {
+.domItem .object::after {
 	content:'}';
 }
-.domItem:not(:last-of-type) >.array:after,
-.domItem:not(:last-of-type).array:after {
+.domItem:not(:last-of-type) >.array::after,
+.domItem:not(:last-of-type).array::after {
 	content:'],';
 }
-.domItem:not(:last-of-type) >.object:after {
+.domItem:not(:last-of-type) >.object::after {
 	content:'},';
 }
-.domItem.value:not(:last-of-type):after {
+.domItem.value:not(:last-of-type)::after {
 	content:',';
 }
 /* //Query display support END*/

@@ -89,6 +89,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 						}
 					};
 				keyTool.init();
+				btnActivate();
 				this[type][method]();
 			},
 		ext: {
@@ -111,7 +112,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 let keyTool = {			// Add key-value floating window operations
 		init: function() {
 				document.querySelectorAll('#keySelect li.choosd').forEach( i =>{ i.className = i.className.replace(/\s*choosd/g,'')});
-				document.querySelectorAll('#keySelect li').forEach( i =>{ i.onclick = keyTool.liChoose});
+				document.querySelectorAll('#keySelect li').forEach( i =>{ i.onclick = keyTool.liChoose;
+																		i.ondblclick = keyTool.result });
 				document.querySelector('#keySelect button.esc').onclick = this.keyHide;
 				document.querySelector('#keySelect button.ok').onclick = this.result;
 				document.querySelector('#keySelect input[type="text"]').oninput = this.inpCheck;
@@ -135,16 +137,19 @@ let keyTool = {			// Add key-value floating window operations
 				document.querySelectorAll('#keySelect li.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
 				document.querySelector('#keySelect input[type="text"]').value = '';
 				document.documentElement.onclick = this.keyTrap;
+				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
 				bodyOut.querySelector('button[data-action="key"]').setAttribute('disabled',1);
 				this.panel.style.display = 'block';
+// 				elementInViewport(this.panel)
 			},
 		result: function() {
 				let key = document.querySelector('#keySelect input[type="text"]');
-				let val = document.querySelector('#keySelect li.active');
+				let val = document.querySelector('#keySelect li.active') 
+										|| {'innerText':'','className':''};		// NOW Allow empty value!
 				val.className = val.className.replace(/\s*choosd/g,'');		// Prevent
 				val.className += ' choosd';
 				if ( typeof(keyTool.callbk) === 'function' ) {
-					keyTool.callbk(key.value, val.innerText);
+					keyTool.callbk(key.value, val.cloneNode(true) );		// Pass into callback just a LI copy
 				}
 				keyTool.keyHide();
 			},
@@ -159,10 +164,10 @@ let keyTool = {			// Add key-value floating window operations
 				}
 				keyTool.inpCheck();
 			},
-		inpCheck: function(evt) {
+		inpCheck: function(evt) {		// Check for some of list selected
 				let txt = document.querySelector('#keySelect input[type="text"]');
-				let li = document.querySelector('#keySelect li.active');
-				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {
+				let li = document.querySelector('#keySelect li.active') || true;		// Ignore this check - allow empty keyName
+				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {					// Stub for ignore list checking is being used!
 					document.querySelector('#keySelect button.ok').removeAttribute('disabled');
 				} else {
 					document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
@@ -170,31 +175,109 @@ let keyTool = {			// Add key-value floating window operations
 			},
 	};
 
+let rollUp = function(evt) {		// Rollup JSON divs
+		if ( !evt.target.matches('.preset') ) return;
+		evt.stopImmediatePropagation();
+		if ( evt.target.matches('.shorten') ) {
+			evt.target.className = evt.target.className.replace(/\s*shorten/g,'');
+		} else {
+			evt.target.className += ' shorten';
+		}
+	};
+
+var keyEdit = {
+		action: function(evt) {
+				this.target = evt.target;
+				let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
+				keyEdit.preval = evt.target.innerText;
+				evt.target.innerHTML = '';
+				let inpt = createObj('input',{'type':'text','className':'jsonKeyEdit',
+						'style.width':w+'px','style.height':h+'px',
+						'value':keyEdit.preval,
+						'onblur':keyEdit.killInpt,'onkeydown':keyEdit.keyOut });
+				evt.target.appendChild(inpt);
+				inpt.focus();
+				inpt.select();
+			},
+		killInpt: function(evt) {
+				let host = evt.target.closest('.keyName');
+				let value = evt.target.value;
+				host.removeChild(evt.target);
+				if ( value.replace(/\s+/g,'').length > 0) {
+					host.innerText = value;
+				} else {
+					host.innerText = keyEdit.preval;
+				}
+			},
+		keyOut: function(evt) {
+				if ( evt.code.match(/Enter|Tab/) ) {
+					evt.preventDefault();
+					evt.target.blur();
+				} else if ( evt.code.match(/Escape/) ) {
+					evt.target.value = keyEdit.preval;
+					evt.target.blur();
+				}
+			}
+	};
+
 let jsonEdit = {			// Json elements buttons operations
 		list: function(body) {
-				let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem array','innerHTML':'&nbsp;','onclick':jsonSelect});
+				let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem array active','innerHTML':'&nbsp;','onclick':jsonSelect});
 				this.place(body, el);
 			},
 		hash: function(body) {
 				let el = createObj('div',{'className':'domItem'});
-				el.appendChild(createObj('div',{'id':Date.now(),'className':'jsonItem object','innerHTML':'&nbsp;','onclick':jsonSelect}));
+				el.appendChild(createObj('div',{'id':Date.now(),'className':'jsonItem object active','innerHTML':'&nbsp;','onclick':jsonSelect}));
 				this.place(body, el);
 			},
-		key: function(body) {
+		key: function(body) {				// Append values from users, media tables
 				keyTool.fire( function(key, val) {
-									let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value','onclick':jsonSelect});
-									el.appendChild(createObj('span',{'className':'keyName','innerText':key}));
-									el.insertAdjacentText('beforeend',':');
-									el.appendChild(createObj('span',{'className':'keyVal','innerText':'$'+val}));
-									jsonEdit.place(body, el);
-								});
+								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
+								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
+															'data-name':text,'onclick':jsonSelect,'title':val.title});
+								let reClass;
+								el.appendChild(createObj('span',{'className':'keyName','innerText':key,'ondblclick':keyEdit.action}));
+								el.insertAdjacentText('beforeend',':');
+								let keyVal = createObj('span',{'className':'keyVal','innerText':text});
+								if ( val.dataset.list == '1') {
+									reClass = el.className.replace(/\s*value/g,'');
+									keyVal = createObj('div',{'className':'domItem array preset shorten','onclick':rollUp});		// Unchangeable item
+									let mBox = createObj('div',{'className':'domItem'});
+									let mDef = createObj('div',{'className':'object media','data-name':text});
+									media.forEach( m =>{
+										let mFile = createObj('div',{'className':'domItem value media',
+																	'data-name':m.name,'title':m.title});
+										let mName = createObj('span',{'className':'keyName','innerText':m.name,'ondblclick':keyEdit.action});
+										let mVal = createObj('span',{'className':'keyVal','innerText':'$'+m.name});
+										mFile.appendChild(mName);
+										mFile.insertAdjacentText('beforeend',':');
+										mFile.appendChild(mVal);
+										mDef.appendChild(mFile);
+									});
+									mBox.appendChild(mDef);
+									keyVal.appendChild(mBox);
+									keyVal.appendChild(createObj('div',{'className':'domItem same','innerText':'<--->',
+															'title':'Подразумевается что массив ['+text
+															+'] содержит равнозначные по типу и структуре элементы' }));
+								} else if ( text.length > 0 ) {
+									keyVal.innerText = '$'+ text;
+								}
+								el.appendChild(keyVal);
+								jsonEdit.place(body, el);
+								if (reClass) el.className = reClass;
+
+							});
 			},
 		del: function(body) {
 				let selected = bodyOut.querySelectorAll('.qw_data .jsonItem.active');
 				if ( selected.length > 0 ) {
 					selected.forEach( i =>{ try { 
 												let d = i.closest('.domItem');
-												d.parentNode.removeChild(d) } catch(e) {} } );
+												let b = d.parentNode;
+												b.removeChild(d);
+												if ( b.firstElementChild.matches('.same') ) b.removeChild(b.firstElementChild);
+												if ( b.lastChild.nodeType == 3) b.parentNode.removeChild(b);
+									 		} catch(e) {} } );
 					btnActivate();
 				}
 			},
@@ -202,34 +285,56 @@ let jsonEdit = {			// Json elements buttons operations
 				let qdata = body.querySelector('.qw_data');
 				let selected = qdata.querySelectorAll('.jsonItem.active');
 				if ( selected.length > 0 ) {
-					selected.forEach( i =>{ 
-							if ( i.matches('.array') ) {
-								if ( i.children.length === 1 ) {
-									item = createObj('div',{'className':'domItem same','innerText':'<--->',
-										'title':'Подразумевается что массив содержит равнозначные по типу и структуре элементы' });
-								} else if(i.children.length > 1) {
-									item = null;
-								}
-							} else if( i.matches('.object') && !item.matches('.value') ) {
-									item = null;
+					let reClass = [];
+					for (nI=0; nI<selected.length; nI++) { 
+						let toAdd = true;
+						let i = selected[nI];
+						if ( i.matches('.array') ) {
+							if ( item.matches('.value') ) {			// Leave just a value
+								item.removeChild(item.querySelector('.keyName'));
+								if (item.firstChild.nodeType === 3) item.removeChild(item.firstChild);
 							}
-							if ( item ) i.appendChild(item);
-						} );
+
+							if ( i.children.length === 1 ) {
+								item = createObj('div',{'className':'domItem same','innerText':'<--->',
+									'title':'Подразумевается что массив содержит равнозначные по типу и структуре элементы' });
+							} else if(i.children.length > 1) {
+								toAdd = false;
+							}
+						} else if( i.matches('.value') && !item.matches('.value') ) {
+							reClass.push( {'id':i.id, 'class':'domItem'} );		// Reclass some items
+							i.removeChild( i.lastElementChild );
+						} else if( i.matches('.object') && !item.matches('.value') ) {
+							toAdd = false;
+						} else if( i.matches('.value') && item.matches('.value') ) {
+							toAdd = false;
+						}
+						if ( toAdd ) {		// Append only once! (without duplicating item)
+							if ( item.matches('.active') || item.querySelector('.active') ) {
+								selected.forEach( 
+										j =>{ j.className = j.className.replace(/\s*active/g,'')} );
+							}
+							i.appendChild(item);
+							break;
+						}
+					}
+					reClass.forEach( el =>{ document.getElementById(el.id).className = el.class});
 				} else {
 					qdata.appendChild(item);
 				}
+				btnActivate();
 			}
 	};
 let jsonSelect = function(e) {
 		e.stopImmediatePropagation();
 		let el = e.target.closest('.jsonItem');
 		if ( e.shiftKey ) {
+			e.preventDefault();
 			if ( el.matches('.active') ) {
 				el.className = el.className.replace(/\s*active/g,'');
 			} else {
 				el.className += ' active';
 			}
-			e.preventDefault();
 		} else {
 			document.querySelectorAll('.jsonItem').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
 			el.className += ' active';
@@ -251,19 +356,21 @@ let btnActivate = function() {
 				if ( bt.dataset.skip ) {
 					let skip = bt.dataset.skip;
 					bt.removeAttribute('disabled');
-					if ( skip.match(/^\*/) ) {
-						if ( skip.match(/^\*!/) ) {
-							skip = skip.replace(/^\*!\s*/,'');
-							if ( !bodyOut.querySelector(skip) ) bt.setAttribute('disabled', true);
-						} else {
-							skip = skip.replace(/^\*\s*/,'');
-							if ( bodyOut.querySelector(skip) ) bt.setAttribute('disabled', true);
-							
-						}
-					} else {
-// 						if ( this.target.matches(bt.dataset.skip) ) bt.setAttribute('disabled', true);		// Tuning need
-					}
+					let toDis = '';
+					let selectors = skip.split('&&');
+					selectors.forEach( ss =>{
+							let selector = ss.substring(ss.indexOf('!')+1 )
+							let test = bodyOut.querySelector(selector) ? true : false;
+							if ( ss.match(/!/) ) test = !test;
+							if ( typeof(toDis) === 'string' ) {
+								toDis = test;
+							} else {
+								toDis = (toDis && test);
+							}
+						});
+					if ( toDis ) bt.setAttribute('disabled', 1);
 				}
+
 			});
 	};
 
