@@ -485,6 +485,9 @@ span.inbtn {
 	font-size:100%;
 	color:var(--panel-back, '#016B45');
 }
+.qwHdr code {
+	cursor:default;
+}
 .qwHdr code:empty {
 	visibility:hidden;
 }
@@ -584,14 +587,10 @@ span.inbtn {
 .domItem .object::after {
 	content:'}';
 }
-.domItem:not(:last-of-type) >.array::after,
-.domItem:not(:last-of-type).array::after {
-	content:'],';
-}
-.domItem:not(:last-of-type) >.object::after {
+.domItem:not(:last-child) >.object::after {
 	content:'},';
 }
-.domItem.value:not(:last-of-type)::after {
+.domItem.value:not(:last-child)::after {
 	content:',';
 }
 /* //Query display support END*/

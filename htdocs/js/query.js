@@ -47,20 +47,102 @@ let showQRY = function(host, query) {
 		}
 	};
 
+function init() {
+	return fromDOM(document.querySelector('.tabContent.shown .qw_recv .qw_data'));
+}
+
+let ino = 0;
+
+let fromDOM = function(node) {
+		console.log('Pass '+(ino++));
+		let dom;
+		let getVal = function(item) {
+				let res = {};
+				if ( item.firstChild.matches('.keyVal') ) {
+					res.val = item.firstChild.innerText;
+
+				} else if (item.firstChild.matches('.keyName') 
+							&& item.lastChild.matches('.keyVal') ) {
+					res.key = item.firstChild.innerText;
+					res.val= item.lastChild.innerText;
+
+				} else if( item.lastChild ) {
+					if ( item.firstChild.matches('.keyName') ) {
+						res.key = item.firstChild.innerText;
+					}
+		console.log( item.lastChild );
+		// 			res.val='DOM';
+					res.val = fromDOM(item.lastChild);
+				}
+		console.log(res);
+				return res;
+			};
+
+		if ( node.className === 'domItem') node = node.firstChild;
+		if ( node.matches('.array') ) {
+			dom = [];
+			for (nC=0; nC<node.children.length; nC++) {
+				if ( node.children[nC].matches('.same') ) break;
+				let res = getVal(node.children[nC]);
+				if ( res.key ) {
+					dom.push(res);
+				} else {
+					dom.push(res.val);
+				}
+			}
+		} else if ( node.matches('.object') ) {
+			dom  = {};
+			for (nC=0; nC<node.children.length; nC++) {
+				let res = getVal(node.children[nC]);
+				dom[res.key] = res.val;
+			}
+		} else if ( node.matches('.value') ) {
+			console.log('FromDom value');
+			let res = getVal(node);
+			if ( res.key ) {
+				dom = {};
+				dom[res.key] = res.val;
+			} else {
+				dom = res.val;
+			}
+			
+		} else if ( node.firstChild ) {
+			dom = fromDOM(node.firstChild);
+		}
+console.log(dom);
+		return dom;
+	};
+	
 let toDOM = function(val, key) {
 		let div = createObj('div',{'className':'domItem'});
 		if ( val.constructor.toString().match(/Array/) ) {
-			div.innerHTML = '<span class="keyName">'+key+'</span>:';
+			let inner = toDOM( val[0] );
 			let content = createObj('div',{'className':'domItem array'});
-			content.appendChild( toDOM( val[0] ));
-			if ( val.length > 1 ) content.appendChild(createObj('div',{'className':'domItem same','innerText':'<--->',
-							'title':'Подразумевается что массив ['+key+'] содержит равнозначные по типу и структуре элементы' }));
-			div.appendChild(content);
+			let stub = createObj('div', {'className':'domItem same','innerText':'<--->',
+							'title':'Подразумевается что массив [] содержит равнозначные по типу и структуре элементы' });
+			if ( key ) {
+				div.className += ' value';
+				div.innerHTML = '<span class="keyName">'+key+'</span>:';
+				content.appendChild( inner);
+				if ( val.length > 1 ) {
+					stub.title = stub.title.replace(/\[\]/,'['+key+']');
+					content.appendChild(stub);
+				}
+				div.appendChild(content);
+			} else {
+				div.className += ' array';
+				div.appendChild(inner);
+				if ( val.length > 1 ) {
+					stub.title = stub.title.replace(/\[\]/,'');
+					div.appendChild(stub);
+				}
+			}
 		} else if ( val.constructor.toString().match(/Object/) ) {
 			let content = createObj('div',{'className':'object'});
 			if ( key ) {
 				div.innerHTML = '<span class="keyName">'+key+'</span>:';
 				content.className += ' domItem';
+				div.className += ' value';
 			}
 			Object.keys(val).forEach( k=>{
 					content.appendChild( toDOM( val[k], k) );
@@ -80,14 +162,18 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 				let method = document.querySelector('.tabContent.shown .subTab.active').dataset.type;
 				bodyIn = document.querySelector('.tabContent.shown .qw_recv');
 				bodyOut = document.querySelector('.tabContent.shown .qw_send');
-				bodyOut.onclick = function(e) {		// Deselect JSONs
-						if ( e.path.findIndex( i =>{ 
-										return ( i.nodeType === 1 && (i.matches('.jsonItem') || i.type === 'button') ) 
-									}) < 0 ) {
-							document.querySelectorAll('.jsonItem').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
-							btnActivate();
-						}
-					};
+				if (bodyOut) {
+					bodyOut.onclick = function(e) {		// Deselect JSONs
+							if ( e.path.findIndex( i =>{ 
+											return ( i.nodeType === 1 && (i.matches('.jsonItem') || i.type === 'button') ) 
+										}) < 0 ) {
+								document.querySelectorAll('.jsonItem').forEach( 
+									
+									i =>{ i.className = i.className.replace(/\s*active/g,'')});
+								btnActivate();
+							}
+						};
+				}
 				keyTool.init();
 				btnActivate();
 				this[type][method]();
@@ -250,12 +336,10 @@ let jsonEdit = {			// Json elements buttons operations
 								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
 								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
 															'data-name':text,'onclick':jsonSelect,'title':val.title});
-								let reClass;
 								el.appendChild(createObj('span',{'className':'keyName','innerText':key,'ondblclick':keyEdit.action}));
 								el.insertAdjacentText('beforeend',':');
 								let keyVal = createObj('span',{'className':'keyVal','innerText':text});
 								if ( val.dataset.list == '1') {
-									reClass = el.className.replace(/\s*value/g,'');
 									keyVal = createObj('div',
 												{'className':'domItem array preset shorten','onclick':rollUp});	// Unchangeable item
 									let mBox = createObj('div',{'className':'domItem'});
@@ -286,7 +370,6 @@ let jsonEdit = {			// Json elements buttons operations
 								}
 								el.appendChild(keyVal);
 								jsonEdit.place(body, el);
-								if (reClass) el.className = reClass;
 
 							});
 			},
@@ -307,7 +390,6 @@ let jsonEdit = {			// Json elements buttons operations
 				let qdata = body.querySelector('.qw_data');
 				let selected = qdata.querySelectorAll('.jsonItem.active');
 				if ( selected.length > 0 ) {
-					let reClass = [];
 					for (nI=0; nI<selected.length; nI++) { 
 						let toAdd = true;
 						let i = selected[nI];
@@ -324,7 +406,6 @@ let jsonEdit = {			// Json elements buttons operations
 								toAdd = false;
 							}
 						} else if( i.matches('.value') && !item.matches('.value') ) {
-							reClass.push( {'id':i.id, 'class':'domItem'} );		// Reclass some items
 							i.removeChild( i.lastElementChild );
 						} else if( i.matches('.object') && !item.matches('.value') ) {
 							toAdd = false;
@@ -340,7 +421,6 @@ let jsonEdit = {			// Json elements buttons operations
 							break;
 						}
 					}
-					reClass.forEach( el =>{ document.getElementById(el.id).className = el.class});
 				} else {
 					qdata.appendChild(item);
 				}

@@ -1,4 +1,8 @@
+<p class="comment">&mdash;&nbsp;Используйте двойной щелчок для изменения названий ключей в составляемом JSON.<br>
+&mdash;&nbsp;<span class="keyVal">$</span> перед значением ключа обозначает имя переменной/поля.
+</p>
 <div class="qw_define">
+
 	<ol class="subTabs"  data-type="ext">
 % foreach my $mod ( @$to_gate ) {
 %	if ( $mod->{'fail'} ) {

@@ -567,6 +567,8 @@ sub hsocket {		# Process http admin queries
 	my $self = shift;
 
 	unless ( $self->req->content->headers->content_type eq 'application/json') {
+		$self->logger->dump('hsocket received wrong '.$self->req->content->headers->content_type, 3);
+		$self->stash('html_code' => 'Wrong request type '.$self->req->content->headers->content_type);
 		$self->render( template => 'exception', status => 404 );
 		return;
 	}
