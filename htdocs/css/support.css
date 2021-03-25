@@ -261,8 +261,8 @@ div.options {
 	margin:0.5em 2em;
 	border-top:1px solid var(--body-text-lt,'#cccccc');
 }
-.buttonbar a.button:visited,
-.buttonbar a.button {
+.buttonbar .button:visited,
+.buttonbar .button {
 	text-decoration:none;
 	margin-right:2em;
 	padding:0.25em 2em;
@@ -270,8 +270,14 @@ div.options {
 	border-radius:0.3em;
 	background: var(--btn-bg);
 	color: var(--btn-fg);
+	font-size:90%;
+	line-height:1.2;
 }
-.buttonbar a.button:active {
+.buttonbar .button:disabled {
+	color:var(--body-text-lt,'#cccccc');
+	background: var(--body-gray-dk,'#eaeaea');
+}
+.buttonbar .button:active {
 	background: var(--btn-bg-alt);
 }
 

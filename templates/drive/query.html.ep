@@ -21,10 +21,10 @@
 %= include 'drive/qw_to_gate'
 		</div><!--Tab Users-->
 	</div>
-	<div class="buttonbar">
-		<a href="<%= url_for('admin') %>" class="button esc">Выход</a>
-<!-- 		<a href="#" id="save" class="button sav">Сохранить</a> -->
+	<div id="eCommit" class="buttonbar">
+		<a href="<%= url_for('admin') %>" class="button esc static">Выход</a>
 	</div>
+
 	<div id="keySelect" class="floatbar over-panel" style="display:none;">
 		<div class="dragbar">
 			<h>Выберите ключ-значение</h>

@@ -2,6 +2,8 @@ let tick = 0;		// Timeout handler/
 let bodyIn = document.querySelector('.tabContent.shown .qw_recv');
 let bodyOut = document.querySelector('.tabContent.shown .qw_send');
 let keyItems = document.querySelectorAll('#keySelect li');
+let snapshot;
+let getSnap;
 
 let subSwitch = function(tab) {
 		let cook = getCookie('acTab');
@@ -47,70 +49,65 @@ let showQRY = function(host, query) {
 		}
 	};
 
-function init() {
-	return fromDOM(document.querySelector('.tabContent.shown .qw_recv .qw_data'));
-}
+let getVal = function(item) {		// Obtain key:value pair from DOM <div class="value">
+		let value = {};
+		if ( item.firstElementChild.matches('.keyVal') ) {		// Scalar value as array item
+			value.val = item.firstElementChild.innerText;
+		} else if (item.firstElementChild.matches('.keyName') 
+					&& item.lastElementChild.matches('.keyVal') ) {		// key:scalar value pair
+			value.key = item.firstElementChild.innerText;
+			value.val= item.lastElementChild.innerText;
+		} else if( item.lastElementChild ) {
+			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
+				value.key = item.firstElementChild.innerText;
+			}
+			value.val = fromDOM(item.lastElementChild);
+		}
+		return value;
+	};
 
-let ino = 0;
+var fromDOM = function(node) {			// Parse DOM into JSON
+		let obj;
+		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra containers
 
-let fromDOM = function(node) {
-		console.log('Pass '+(ino++));
-		let dom;
-		let getVal = function(item) {
-				let res = {};
-				if ( item.firstChild.matches('.keyVal') ) {
-					res.val = item.firstChild.innerText;
-
-				} else if (item.firstChild.matches('.keyName') 
-							&& item.lastChild.matches('.keyVal') ) {
-					res.key = item.firstChild.innerText;
-					res.val= item.lastChild.innerText;
-
-				} else if( item.lastChild ) {
-					if ( item.firstChild.matches('.keyName') ) {
-						res.key = item.firstChild.innerText;
-					}
-		console.log( item.lastChild );
-		// 			res.val='DOM';
-					res.val = fromDOM(item.lastChild);
-				}
-		console.log(res);
-				return res;
-			};
-
-		if ( node.className === 'domItem') node = node.firstChild;
 		if ( node.matches('.array') ) {
-			dom = [];
-			for (nC=0; nC<node.children.length; nC++) {
+			obj = [];
+			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
-				let res = getVal(node.children[nC]);
-				if ( res.key ) {
-					dom.push(res);
+				if ( node.children[nC].matches('.value') ) {
+					let res = getVal(node.children[nC]);
+					if ( res.key ) {
+						let got = {};
+						got[res.key] = res.val;
+						obj.push(got);
+					} else {
+						obj.push(res.val);
+					}
 				} else {
-					dom.push(res.val);
+					obj.push( fromDOM(node.children[nC]) );
 				}
 			}
+
 		} else if ( node.matches('.object') ) {
-			dom  = {};
-			for (nC=0; nC<node.children.length; nC++) {
+			obj  = {};
+			for (let nC=0; nC< node.children.length; nC++) {
 				let res = getVal(node.children[nC]);
-				dom[res.key] = res.val;
+				obj[res.key] = res.val;
 			}
-		} else if ( node.matches('.value') ) {
-			console.log('FromDom value');
+
+		} else if ( node.matches('.value') ) {		// Probably, Helpless trigger
 			let res = getVal(node);
 			if ( res.key ) {
-				dom = {};
-				dom[res.key] = res.val;
+				obj = {};
+				obj[res.key] = res.val;
 			} else {
-				dom = res.val;
+				obj = res.val;
 			}
 			
-		} else if ( node.firstChild ) {
-			dom = fromDOM(node.firstChild);
+		} else if ( node.firstElementChild ) {		// Possibly exceptions trap
+			obj = fromDOM(node.firstElementChild);
 		}
-console.log(dom);
-		return dom;
+		return obj;
 	};
 	
 let toDOM = function(val, key) {
@@ -174,17 +171,61 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							}
 						};
 				}
-				keyTool.init();
 				btnActivate();
+				keyTool.init();
 				this[type][method]();
 			},
 		ext: {
 				read: function() {
+						let action = document.querySelector('.tabContent.shown li.subTab.active');
+						getSnap = function() { return bodyIn.innerHTML + bodyOut.innerHTML };
+						flush({'code':'load','data':{'action':action.dataset.name}}, document.location.href, function(resp) {
+								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+								if ( resp.fail ) {
+									alert(resp.fail);
+								} else if( resp.code == 1) {
+									bodyIn.querySelector('.qw_data').innerHTML = '';
+									bodyOut.querySelector('.qw_data').innerHTML = '';
+									bodyIn.querySelector('.qw_code code').innerText = resp.data.qw_recv.code;
+									bodyOut.querySelector('.qw_code #code').value = resp.data.qw_send.code
+									snapshot = getSnap();
+									commitEnable();
+								}
+							});
+						dispatch.ext.committer = function(e) {
+								let formData = {'name':action.dataset.name,
+												'qw_recv':{'code':bodyIn.querySelector('.qw_code code').innerText,
+														'data':fromDOM( bodyIn.querySelector('.qw_data'))},
+												'qw_send':{'code':bodyOut.querySelector('.qw_code #code').value,
+														'data':fromDOM( bodyOut.querySelector('.qw_data'))}
+												};
+								flush({'code':'commit','data':formData}, document.location.href, function(resp) {
+										if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+										if ( resp.fail ) {
+											alert(resp.fail);
+										} else if( resp.code == 1) {
+											snapshot = getSnap();
+											commitEnable();
+										}
+									});
+							};
+						dispatch.ext.layout();
 						return true;
 					},
 				write: function() {
+						dispatch.ext.committer = function(e) {};
 						console.log('Draw Write');
+						dispatch.ext.layout();
 						return true;
+					},
+				layout: function() {
+						let bbar = document.getElementById('eCommit');
+						bbar.querySelectorAll('*:not(.static)').forEach( b =>{bbar.removeChild(b)});
+						let bsav = createObj('button',{'type':'button','className':'button ok','innerText':'Сохранить',
+											'onclick':dispatch.ext.committer, 'disabled':1});
+						bbar.appendChild( bsav);
+					},
+				committer: function() {
 					}
 			},
 		int: {
@@ -453,6 +494,17 @@ btnDo.forEach( bt =>{
 			};
 	});
 
+let commitEnable = function() {
+		if ( getSnap ) {
+			let state = getSnap();
+			if ( state != snapshot ) {
+				document.querySelector('#eCommit button.ok').removeAttribute('disabled');
+			} else {
+				document.querySelector('#eCommit button.ok').setAttribute('disabled', 1);
+			}
+		}
+	};
+
 let btnActivate = function() {
 		btnDo.forEach( bt =>{
 				if ( bt.dataset.skip ) {
@@ -474,6 +526,7 @@ let btnActivate = function() {
 				}
 
 			});
+		commitEnable();
 	};
 
 let tabs = document.querySelectorAll('.subTab:not(.fail)');
@@ -484,7 +537,7 @@ tabs.forEach( st =>{
 				};
 	});
 
-let qState = function(state) {
+let qState = function(state) {		// Income Awaiting service fn
 		if (state == 1) {
 			document.getElementById('listen').disabled = true;
 			document.getElementById('abort').style.display = 'initial';
@@ -502,7 +555,7 @@ document.getElementById('listen').onclick = function(e) {
 		let btn = this;
 		qState(1);
 		let tstart = Date.now();
-		let msg_send = {'code':'watchdog', 'data':{'timeout':period}};
+		let msg_send = {'code':'watchdog', 'data':{'period':period,'timeout':timeout}};
 
 		let msgGot = function(msg) {
 				if ( msg.match(/^[\{\[]/) ) msg = JSON.parse(msg);
