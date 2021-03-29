@@ -15,10 +15,10 @@
 	</ul>
 	<div id="tabHolder" class="tabHolder">
 		<div id="tab_0" class="tabContent">
-%= include 'drive/qw_to_office'
+%= include 'drive/qw_ext'
 		</div><!--Tab Groups-->
 		<div id="tab_1" class="tabContent">
-%= include 'drive/qw_to_gate'
+%= include 'drive/qw_int'
 		</div><!--Tab Users-->
 	</div>
 	<div id="eCommit" class="buttonbar">

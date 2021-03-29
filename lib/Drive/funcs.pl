@@ -96,7 +96,8 @@ my ($datetime, $gmt) = @_;
 
 	$date[5]+=1900;
 	$date[4]++;
-	map { $date[$_] = "0" x ( 2 - length( $date[$_] ) ) . $date[$_] } (0, 1, 2, 3, 4);
+	map { $date[$_] = sprintf('%02d', $date[$_]) } (0, 1, 2, 3, 4);
+# 	map { $date[$_] = "0" x ( 2 - length( $date[$_] ) ) . $date[$_] } (0, 1, 2, 3, 4);
 
 	return ($date[5], $date[4], $date[3],$date[2],$date[1],$date[0],$date[6]) if wantarray();
 	return "$date[3]-$date[4]-$date[5] $date[2]:$date[1]:$date[0].$date[6]";

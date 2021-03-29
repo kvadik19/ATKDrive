@@ -3,8 +3,8 @@
 </p>
 <div class="qw_define">
 
-	<ol class="subTabs"  data-type="ext">
-% foreach my $mod ( @$to_gate ) {
+	<ol class="subTabs"  data-type="int">
+% foreach my $mod ( @$int ) {
 %	if ( $mod->{'fail'} ) {
 		<li class="subTab fail" data-name="fail" title="<%= $mod->{'fail'}%>"><%= $mod->{'fail'}%></li>
 %	} else {
@@ -34,7 +34,7 @@
 			<h4>Передаваемый ответ</h4>
 			<div class="qw_body">
 				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <input type="text" id="code" class="udata" />
-					<span class="inbtn" id="codeSync" title="Установить такой же, как в полученном">&#9851;</span>
+					<div class="inbtn codeSync" title="Установить такой же, как в полученном">&#9851;</div>
 				</div>
 				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
 				<div class="qw_data">

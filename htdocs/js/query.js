@@ -2,10 +2,10 @@ let tick = 0;		// Timeout handler/
 let bodyIn = document.querySelector('.tabContent.shown .qw_recv');
 let bodyOut = document.querySelector('.tabContent.shown .qw_send');
 let keyItems = document.querySelectorAll('#keySelect li');
-let snapshot;
-let getSnap;
+let snapshot;		//
+let getSnap;		// Tools for changed data check
 
-let subSwitch = function(tab) {
+let subSwitch = function(tab) {			// Click on subTabs
 		let cook = getCookie('acTab');
 		let def = {};
 		if ( cook ) def = JSON.parse( decodeURIComponent(cook) );
@@ -36,7 +36,7 @@ let subSwitch = function(tab) {
 		}
 	};
 
-let showQRY = function(host, query) {
+let showQRY = function(host, query) {			// Display incoming query received by watchdog
 		if ( query.code ) {
 			let code = host.querySelector('.qwHdr code');
 			code.innerHTML = '';
@@ -56,10 +56,12 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 		} else if (item.firstElementChild.matches('.keyName') 
 					&& item.lastElementChild.matches('.keyVal') ) {		// key:scalar value pair
 			value.key = item.firstElementChild.innerText;
+			if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 			value.val= item.lastElementChild.innerText;
 		} else if( item.lastElementChild ) {
 			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
 				value.key = item.firstElementChild.innerText;
+				if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 			}
 			value.val = fromDOM(item.lastElementChild);
 		}
@@ -119,10 +121,12 @@ let toDOM = function(val, key) {
 							'title':'Подразумевается что массив [] содержит равнозначные по типу и структуре элементы' });
 			if ( key ) {
 				div.className += ' value';
-				div.innerHTML = '<span class="keyName">'+key+'</span>:';
+				let [uname,name] = key.split(';');
+				if (name) div.dataset.name = name;
+				div.innerHTML = '<span class="keyName">'+uname+'</span>:';
 				content.appendChild( inner);
 				if ( val.length > 1 ) {
-					stub.title = stub.title.replace(/\[\]/,'['+key+']');
+					stub.title = stub.title.replace(/\[\]/,'['+uname+']');
 					content.appendChild(stub);
 				}
 				div.appendChild(content);
@@ -137,7 +141,9 @@ let toDOM = function(val, key) {
 		} else if ( val.constructor.toString().match(/Object/) ) {
 			let content = createObj('div',{'className':'object'});
 			if ( key ) {
-				div.innerHTML = '<span class="keyName">'+key+'</span>:';
+				let [uname,name] = key.split(';');
+				if (name) div.dataset.name = name;
+				div.innerHTML = '<span class="keyName">'+uname+'</span>:';
 				content.className += ' domItem';
 				div.className += ' value';
 			}
@@ -148,7 +154,11 @@ let toDOM = function(val, key) {
 		} else {
 			div.className += ' value';
 			div.innerHTML = '<span class="keyVal">'+val+'</span>';
-			if ( key ) div.innerHTML = '<span class="keyName">'+key+'</span>:<span class="keyVal">'+val+'</span>';
+			if ( key ) {
+				let [uname,name] = key.split(';');
+				if (name) div.dataset.name = name;
+				div.innerHTML = '<span class="keyName">'+uname+'</span>:<span class="keyVal">'+val+'</span>';
+			}
 		}
 		return div;
 	};
@@ -160,26 +170,30 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 				bodyIn = document.querySelector('.tabContent.shown .qw_recv');
 				bodyOut = document.querySelector('.tabContent.shown .qw_send');
 				if (bodyOut) {
-					bodyOut.onclick = function(e) {		// Deselect JSONs
+					bodyOut.querySelector('.qw_body').onclick = function(e) {		// Deselect JSONs
 							if ( e.path.findIndex( i =>{ 
-											return ( i.nodeType === 1 && (i.matches('.jsonItem') || i.type === 'button') ) 
+											return ( i.nodeType === 1 
+												&& (i.matches('.jsonItem') || i.type==='button' || i.matches('.codeSync')) ) 
 										}) < 0 ) {
 								document.querySelectorAll('.jsonItem').forEach( 
-									
-									i =>{ i.className = i.className.replace(/\s*active/g,'')});
+													i =>{ i.className = i.className.replace(/\s*active/g,'')});
 								btnActivate();
 							}
 						};
+						bodyOut.querySelector('.codeSync').onclick = function(e) {	// Just transfer income `CODE` to outgoing composer
+								let inCode = bodyIn.querySelector('.qw_code code').innerText;
+								if ( inCode ) bodyOut.querySelector('.qw_code #code').value = inCode;
+							};
 				}
 				btnActivate();
-				keyTool.init();
+				keyTool.init(type);
 				this[type][method]();
 			},
-		ext: {
+		int: {
 				read: function() {
-						let action = document.querySelector('.tabContent.shown li.subTab.active');
 						getSnap = function() { return bodyIn.innerHTML + bodyOut.innerHTML };
-						flush({'code':'load','data':{'action':action.dataset.name}}, document.location.href, function(resp) {
+						let action = document.querySelector('.tabContent.shown .subTab.active');
+						flush({'code':'load','data':{'name':action.dataset.name}}, document.location.href, function(resp) {
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
 								if ( resp.fail ) {
 									alert(resp.fail);
@@ -192,7 +206,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									commitEnable();
 								}
 							});
-						dispatch.ext.committer = function(e) {
+						dispatch.int.committer = function(e) {
+								let action = document.querySelector('.tabContent.shown .subTab.active');
 								let formData = {'name':action.dataset.name,
 												'qw_recv':{'code':bodyIn.querySelector('.qw_code code').innerText,
 														'data':fromDOM( bodyIn.querySelector('.qw_data'))},
@@ -209,26 +224,26 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 										}
 									});
 							};
-						dispatch.ext.layout();
+						dispatch.int.layout();
 						return true;
 					},
 				write: function() {
-						dispatch.ext.committer = function(e) {};
+						dispatch.int.committer = function(e) {};
 						console.log('Draw Write');
-						dispatch.ext.layout();
+						dispatch.int.layout();
 						return true;
 					},
 				layout: function() {
 						let bbar = document.getElementById('eCommit');
 						bbar.querySelectorAll('*:not(.static)').forEach( b =>{bbar.removeChild(b)});
 						let bsav = createObj('button',{'type':'button','className':'button ok','innerText':'Сохранить',
-											'onclick':dispatch.ext.committer, 'disabled':1});
+											'onclick':dispatch.int.committer, 'disabled':1});
 						bbar.appendChild( bsav);
 					},
 				committer: function() {
 					}
 			},
-		int: {
+		ext: {
 				rw: function() {
 						console.log('Draw Read/Write');
 						return true;
@@ -237,7 +252,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 	};
 
 let keyTool = {			// Add key-value floating window operations
-		init: function() {
+		init: function( targeType ) {
 				document.querySelectorAll('#keySelect li.choosd').forEach( i =>{ i.className = i.className.replace(/\s*choosd/g,'')});
 				document.querySelectorAll('#keySelect li').forEach( i =>{ i.onclick = keyTool.liChoose;
 																		i.ondblclick = keyTool.result });
@@ -310,15 +325,6 @@ let keyTool = {			// Add key-value floating window operations
 			},
 	};
 
-let rollUp = function(evt) {		// Rollup JSON divs
-		if ( !evt.target.matches('.preset') ) return;
-		evt.stopImmediatePropagation();
-		if ( evt.target.matches('.shorten') ) {
-			evt.target.className = evt.target.className.replace(/\s*shorten/g,'');
-		} else {
-			evt.target.className += ' shorten';
-		}
-	};
 
 let keyEdit = {
 		action: function(evt) {
@@ -363,11 +369,20 @@ let keyEdit = {
 	};
 
 let jsonEdit = {			// Json elements buttons operations
-		list: function(body) {
+		rollUp: function(evt) {		// Rollup  .jsonItem.preset divs
+				if ( !evt.target.matches('.preset') ) return;
+				evt.stopImmediatePropagation();
+				if ( evt.target.matches('.shorten') ) {
+					evt.target.className = evt.target.className.replace(/\s*shorten/g,'');
+				} else {
+					evt.target.className += ' shorten';
+				}
+			},
+		list: function(body) {			// Add array
 				let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem array active','innerHTML':'&nbsp;','onclick':jsonSelect});
 				this.place(body, el);
 			},
-		hash: function(body) {
+		hash: function(body) {			// Add Object
 				let el = createObj('div',{'className':'domItem'});
 				el.appendChild(createObj('div',{'id':Date.now(),'className':'jsonItem object active','innerHTML':'&nbsp;','onclick':jsonSelect}));
 				this.place(body, el);
@@ -382,7 +397,7 @@ let jsonEdit = {			// Json elements buttons operations
 								let keyVal = createObj('span',{'className':'keyVal','innerText':text});
 								if ( val.dataset.list == '1') {
 									keyVal = createObj('div',
-												{'className':'domItem array preset shorten','onclick':rollUp});	// Unchangeable item
+												{'className':'domItem array preset shorten','onclick': jsonEdit.rollUp});	// Unchangeable item
 									let mBox = createObj('div',{'className':'domItem'});
 									let mDef = createObj('div',{'className':'object media','data-name':text});
 									media.forEach( m =>{
@@ -468,7 +483,7 @@ let jsonEdit = {			// Json elements buttons operations
 				btnActivate();
 			}
 	};
-let jsonSelect = function(e) {
+let jsonSelect = function(e) {			// Click on composers .jsonItems
 		e.stopImmediatePropagation();
 		let el = e.target.closest('.jsonItem');
 		if ( e.shiftKey ) {
@@ -485,7 +500,7 @@ let jsonSelect = function(e) {
 		btnActivate();
 	};
 
-let btnDo = document.querySelectorAll('button.dataDo');
+let btnDo = document.querySelectorAll('button.dataDo');		// Buttons for OUT message JSON composer elements
 btnDo.forEach( bt =>{
 		bt.onclick = function(e) {
 				e.stopImmediatePropagation();
@@ -494,7 +509,7 @@ btnDo.forEach( bt =>{
 			};
 	});
 
-let commitEnable = function() {
+let commitEnable = function() {			// Main button 'Save'
 		if ( getSnap ) {
 			let state = getSnap();
 			if ( state != snapshot ) {
@@ -505,7 +520,7 @@ let commitEnable = function() {
 		}
 	};
 
-let btnActivate = function() {
+let btnActivate = function() {		// Buttons for OUT message JSON composer
 		btnDo.forEach( bt =>{
 				if ( bt.dataset.skip ) {
 					let skip = bt.dataset.skip;
@@ -550,8 +565,8 @@ let qState = function(state) {		// Income Awaiting service fn
 			document.getElementById('tout').innerText = timeout;
 		}
 	};
-document.getElementById('abort').onclick = qState;
-document.getElementById('listen').onclick = function(e) {
+document.getElementById('abort').onclick = qState;		// Income query listener stop
+document.getElementById('listen').onclick = function(e) {		// Income query listener activate
 		let btn = this;
 		qState(1);
 		let tstart = Date.now();
@@ -560,7 +575,7 @@ document.getElementById('listen').onclick = function(e) {
 		let msgGot = function(msg) {
 				if ( msg.match(/^[\{\[]/) ) msg = JSON.parse(msg);
 				if ( msg.data ) {
-					if ( msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
+					if ( typeof(msg.data) == 'string' && msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
 					showQRY(bodyIn, msg);
 					qState(0);
 				} else if( Date.now() > tstart+timeout*60000 ) {
@@ -577,9 +592,4 @@ document.getElementById('listen').onclick = function(e) {
 				}
 			};
 		flush(msg_send, url, msgGot);
-	};
-
-document.getElementById('codeSync').onclick = function(e) {
-		let inCode = bodyIn.querySelector('.qw_code code').innerText;
-		if ( inCode ) bodyOut.querySelector('.qw_code #code').value = inCode;
 	};

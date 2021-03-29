@@ -368,7 +368,8 @@ div.options {
 	cursor:pointer;
 }
 /* /Context menu panel END*/
-span.inbtn {
+.inbtn {
+	display:inline-block;
 	font-size: 150%;
 	vertical-align: middle;
 	font-weight: normal;

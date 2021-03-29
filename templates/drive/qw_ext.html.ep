@@ -1,0 +1,34 @@
+<div class="qw_define">
+	<ol class="subTabs" data-type="ext">
+% foreach my $mod ( @$ext ) {
+%	if ( $mod->{'fail'} ) {
+		<li class="subTab fail" data-name="fail" title="<%= $mod->{'fail'}%>" data-type="rw"><%= $mod->{'fail'}%></li>
+%	} else {
+		<li class="subTab" data-name="<%= $mod->{'name'}%>" title="<%= $mod->{'descr'}%>" data-type="rw">
+			/<%= $mod->{'name'}%> <br>(<%= $mod->{'title'}%>)</li>
+%	}
+% }
+	</ol>
+	<div class=subHolder>
+		<div class="message qw_recv">
+			<h4>Получаемый запрос</h4>
+			<div class="qw_body">
+				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <code></code></div>
+				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
+				<div class="qw_data">
+				</div>
+			</div>
+		</div>
+		<div class="message qw_send">
+			<h4>Передаваемый ответ</h4>
+			<div class="qw_body">
+				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <input type="text" id="code" class="udata" />
+					<span class="inbtn codeSync" title="Установить такой же, как в полученном">&#9851;</span>
+				</div>
+				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
+				<div class="qw_data">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

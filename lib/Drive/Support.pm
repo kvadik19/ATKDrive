@@ -143,24 +143,52 @@ sub query {			# Setup query translation tables
 #####################
 my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
-	my $ret = {'to_gate' => [], 'to_office' => []};
+	my $ret = {'int' => [], 'ext' => []};
 
 	if ( $param->{'code'} ) {			# Some AJAX received
+		$ret->{'json'} = {'code' => $param->{'code'}, 'data' => $param->{'data'} };
+
 		if ( $param->{'code'} eq 'watchdog' ) {		# Await incoming query for administrative purposes
 			$ret->{'json'} = {'code' => 'watching'};
-			if ( -e("$Drive::sys_root/watchdog") && -s("$Drive::sys_root/watchdog") ) {
-				open( my $fh, "< $Drive::sys_root/watchdog" );		# Read message reported by wsocket/hsocket
+			my $watchfile = Drive::upper_dir("$Drive::sys_root/watchdog");
+			if ( -e($watchfile) && -s($watchfile) ) {
+				open( my $fh, "< $watchfile" );		# Read message reported by wsocket/hsocket
 				$ret->{'json'}->{'data'} = decode_utf8(join('', <$fh>));
 				$ret->{'json'}->{'code'} = 'received';
 				close($fh);
-				unlink( "$Drive::sys_root/watchdog" );
+				unlink( $watchfile );
 
 			} elsif ( $param->{'data'}->{'cleanup'} ) {
-				unlink( "$Drive::sys_root/watchdog" ) if -e("$Drive::sys_root/watchdog");
+				my $killstate = 0;
+				if ( -e($watchfile) ) {
+					unlink( $watchfile );
+					$killstate = 1;
+				}
+				$ret->{'json'}->{'data'} = {'file' => $watchfile, 'kill' => $killstate };
 			} else {
 				open( my $fh, "> $Drive::sys_root/watchdog" );		# Zeroing buffer file
 				close($fh);
+				$ret->{'json'}->{'data'} = {'file' => $watchfile, 'open' => 1 };
 			}
+		} elsif ( $param->{'code'} =~ /^load|commit$/ ) {
+			my $oper = $param->{'code'};
+			my $mod_lib = $param->{'data'}->{'name'};
+			eval( "use $mod_lib" );
+			$self->logger->debug($@, 2) if $@;
+			my $module;
+			eval{ $module = $mod_lib->new(  dbh => $self->dbh, 
+											logger => $self->logger, 
+											qdata => $self->{'qdata'} );
+					$oper = $module->$oper( $param->{'data'} );
+				};
+			if ( $@ ) {
+				$self->logger->debug($@, 2);
+				$ret->{'json'}->{'fail'} = $@;
+			} else {
+				$module->DESTROY();
+				Class::Unload->unload( $mod_lib ) unless $use_fail;		# Class::Unload must be installed
+			}
+			$ret->{'json'}->{'data'} = $oper;
 		}
 
 	} else {			# Prepare static page
@@ -180,64 +208,76 @@ my $self = shift;
 		}
 		$ret->{'struct'} = $struct;
 
-		my $qw_dir = "$Drive::sys_root/lib/Query";
-		if ( -d($qw_dir) ) {			#### Collect available <fromOfficeToGate> QueryDispatcher libs
-			opendir( my $dh, $qw_dir );
-			while (my $qw_lib = readdir($dh) ) {
-				next if $qw_lib =~ /^\./ || $qw_lib !~ /\.pm$/;
-				$qw_lib =~ s/\.pm$//;
-				$qw_lib = "Query::$qw_lib";
-				eval( "use $qw_lib" );
-				$self->logger->debug($@, 2) if $@;
-				my $module;
-				my $qw_info;
-				eval{ $module = $qw_lib->new(  dbh => $self->dbh, 
-												logger => $self->logger, 
-												qdata => $self->{'qdata'} );
-						$qw_info = $module->describe;
-					};
-				if ( $@ ) {
-					$self->logger->debug($@, 2);
-					push( @{$ret->{'to_gate'}}, {'fail' => $@} );
-				} else {
-					push( @{$ret->{'to_gate'}}, $qw_info );
-					$module->DESTROY();
-					Class::Unload->unload( $qw_lib ) unless $use_fail;
-				}
-			}
-			closedir( $dh );
-			push( @{$ret->{'to_gate'}}, {'fail' => 'No modules found'} ) unless scalar( @{$ret->{'to_gate'}});
-		} else {			# Gathering available libraries
-			push( @{$ret->{'to_gate'}}, {'fail' => "$qw_dir not exists"} );
-		}
-
-		$qw_dir = "$Drive::sys_root$sys->{'html_dir'}";			#### Collect available <fromUserPageToOffice> templates
-		if ( -d($qw_dir) ) {
-			opendir( my $dh, $qw_dir );
-			while (my $qw_tmpl = readdir($dh) ) {
-				next if $qw_tmpl =~ /^\./ || $qw_tmpl !~ /\.tmpl$/;
-				my $qw_info = {'name' => $qw_tmpl, 'title' => $qw_tmpl};
-
-				open( my $fh, "< $qw_dir/$qw_tmpl");
-				my $templ = decode_utf8( join('', <$fh>));
-				close( $fh);
-				next if $templ =~ /<!--\s*local\s*-->/i;
-
-				my $dom = Mojo::DOM->new( $templ );
-				my $title = $dom->find('h1')->[0];
-
-				$qw_info->{'name'} =~ s/\.tmpl$//;
-				$qw_info->{'title'} = $title->text() if $title;
-				push( @{$ret->{'to_office'}}, $qw_info );
-			}
-			closedir( $dh );
-			push( @{$ret->{'to_office'}}, {'fail' => 'No modules found'} ) unless scalar( @{$ret->{'to_gate'}});
-		} else {
-			push( @{$ret->{'to_office'}}, {'fail' => "$qw_dir not exists"} );
+		my $modules = $self->get_modules();
+		while ( my ($name, $data) = each(%$modules) ) {
+			$ret->{$name} = $data;
 		}
 	}
 
 	return $ret;
+}
+#####################
+sub get_modules {			# Prepare installed modules
+#####################
+my $self = shift;
+	my $mods;
+
+	my $qw_dir = "$Drive::sys_root/lib/Query";
+	if ( -d($qw_dir) ) {			#### Collect available <fromOfficeToGate> QueryDispatcher libs
+		opendir( my $dh, $qw_dir );
+		while (my $qw_lib = readdir($dh) ) {
+			next if $qw_lib =~ /^\./ || $qw_lib !~ /\.pm$/;
+			$qw_lib =~ s/\.pm$//;
+			$qw_lib = "Query::$qw_lib";
+			eval( "use $qw_lib" );
+			$self->logger->debug($@, 2) if $@;
+			my $module;
+			my $qw_info;
+			eval{ $module = $qw_lib->new(  dbh => $self->dbh, 
+											logger => $self->logger, 
+											qdata => $self->{'qdata'} );
+					$qw_info = $module->describe;
+				};
+			if ( $@ ) {
+				$self->logger->debug($@, 2);
+				push( @{$mods->{'int'}}, {'fail' => $@} );
+			} else {
+				push( @{$mods->{'int'}}, $qw_info );
+				$module->DESTROY();
+				Class::Unload->unload( $qw_lib ) unless $use_fail;		# Class::Unload must be installed
+			}
+		}
+		closedir( $dh );
+		push( @{$mods->{'int'}}, {'fail' => 'No modules found'} ) unless scalar( @{$mods->{'int'}});
+	} else {			# Gathering available libraries
+		push( @{$mods->{'int'}}, {'fail' => "$qw_dir not exists"} );
+	}
+
+	$qw_dir = "$Drive::sys_root$sys->{'html_dir'}";			#### Collect available <fromUserPageToOffice> templates
+	if ( -d($qw_dir) ) {
+		opendir( my $dh, $qw_dir );
+		while (my $qw_tmpl = readdir($dh) ) {
+			next if $qw_tmpl =~ /^\./ || $qw_tmpl !~ /\.tmpl$/;
+			my $qw_info = {'name' => $qw_tmpl, 'title' => $qw_tmpl};
+
+			open( my $fh, "< $qw_dir/$qw_tmpl");
+			my $template = decode_utf8( join('', <$fh>));
+			close( $fh);
+			next if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
+
+			my $dom = Mojo::DOM->new( $template );
+			my $title = $dom->find('h1')->[0];			# Extract page title as module name
+
+			$qw_info->{'name'} =~ s/\.tmpl$//;
+			$qw_info->{'title'} = $title->text() if $title;
+			push( @{$mods->{'ext'}}, $qw_info );
+		}
+		closedir( $dh );
+		push( @{$mods->{'ext'}}, {'fail' => 'No modules found'} ) unless scalar( @{$mods->{'ext'}});
+	} else {
+		push( @{$mods->{'ext'}}, {'fail' => "$qw_dir not exists"} );
+	}
+	return $mods;
 }
 #####################
 sub connect {		# Setup interconnect settings
@@ -635,7 +675,7 @@ sub wsocket {		# Process websocket queries
 					});
 }
 #####################
-sub listen {		# Open and listen socket
+sub listen_sock {		# Open and listen socket
 #####################
 my ($self, $socket_name, $timeout) = @_;
 	my $msg;

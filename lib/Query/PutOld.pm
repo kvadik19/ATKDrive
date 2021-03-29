@@ -12,6 +12,7 @@ use Mojo::Util qw(url_escape url_unescape);
 use XML::XML2JSON;
 
 
+my ($dbh, $logger);
 my @options = qw(
 		dbh
 		logger
@@ -34,6 +35,8 @@ my $class = shift;
 	my %init = @_;
 	my %hash = map(( "$_" => $init{$_} ), @options);
 	my $self = bless \%hash, $class;
+	$dbh = $self->{'dbh'};
+	$logger = $self->{'logger'};
 	return $self;
 }
 
