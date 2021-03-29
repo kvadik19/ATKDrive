@@ -168,26 +168,27 @@ my $self = shift;
 			} else {
 				open( my $fh, "> $Drive::sys_root/watchdog" );		# Zeroing buffer file
 				close($fh);
-				$ret->{'json'}->{'data'} = {'file' => $watchfile, 'open' => 1 };
 			}
 		} elsif ( $param->{'code'} =~ /^load|commit$/ ) {
-			my $oper = $param->{'code'};
+			my $action = $param->{'code'};
 			my $mod_lib = $param->{'data'}->{'name'};
 			eval( "use $mod_lib" );
 			$self->logger->debug($@, 2) if $@;
 			my $module;
+			my $oper;
 			eval{ $module = $mod_lib->new(  dbh => $self->dbh, 
 											logger => $self->logger, 
 											qdata => $self->{'qdata'} );
-					$oper = $module->$oper( $param->{'data'} );
+					$oper = $module->$action( $param->{'data'} );
 				};
 			if ( $@ ) {
 				$self->logger->debug($@, 2);
 				$ret->{'json'}->{'fail'} = $@;
 			} else {
 				$module->DESTROY();
-				Class::Unload->unload( $mod_lib ) unless $use_fail;		# Class::Unload must be installed
 			}
+			Class::Unload->unload( $mod_lib ) unless $use_fail;		# Class::Unload must be installed
+			$ret->{'json'}->{'fail'} = $oper->{'fail'} if exists( $oper->{'fail'}); 
 			$ret->{'json'}->{'data'} = $oper;
 		}
 
@@ -221,6 +222,8 @@ sub get_modules {			# Prepare installed modules
 #####################
 my $self = shift;
 	my $mods;
+	my $config_path = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/query");
+	mkpath( $config_path, { mode => 0775 } ) unless -d( $config_path );		# Prepare storage, if need
 
 	my $qw_dir = "$Drive::sys_root/lib/Query";
 	if ( -d($qw_dir) ) {			#### Collect available <fromOfficeToGate> QueryDispatcher libs
@@ -244,8 +247,8 @@ my $self = shift;
 			} else {
 				push( @{$mods->{'int'}}, $qw_info );
 				$module->DESTROY();
-				Class::Unload->unload( $qw_lib ) unless $use_fail;		# Class::Unload must be installed
 			}
+			Class::Unload->unload( $qw_lib ) unless $use_fail;		# Class::Unload must be installed
 		}
 		closedir( $dh );
 		push( @{$mods->{'int'}}, {'fail' => 'No modules found'} ) unless scalar( @{$mods->{'int'}});
@@ -613,14 +616,7 @@ sub hsocket {		# Process http admin queries
 		return;
 	}
 	my $msg_send = {'fail' => "418 : I'm a teapot"};
-# $self->logger->dump(Dumper($self->req->content->asset),1,1);
 	my $msg_recv = $self->req->content->asset->{'content'};
-
-	if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
-		open( my $fh, "> $Drive::sys_root/watchdog" );
-		print $fh $msg_recv;
-		close($fh);
-	}
 
 	if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 		my $qry;
@@ -634,6 +630,14 @@ sub hsocket {		# Process http admin queries
 			$msg_send->{'data'} = $qry;
 		}
 		$msg_send = decode_utf8(encode_json( $msg_send ));
+
+		if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
+			$qry = decode_utf8( encode_json( $qry));
+			open( my $fh, "> $Drive::sys_root/watchdog" );
+			print $fh $qry;
+			close($fh);
+		}
+
 	}
 
 	$self->render( type => 'application/json', json => $msg_send );
@@ -645,12 +649,6 @@ sub wsocket {		# Process websocket queries
 
 	$self->on( message => sub { my ( $ws, $msg_recv ) = @_;
 						my $msg_send = {'fail' => "418 : I'm a teapot"};
-
-						if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
-							open( my $fh, "> $Drive::sys_root/watchdog" );
-							print $fh $msg_recv;
-							close($fh);
-						}
 
 						if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 							my $qry;
@@ -664,6 +662,14 @@ sub wsocket {		# Process websocket queries
 								$msg_send->{'data'} = $qry;
 							}
 							$msg_send = decode_utf8(encode_json( $msg_send ));
+
+							if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
+								$qry = decode_utf8( encode_json( $qry));
+								open( my $fh, "> $Drive::sys_root/watchdog" );
+								print $fh $qry;
+								close($fh);
+							}
+
 						} else {
 							$msg_send ="ECHO: $msg_recv";
 						}

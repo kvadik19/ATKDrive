@@ -49,6 +49,23 @@ let showQRY = function(host, query) {			// Display incoming query received by wa
 		}
 	};
 
+let jsonSelect = function(e) {			// Click on composers .jsonItems
+		e.stopImmediatePropagation();
+		let el = e.target.closest('.jsonItem');
+		if ( e.shiftKey ) {
+			e.preventDefault();
+			if ( el.matches('.active') ) {
+				el.className = el.className.replace(/\s*active/g,'');
+			} else {
+				el.className += ' active';
+			}
+		} else {
+			document.querySelectorAll('.jsonItem').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
+			el.className += ' active';
+		}
+		btnActivate();
+	};
+
 let getVal = function(item) {		// Obtain key:value pair from DOM <div class="value">
 		let value = {};
 		if ( item.firstElementChild.matches('.keyVal') ) {		// Scalar value as array item
@@ -57,11 +74,15 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 					&& item.lastElementChild.matches('.keyVal') ) {		// key:scalar value pair
 			value.key = item.firstElementChild.innerText;
 			if ( item.dataset.name ) value.key += ';'+item.dataset.name;
+			if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
+			if ( item.matches('.preset') ) value.key += ';%preset';
 			value.val= item.lastElementChild.innerText;
 		} else if( item.lastElementChild ) {
 			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
 				value.key = item.firstElementChild.innerText;
 				if ( item.dataset.name ) value.key += ';'+item.dataset.name;
+				if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
+				if ( item.matches('.preset') ) value.key += ';%preset';
 			}
 			value.val = fromDOM(item.lastElementChild);
 		}
@@ -73,7 +94,10 @@ var fromDOM = function(node) {			// Parse DOM into JSON
 		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra containers
 
 		if ( node.matches('.array') ) {
-			obj = [];
+			let manifest = '==manifest;';
+			if ( node.matches('.jsonItem') ) manifest += 'jsonItem;';
+			if ( node.matches('.preset') ) manifest += 'preset;';
+			obj = [ manifest ];
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
 				if ( node.children[nC].matches('.value') ) {
@@ -91,7 +115,10 @@ var fromDOM = function(node) {			// Parse DOM into JSON
 			}
 
 		} else if ( node.matches('.object') ) {
-			obj  = {};
+			let manifest = '';
+			if ( node.matches('.jsonItem') ) manifest += 'jsonItem;';
+			if ( node.matches('.preset') ) manifest += 'preset;';
+			obj  = { '==manifest':manifest };
 			for (let nC=0; nC< node.children.length; nC++) {
 				let res = getVal(node.children[nC]);
 				obj[res.key] = res.val;
@@ -111,22 +138,40 @@ var fromDOM = function(node) {			// Parse DOM into JSON
 		}
 		return obj;
 	};
+
+let keySplit = function( keyName ) {
+		let parts = keyName.split(';');
+		let ret = { 'uname':parts.shift(), 'name':'', 'classname':'' };
+		let part;
+		while( part = parts.shift() ) {
+			if ( part.match(/^%/) ) {
+				ret.classname += ' '+ part.replace(/^%/,'');
+			} else {
+				ret.name = part;
+			}
+		}
+		return ret;
+	};
 	
 let toDOM = function(val, key) {
 		let div = createObj('div',{'className':'domItem'});
 		if ( val.constructor.toString().match(/Array/) ) {
+			let manifest;
+			if ( val[0] === '==manifest' ) manifest = val.shift();
 			let inner = toDOM( val[0] );
 			let content = createObj('div',{'className':'domItem array'});
 			let stub = createObj('div', {'className':'domItem same','innerText':'<--->',
 							'title':'Подразумевается что массив [] содержит равнозначные по типу и структуре элементы' });
 			if ( key ) {
 				div.className += ' value';
-				let [uname,name] = key.split(';');
-				if (name) div.dataset.name = name;
-				div.innerHTML = '<span class="keyName">'+uname+'</span>:';
+				let ukey = keySplit(key);
+				if (ukey.name) div.dataset.name = ukey.name;
+				div.className += ukey.classname;
+
+				div.innerHTML = '<span class="keyName">'+ukey.uname+'</span>:';
 				content.appendChild( inner);
 				if ( val.length > 1 ) {
-					stub.title = stub.title.replace(/\[\]/,'['+uname+']');
+					stub.title = stub.title.replace(/\[\]/,'['+ukey.uname+']');
 					content.appendChild(stub);
 				}
 				div.appendChild(content);
@@ -139,11 +184,18 @@ let toDOM = function(val, key) {
 				}
 			}
 		} else if ( val.constructor.toString().match(/Object/) ) {
+			let manifest;
+			if ( '==manifest' in val ) {
+				manifest = val['==manifest'];
+				delete val['==manifest'];
+			}
 			let content = createObj('div',{'className':'object'});
 			if ( key ) {
-				let [uname,name] = key.split(';');
-				if (name) div.dataset.name = name;
-				div.innerHTML = '<span class="keyName">'+uname+'</span>:';
+				let ukey = keySplit(key);
+				if (ukey.name) div.dataset.name = ukey.name;
+				div.className += ukey.classname;
+
+				div.innerHTML = '<span class="keyName">'+ukey.uname+'</span>:';
 				content.className += ' domItem';
 				div.className += ' value';
 			}
@@ -155,9 +207,10 @@ let toDOM = function(val, key) {
 			div.className += ' value';
 			div.innerHTML = '<span class="keyVal">'+val+'</span>';
 			if ( key ) {
-				let [uname,name] = key.split(';');
-				if (name) div.dataset.name = name;
-				div.innerHTML = '<span class="keyName">'+uname+'</span>:<span class="keyVal">'+val+'</span>';
+				let ukey = keySplit(key);
+				if (ukey.name) div.dataset.name = ukey.name;
+				div.className += ukey.classname;
+				div.innerHTML = '<span class="keyName">'+ukey.uname+'</span>:<span class="keyVal">'+val+'</span>';
 			}
 		}
 		return div;
@@ -195,15 +248,21 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 						let action = document.querySelector('.tabContent.shown .subTab.active');
 						flush({'code':'load','data':{'name':action.dataset.name}}, document.location.href, function(resp) {
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
-								if ( resp.fail ) {
-									alert(resp.fail);
-								} else if( resp.code == 1) {
+								if( resp.data && resp.data.success == 1) {
+									let define = resp.data;
 									bodyIn.querySelector('.qw_data').innerHTML = '';
+									bodyIn.querySelector('.qw_data').appendChild( toDOM( define.qw_recv.data) );
+
 									bodyOut.querySelector('.qw_data').innerHTML = '';
-									bodyIn.querySelector('.qw_code code').innerText = resp.data.qw_recv.code;
-									bodyOut.querySelector('.qw_code #code').value = resp.data.qw_send.code
+									bodyOut.querySelector('.qw_data').appendChild( toDOM( define.qw_send.data) );
+
+									bodyIn.querySelector('.qw_code code').innerText = define.qw_recv.code;
+									bodyOut.querySelector('.qw_code #code').value = define.qw_send.code
+									document.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonSelect});
 									snapshot = getSnap();
 									commitEnable();
+								} else {
+									console.log( resp);
 								}
 							});
 						dispatch.int.committer = function(e) {
@@ -483,22 +542,6 @@ let jsonEdit = {			// Json elements buttons operations
 				btnActivate();
 			}
 	};
-let jsonSelect = function(e) {			// Click on composers .jsonItems
-		e.stopImmediatePropagation();
-		let el = e.target.closest('.jsonItem');
-		if ( e.shiftKey ) {
-			e.preventDefault();
-			if ( el.matches('.active') ) {
-				el.className = el.className.replace(/\s*active/g,'');
-			} else {
-				el.className += ' active';
-			}
-		} else {
-			document.querySelectorAll('.jsonItem').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
-			el.className += ' active';
-		}
-		btnActivate();
-	};
 
 let btnDo = document.querySelectorAll('button.dataDo');		// Buttons for OUT message JSON composer elements
 btnDo.forEach( bt =>{
@@ -574,8 +617,10 @@ document.getElementById('listen').onclick = function(e) {		// Income query liste
 
 		let msgGot = function(msg) {
 				if ( msg.match(/^[\{\[]/) ) msg = JSON.parse(msg);
+					
 				if ( msg.data ) {
 					if ( typeof(msg.data) == 'string' && msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
+					bodyIn.querySelector('.qw_data').innerHTML='';
 					showQRY(bodyIn, msg);
 					qState(0);
 				} else if( Date.now() > tstart+timeout*60000 ) {
