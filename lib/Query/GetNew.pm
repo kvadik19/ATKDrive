@@ -60,6 +60,7 @@ my $qdata = shift;
 								}
 							} elsif( ref($item) eq 'HASH' ) {
 								while ( my ($key, $val) = each(%$item) ) {
+									next if $key =~ /^=+/;
 									my ($name, $field) = split(/;/, $key);
 									my $tgt = $name;		# Get only "localized" name
 									my $src = $get_table->($val) || $field;

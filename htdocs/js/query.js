@@ -2,8 +2,6 @@ let tick = 0;		// Timeout handler/
 let bodyIn = document.querySelector('.tabContent.shown .qw_recv');
 let bodyOut = document.querySelector('.tabContent.shown .qw_send');
 let keyItems = document.querySelectorAll('#keySelect li');
-let snapshot;		//
-let getSnap;		// Tools for changed data check
 
 let subSwitch = function(tab) {			// Click on subTabs
 		let cook = getCookie('acTab');
@@ -49,23 +47,6 @@ let showQRY = function(host, query) {			// Display incoming query received by wa
 		}
 	};
 
-let jsonSelect = function(e) {			// Click on composers .jsonItems
-		e.stopImmediatePropagation();
-		let el = e.target.closest('.jsonItem');
-		if ( e.shiftKey ) {
-			e.preventDefault();
-			if ( el.matches('.active') ) {
-				el.className = el.className.replace(/\s*active/g,'');
-			} else {
-				el.className += ' active';
-			}
-		} else {
-			document.querySelectorAll('.jsonItem').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
-			el.className += ' active';
-		}
-		btnActivate();
-	};
-
 let getVal = function(item) {		// Obtain key:value pair from DOM <div class="value">
 		let value = {};
 		if ( item.firstElementChild.matches('.keyVal') ) {		// Scalar value as array item
@@ -95,8 +76,8 @@ var fromDOM = function(node) {			// Parse DOM into JSON
 
 		if ( node.matches('.array') ) {
 			let manifest = '==manifest;';
-			if ( node.matches('.jsonItem') ) manifest += 'jsonItem;';
-			if ( node.matches('.preset') ) manifest += 'preset;';
+			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
+			if ( node.matches('.preset') ) manifest += '%preset;';
 			obj = [ manifest ];
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
@@ -116,8 +97,8 @@ var fromDOM = function(node) {			// Parse DOM into JSON
 
 		} else if ( node.matches('.object') ) {
 			let manifest = '';
-			if ( node.matches('.jsonItem') ) manifest += 'jsonItem;';
-			if ( node.matches('.preset') ) manifest += 'preset;';
+			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
+			if ( node.matches('.preset') ) manifest += '%preset;';
 			obj  = { '==manifest':manifest };
 			for (let nC=0; nC< node.children.length; nC++) {
 				let res = getVal(node.children[nC]);
@@ -146,7 +127,7 @@ let keySplit = function( keyName ) {
 		while( part = parts.shift() ) {
 			if ( part.match(/^%/) ) {
 				ret.classname += ' '+ part.replace(/^%/,'');
-			} else {
+			} else if( part.length > 0) {
 				ret.name = part;
 			}
 		}
@@ -155,11 +136,14 @@ let keySplit = function( keyName ) {
 	
 let toDOM = function(val, key) {
 		let div = createObj('div',{'className':'domItem'});
+
 		if ( val.constructor.toString().match(/Array/) ) {
-			let manifest;
-			if ( val[0] === '==manifest' ) manifest = val.shift();
-			let inner = toDOM( val[0] );
+			let manifest = '';
+			if ( typeof(val[0]) === 'string' && val[0].match(/^==manifest/) ) manifest = val.shift();
+			let mark = keySplit( manifest );
+
 			let content = createObj('div',{'className':'domItem array'});
+			let inner = toDOM( val[0] );
 			let stub = createObj('div', {'className':'domItem same','innerText':'<--->',
 							'title':'Подразумевается что массив [] содержит равнозначные по типу и структуре элементы' });
 			if ( key ) {
@@ -169,6 +153,7 @@ let toDOM = function(val, key) {
 				div.className += ukey.classname;
 
 				div.innerHTML = '<span class="keyName">'+ukey.uname+'</span>:';
+				content.className += mark.classname;
 				content.appendChild( inner);
 				if ( val.length > 1 ) {
 					stub.title = stub.title.replace(/\[\]/,'['+ukey.uname+']');
@@ -176,6 +161,7 @@ let toDOM = function(val, key) {
 				}
 				div.appendChild(content);
 			} else {
+				div.className += mark.classname;
 				div.className += ' array';
 				div.appendChild(inner);
 				if ( val.length > 1 ) {
@@ -184,12 +170,13 @@ let toDOM = function(val, key) {
 				}
 			}
 		} else if ( val.constructor.toString().match(/Object/) ) {
-			let manifest;
+			let manifest = '';
 			if ( '==manifest' in val ) {
-				manifest = val['==manifest'];
+				manifest = '==manifest;'+val['==manifest'];
 				delete val['==manifest'];
 			}
-			let content = createObj('div',{'className':'object'});
+			let mark = keySplit( manifest );
+			let content = createObj('div',{'className':'object'+mark.classname});
 			if ( key ) {
 				let ukey = keySplit(key);
 				if (ukey.name) div.dataset.name = ukey.name;
@@ -217,6 +204,8 @@ let toDOM = function(val, key) {
 	};
 
 let dispatch = {		// Switching between Tabs/subTabs dispatcher
+		getSnap: '',
+		snapshot: '',
 		display: function() {
 				let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
 				let method = document.querySelector('.tabContent.shown .subTab.active').dataset.type;
@@ -244,7 +233,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 			},
 		int: {
 				read: function() {
-						getSnap = function() { return bodyIn.innerHTML + bodyOut.innerHTML };
+						dispatch.getSnap = function() { return bodyIn.innerText.replace(/\s/g,'') + bodyOut.innerText.replace(/\s/g,'') };
 						let action = document.querySelector('.tabContent.shown .subTab.active');
 						flush({'code':'load','data':{'name':action.dataset.name}}, document.location.href, function(resp) {
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
@@ -258,8 +247,10 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 
 									bodyIn.querySelector('.qw_code code').innerText = define.qw_recv.code;
 									bodyOut.querySelector('.qw_code #code').value = define.qw_send.code
-									document.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonSelect});
-									snapshot = getSnap();
+									document.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonEdit.jsonSelect});
+									document.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
+									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.action});
+									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
 								} else {
 									console.log( resp);
@@ -277,8 +268,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 										if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
 										if ( resp.fail ) {
 											alert(resp.fail);
-										} else if( resp.code == 1) {
-											snapshot = getSnap();
+										} else if( resp.data.success == 1) {
+											dispatch.snapshot = dispatch.getSnap();
 											commitEnable();
 										}
 									});
@@ -428,6 +419,23 @@ let keyEdit = {
 	};
 
 let jsonEdit = {			// Json elements buttons operations
+		jsonSelect: function(e) {			// Click on composers .jsonItems
+				e.stopImmediatePropagation();
+				let el = e.target.closest('.jsonItem');
+				if ( e.shiftKey ) {
+					e.preventDefault();
+					if ( el.matches('.active') ) {
+						el.className = el.className.replace(/\s*active/g,'');
+					} else {
+						el.className += ' active';
+					}
+				} else {
+					document.querySelectorAll('.jsonItem').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
+					el.className += ' active';
+				}
+				btnActivate();
+			},
+
 		rollUp: function(evt) {		// Rollup  .jsonItem.preset divs
 				if ( !evt.target.matches('.preset') ) return;
 				evt.stopImmediatePropagation();
@@ -438,19 +446,19 @@ let jsonEdit = {			// Json elements buttons operations
 				}
 			},
 		list: function(body) {			// Add array
-				let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem array active','innerHTML':'&nbsp;','onclick':jsonSelect});
+				let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem array active','innerHTML':'&nbsp;','onclick':jsonEdit.jsonSelect});
 				this.place(body, el);
 			},
 		hash: function(body) {			// Add Object
 				let el = createObj('div',{'className':'domItem'});
-				el.appendChild(createObj('div',{'id':Date.now(),'className':'jsonItem object active','innerHTML':'&nbsp;','onclick':jsonSelect}));
+				el.appendChild(createObj('div',{'id':Date.now(),'className':'jsonItem object active','innerHTML':'&nbsp;','onclick':jsonEdit.jsonSelect}));
 				this.place(body, el);
 			},
 		key: function(body) {				// Append values from users, media tables
 				keyTool.fire( function(key, val) {
 								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
 								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
-															'data-name':text,'onclick':jsonSelect,'title':val.title});
+															'data-name':text,'onclick':jsonEdit.jsonSelect,'title':val.title});
 								el.appendChild(createObj('span',{'className':'keyName','innerText':key,'ondblclick':keyEdit.action}));
 								el.insertAdjacentText('beforeend',':');
 								let keyVal = createObj('span',{'className':'keyVal','innerText':text});
@@ -553,9 +561,9 @@ btnDo.forEach( bt =>{
 	});
 
 let commitEnable = function() {			// Main button 'Save'
-		if ( getSnap ) {
-			let state = getSnap();
-			if ( state != snapshot ) {
+		if ( typeof(dispatch.getSnap) === 'function' ) {
+			let state = dispatch.getSnap();
+			if ( state != dispatch.snapshot ) {
 				document.querySelector('#eCommit button.ok').removeAttribute('disabled');
 			} else {
 				document.querySelector('#eCommit button.ok').setAttribute('disabled', 1);
@@ -617,14 +625,16 @@ document.getElementById('listen').onclick = function(e) {		// Income query liste
 
 		let msgGot = function(msg) {
 				if ( msg.match(/^[\{\[]/) ) msg = JSON.parse(msg);
-					
+
 				if ( msg.data ) {
-					if ( typeof(msg.data) == 'string' && msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
+					if ( typeof(msg.data) === 'string' && msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
 					bodyIn.querySelector('.qw_data').innerHTML='';
 					showQRY(bodyIn, msg);
 					qState(0);
+
 				} else if( Date.now() > tstart+timeout*60000 ) {
 					qState(0);
+
 				} else {
 					let left = timeout*60 - Math.round( (Date.now()-tstart)/1000 );
 					if (left < 60) {
