@@ -59,6 +59,15 @@ my $action = shift;
 	$self->render( type => 'application/json', json => $out );
 }
 #############################
+sub drive_media {				# Mediafiles access for /drive/media/uid/mtype/media_id
+#############################
+my $self = shift;
+	my (undef, undef, $uid, $media_role, $media_id) = @{$self->{'qdata'}->{'stack'}};
+	my $filedata = $self->dbh->selectrow_arrayref( "SELECT filename,mime FROM media WHERE id=$media_id" );
+	my $filename = "$Drive::sys_root$sys->{'user_dir'}/$uid/$media_role/$filedata->[0]";
+	return $self->proxy( $filename);
+}
+#############################
 sub medialist {				# Read all from DB
 #############################
 my $self = shift;
@@ -215,7 +224,7 @@ my $res;
 	return $res;
 }
 #############################
-sub cleanup_dir {				# Proxying mediafiles from directory
+sub cleanup_dir {				# Purge upload dir
 #############################
 my ($self, $udir ) = @_;
 	$udir = "$Drive::sys_root$sys->{'user_dir'}" unless $udir;
@@ -240,7 +249,7 @@ my ($self, $filename) = @_;
 						"\x21\xF9\x04\x01\x00\x00\x00\x00\x2C\x00\x00\x00".
 						"\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3B";		# One-pixel transparent image
 # $self->logger->dump("Proxy $filename");
-	if ( -e($filename) ) {
+	if ( -e($filename) && -f($filename) ) {
 		open( my $ih, "< $filename");
 		$idata = join('', <$ih>);
 		close( $ih);

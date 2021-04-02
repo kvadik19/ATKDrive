@@ -47,6 +47,7 @@ sub startup {
 
 	$r->route('/media')->to(controller => 'media', action => 'operate');
 	$r->route('/media/*path')->to(controller => 'media', action => 'operate');
+	$r->route('/drive/media/*path')->to(controller => 'media', action => 'drive_media');
 
 	$r->route('/drive')->to(controller => 'support', action => 'hello')->name('admin');
 	$r->route('/drive/*path')->to(controller => 'support', action => 'support');

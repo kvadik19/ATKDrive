@@ -43,6 +43,13 @@ my $class = shift;
 	return $self;
 }
 #################
+sub execute {	#			# Make main operation
+#################
+my ($self, $qdata) = @_;
+	my $ret;
+	return $ret;
+}
+#################
 sub commit {		#			# Store settings after editing
 #################
 my $self = shift;

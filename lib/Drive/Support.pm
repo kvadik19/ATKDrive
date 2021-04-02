@@ -19,7 +19,6 @@ use Utils::NETS;
 use Time::HiRes qw( usleep );
 use HTML::Template;
 
-our $intercom;
 my $templates;
 my $sys = \%Drive::sys;
 my $use_fail = '';
@@ -28,6 +27,7 @@ $use_fail = $@ if $@;
 
 use Data::Dumper;
 
+our $intercom = {};
 
 #############################
 sub hello {					# Operations root menu
@@ -35,6 +35,9 @@ sub hello {					# Operations root menu
 my $self = shift;
 	$self->{'qdata'}->{'layout'} = 'support';
 	$self->{'qdata'}->{'tags'}->{'page_title'} = '';
+	$intercom->{'init'}->();
+$self->logger->dump(Dumper($intercom));
+
 	$self->render( template => 'drive/splash', status => $self->stash('http_state') );
 }
 #############################
@@ -607,17 +610,16 @@ my $sql;
 #####################
 sub hsocket {		# Process http admin queries
 #####################
-	my $self = shift;
-
+my $self = shift;
 	unless ( $self->req->content->headers->content_type eq 'application/json') {
 		$self->logger->dump('hsocket received wrong '.$self->req->content->headers->content_type, 3);
 		$self->stash('html_code' => 'Wrong request type '.$self->req->content->headers->content_type);
 		$self->render( template => 'exception', status => 404 );
-		return;
+		return;				# Report 404 on strange messages
 	}
+
 	my $msg_send = {'fail' => "418 : I'm a teapot"};
 	my $msg_recv = $self->req->content->asset->{'content'};
-
 	if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 		my $qry;
 		eval{ $qry = decode_json( encode_utf8($msg_recv) )};
@@ -625,27 +627,28 @@ sub hsocket {		# Process http admin queries
 			$msg_send->{'fail'} = "Decode JSON : $@";
 			$self->logger->dump( $msg_send->{'fail'} );
 		} else {
+			if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
+				$qry = decode_utf8( encode_json( $qry));
+				open( my $fh, "> $Drive::sys_root/watchdog" );
+				print $fh $qry;
+				close($fh);
+			}
 			delete( $msg_send->{'fail'});
-			$msg_send->{'code'} = 'ECHO';
-			$msg_send->{'data'} = $qry;
+			my $operate = $self->process_query( $qry );
+			while ( my ($key, $val) = each( %$operate) ) {
+				$msg_send->{$key} = $val;
+			}
 		}
 		$msg_send = decode_utf8(encode_json( $msg_send ));
-
-		if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
-			$qry = decode_utf8( encode_json( $qry));
-			open( my $fh, "> $Drive::sys_root/watchdog" );
-			print $fh $qry;
-			close($fh);
-		}
-
+	} else {
+		$msg_send ="ECHO: $msg_recv";
 	}
-
 	$self->render( type => 'application/json', json => $msg_send );
 }
 #####################
-sub wsocket {		# Process websocket queries
+sub wsocket {		# Process websocket admin queries
 #####################
-	my $self = shift;
+my $self = shift;
 
 	$self->on( message => sub { my ( $ws, $msg_recv ) = @_;
 						my $msg_send = {'fail' => "418 : I'm a teapot"};
@@ -657,60 +660,76 @@ sub wsocket {		# Process websocket queries
 								$msg_send->{'fail'} = "Decode JSON : $@";
 								$self->logger->dump( $msg_send->{'fail'} );
 							} else {
+								if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {	# Report received msg 
+									$qry = decode_utf8( encode_json( $qry));
+									open( my $fh, "> $Drive::sys_root/watchdog" );
+									print $fh $qry;
+									close($fh);
+								}
 								delete( $msg_send->{'fail'});
-								$msg_send->{'code'} = 'ECHO';
-								$msg_send->{'data'} = $qry;
+								my $operate = $self->process_query( $qry );
+								while ( my ($key, $val) = each( %$operate) ) {
+									$msg_send->{$key} = $val;
+								}
 							}
 							$msg_send = decode_utf8(encode_json( $msg_send ));
-
-							if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {
-								$qry = decode_utf8( encode_json( $qry));
-								open( my $fh, "> $Drive::sys_root/watchdog" );
-								print $fh $qry;
-								close($fh);
-							}
-
 						} else {
 							$msg_send ="ECHO: $msg_recv";
 						}
 						$ws->send( $msg_send );
 					});
-
 	$self->on( finish => sub { my ( $ws, $code, $reason ) = @_;
 						$self->{'messenger'}->terminate() if $self->{'messenger'};
 					});
 }
 #####################
-sub listen_sock {		# Open and listen socket
+sub process_query {		# Process intercommunication queries
 #####################
-my ($self, $socket_name, $timeout) = @_;
-	my $msg;
-	my $socket = "$Drive::sys_root/$socket_name\_$$";
+my ($self, $query) = @_;
+	my $ret = {'fail' => "418 : I'm a teapot"};
+	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/query");
+	return $ret unless -d($conf_dir);
 
-	my $insock = IO::Socket::UNIX->new(
-		Local => $socket, 
-		Proto => 0, 
-		Type => SOCK_DGRAM, 
-		Listen => 3 );		# Create socket
-
-	if ( $@ ) {			# Check if SERVER socket success
-		$self->logger->debug("Create IN socket:$@", 1);
-	} else {
-		my $socks = IO::Select->new( $insock );
-		my ($ready, ) = $socks->can_read( $timeout );
-		if ( $ready ) {
-			$ready->recv($msg, $sys->{'inet_buffer'});
-			$msg =~ s/\n$//;
+	my $conf = $intercom->{ $query->{'code'}};
+	unless ( $conf && $conf->{'upd'} >= ( stat($conf_dir))[9] ) {			# Update intercom
+		opendir( my $dh, $conf_dir );
+		while( my $fname = readdir($dh) ) {
+			next unless $fname =~ /^\w+$/;
+			if ( (stat("$conf_dir/$fname"))[9] > $conf->{'upd'} ) {
+				my $def = Drive::read_xml( "$conf_dir/$fname", $fname, 'utf8' );
+				if ( exists( $def->{'_xml_fail'}) ) {
+					$ret->{'fail'} = $def->{'_xml_fail'};
+				} elsif( $def ) {
+					eval { $intercom->{ decode_json($def->{'define_recv'})->{'code'}} 
+										= { 'upd'=>time, 'lib'=>"Query::$fname" } };
+					$ret->{'fail'} = $@ if $@;
+				}
+			}
 		}
-		if ( $insock ) {
-			$insock->shutdown(0);
-			$insock->close();
-			undef $insock;
-		}
-		unlink( $socket ) if -e( $socket );
-	}			# Check if IN socket success
+		closedir($dh)
+	}
 
-	return $msg;
+	if ( exists( $intercom->{ $query->{'code'}}) ) {		# Recheck intercom
+		my $libname = $intercom->{ $query->{'code'}}->{'lib'};
+		eval( "use $libname" );
+		$self->logger->debug($@, 2) if $@;
+		my $module;
+		my $qw_info;
+		eval{ $module = $libname->new(  dbh => $self->dbh, 
+										logger => $self->logger, 
+										qdata => $self->{'qdata'} );
+				$ret = $module->execute( $query->{'data'} );
+			};
+		if ( $@ ) {
+			$self->logger->debug($@, 2);
+			$ret->{'fail'} = $@;
+		} else {
+			$ret->{'code'} = $query->{'code'};
+			$module->DESTROY();
+		}
+		Class::Unload->unload( $libname ) unless $use_fail;		# Class::Unload must be installed
+	}
+	return $ret;
 }
 #####################
 sub reboot {		# Manually reboot backserver
@@ -720,4 +739,5 @@ sub reboot {		# Manually reboot backserver
 	my $res = kill( $signal, getppid() );
 	return {'pid' => getppid, 'signal' => $signal};
 }
+
 1

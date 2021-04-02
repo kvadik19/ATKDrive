@@ -70,9 +70,10 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 		return value;
 	};
 
-var fromDOM = function(node) {			// Parse DOM into JSON
+let fromDOM = function(node) {			// Parse DOM into JSON
 		let obj;
 		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra containers
+		if ( !node ) return;
 
 		if ( node.matches('.array') ) {
 			let manifest = '==manifest;';
@@ -136,6 +137,7 @@ let keySplit = function( keyName ) {
 	
 let toDOM = function(val, key) {
 		let div = createObj('div',{'className':'domItem'});
+		if ( !val ) return div;
 
 		if ( val.constructor.toString().match(/Array/) ) {
 			let manifest = '';
@@ -241,7 +243,6 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									let define = resp.data;
 									bodyIn.querySelector('.qw_data').innerHTML = '';
 									bodyIn.querySelector('.qw_data').appendChild( toDOM( define.qw_recv.data) );
-
 									bodyOut.querySelector('.qw_data').innerHTML = '';
 									bodyOut.querySelector('.qw_data').appendChild( toDOM( define.qw_send.data) );
 
