@@ -35,8 +35,6 @@ sub hello {					# Operations root menu
 my $self = shift;
 	$self->{'qdata'}->{'layout'} = 'support';
 	$self->{'qdata'}->{'tags'}->{'page_title'} = '';
-	$intercom->{'init'}->();
-$self->logger->dump(Dumper($intercom));
 
 	$self->render( template => 'drive/splash', status => $self->stash('http_state') );
 }
@@ -205,10 +203,13 @@ my $self = shift;
 			push( @$media_keys, {'name'=>$k, 'title'=>$v->{'title'}, 'ord'=>$v->{'ord'}});
 		}
 		$ret->{'media_keys'} = [ sort { $a->{'ord'}<=>$b->{'ord'} } @$media_keys ];
+		$ret->{'dict'} = {'_ustate'=>$sys->{'user_state'}, '_umode'=>$sys->{'user_mode'}, '_usubj'=>$sys->{'user_type'}};
 
 		my $struct = [];
 		foreach my $def ( @{$config->{'utable'}} ) {
-			push( @$struct, {'name'=>$def->{'name'}, 'title'=>$def->{'title'}, 'list'=>($def->{'type'} eq 'file') });
+			push( @$struct, {'name'=>$def->{'name'}, 'title'=>$def->{'title'}, 
+							'list'=>($def->{'type'} eq 'file'), 
+							'dict'=>($def->{'name'} =~ /^_u(state|mode|subj)/ ? $def->{'name'} : '') });
 		}
 		$ret->{'struct'} = $struct;
 

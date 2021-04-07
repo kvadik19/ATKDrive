@@ -261,6 +261,9 @@ div.options {
 	margin:0.5em 2em;
 	border-top:1px solid var(--body-text-lt,'#cccccc');
 }
+.over-panel .buttonbar button {
+	margin-right:1em;
+}
 .buttonbar .button:visited,
 .buttonbar .button {
 	text-decoration:none;
@@ -390,6 +393,21 @@ div.options {
 	border:1px solid var(--balloon-border,'#999999');
 	background-color: var(--balloon-back,'#ffffcc');
 	color:var(--balloon-text,'#663333');
+}
+.over-panel .panelrow {
+	margin:0.2em 1em;
+	display:flex;
+	flex-direction:row;
+	justify-content:flex-start;
+}
+.over-panel .panelrow input[type="text"] {
+	width:3em;
+	border:thin inset;
+	text-align:center;
+	font-family:SansMono, monospace;
+}
+.over-panel .panelrow label {
+	margin:0px 0.5em;
 }
 .over-panel .optgroup {
 	background-color: unset !important;

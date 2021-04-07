@@ -30,15 +30,15 @@
 			<h>Выберите ключ-значение</h>
 		</div>
 		<div id="keyHolder">
-			<div class="optgroup">
+			<div class="optgroup text">
 			<label>Ключ</label>
 				<input type="text" id="keyName" class="form__input"/>
 			</div>
-			<div class="optgroup">
+			<div class="optgroup list">
 				<label>Доступные значения</label>
 				<ul>
 % foreach my $fld ( @$struct ) {
-					<li data-name="<%= $fld->{'name'} %>" data-list="<%= $fld->{'list'} %>" title="<%= $fld->{'title'} %>">
+					<li data-name="<%= $fld->{'name'} %>" data-list="<%= $fld->{'list'} %>" data-dict="<%= $fld->{'dict'} %>" title="<%= $fld->{'title'} %>">
 						<%= $fld->{'name'} %>
 					</li>
 %}
@@ -56,6 +56,7 @@
 	const period = 5;			// Secs between requests
 	const timeout = 3;		// Mins to wait
 	const media = <%== decode_utf8( encode_json($media_keys)) %>;
+	const dict = <%== decode_utf8( encode_json($dict)) %>;
 	let url = document.location.origin+document.location.pathname;
 	document.addEventListener('DOMContentLoaded', function() {
 		tabSwitch();

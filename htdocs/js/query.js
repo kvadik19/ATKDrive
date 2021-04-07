@@ -35,6 +35,8 @@ let subSwitch = function(tab) {			// Click on subTabs
 	};
 
 let showQRY = function(host, query) {			// Display incoming query received by watchdog
+		let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
+		let method = document.querySelector('.tabContent.shown .subTab.active').dataset.type;
 		if ( query.code ) {
 			let code = host.querySelector('.qwHdr code');
 			code.innerHTML = '';
@@ -44,6 +46,9 @@ let showQRY = function(host, query) {			// Display incoming query received by wa
 			let data = host.querySelector('.qw_data');
 			data.innerHTML = '';
 			data.appendChild( toDOM( query.data) );
+			if ( method === 'write' ) {
+				data.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
+			}
 		}
 	};
 
@@ -209,11 +214,19 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 		getSnap: '',
 		snapshot: '',
 		display: function() {
+				if ( !document.querySelector('.tabContent.shown') ) return;
 				let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
 				let method = document.querySelector('.tabContent.shown .subTab.active').dataset.type;
+				document.querySelector('.tabContent.shown p.comment.addition').innerHTML = '';
 				bodyIn = document.querySelector('.tabContent.shown .qw_recv');
 				bodyOut = document.querySelector('.tabContent.shown .qw_send');
-				if (bodyOut) {
+// 				if ( bodyIn ) {
+					bodyIn.querySelector('.qw_code code').innerText = '';
+					bodyIn.querySelector('.qw_data').innerHTML = '';
+// 				}
+// 				if (bodyOut) {
+					bodyOut.querySelector('.qw_code #code').value = ''
+					bodyOut.querySelector('.qw_data').innerHTML = '';
 					bodyOut.querySelector('.qw_body').onclick = function(e) {		// Deselect JSONs
 							if ( e.path.findIndex( i =>{ 
 											return ( i.nodeType === 1 
@@ -228,9 +241,9 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 								let inCode = bodyIn.querySelector('.qw_code code').innerText;
 								if ( inCode ) bodyOut.querySelector('.qw_code #code').value = inCode;
 							};
-				}
+// 				}
 				btnActivate();
-				keyTool.init(type);
+				keyTool.init(type, method);
 				this[type][method]();
 			},
 		int: {
@@ -241,20 +254,18 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
 								if( resp.data && resp.data.success == 1) {
 									let define = resp.data;
-									bodyIn.querySelector('.qw_data').innerHTML = '';
 									bodyIn.querySelector('.qw_data').appendChild( toDOM( define.qw_recv.data) );
-									bodyOut.querySelector('.qw_data').innerHTML = '';
 									bodyOut.querySelector('.qw_data').appendChild( toDOM( define.qw_send.data) );
 
 									bodyIn.querySelector('.qw_code code').innerText = define.qw_recv.code;
 									bodyOut.querySelector('.qw_code #code').value = define.qw_send.code
 									document.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonEdit.jsonSelect});
 									document.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
-									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.action});
+									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
 									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
 								} else {
-									console.log( resp);
+									console.log( resp.fail);
 								}
 							});
 						dispatch.int.committer = function(e) {
@@ -279,8 +290,30 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 						return true;
 					},
 				write: function() {
+						document.querySelector('.tabContent.shown p.comment.addition').innerHTML 
+							= 'Используйте двойной шелчок на значении в получаемом запросе чтобы назначить поле в таблице шлюза';
+						dispatch.getSnap = function() { return bodyIn.innerText.replace(/\s/g,'') + bodyOut.innerText.replace(/\s/g,'') };
+						let action = document.querySelector('.tabContent.shown .subTab.active');
+						flush({'code':'load','data':{'name':action.dataset.name}}, document.location.href, function(resp) {
+								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+								if( resp.data && resp.data.success == 1) {
+									let define = resp.data;
+									bodyIn.querySelector('.qw_data').appendChild( toDOM( define.qw_recv.data) );
+									bodyOut.querySelector('.qw_data').appendChild( toDOM( define.qw_send.data) );
+
+									bodyIn.querySelector('.qw_code code').innerText = define.qw_recv.code;
+									bodyOut.querySelector('.qw_code #code').value = define.qw_send.code
+									document.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonEdit.jsonSelect});
+									document.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
+									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
+									bodyIn.querySelectorAll('.keyValue').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
+									dispatch.snapshot = dispatch.getSnap();
+									commitEnable();
+								} else {
+									console.log( resp.fail);
+								}
+							});
 						dispatch.int.committer = function(e) {};
-						console.log('Draw Write');
 						dispatch.int.layout();
 						return true;
 					},
@@ -303,7 +336,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 	};
 
 let keyTool = {			// Add key-value floating window operations
-		init: function( targeType ) {
+		init: function( tgtType, tgtMethod ) {
 				document.querySelectorAll('#keySelect li.choosd').forEach( i =>{ i.className = i.className.replace(/\s*choosd/g,'')});
 				document.querySelectorAll('#keySelect li').forEach( i =>{ i.onclick = keyTool.liChoose;
 																		i.ondblclick = keyTool.result });
@@ -321,7 +354,7 @@ let keyTool = {			// Add key-value floating window operations
 		keyTrap: function(evt) {			// Click outside of keySelect window
 				if ( evt.path.findIndex( i =>{ return ( i.nodeType === 1 && i.matches('.over-panel')) }) < 0 ) keyTool.keyHide();
 			},
-		fire: function( callbk ) {
+		fire: function( callbk, valuesOnly ) {
 				this.callbk = callbk;
 				document.querySelectorAll('#keySelect li.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
 				document.querySelector('#keySelect input[type="text"]').value = '';
@@ -342,6 +375,17 @@ let keyTool = {			// Add key-value floating window operations
 				else if (Y + H > window.scrollY+window.innerHeight) { Y = window.scrollY+window.innerHeight - H - 20 }
 				this.panel.style.left = X+'px';
 				this.panel.style.top = Y+'px';
+
+				document.querySelector('#keySelect h').innerText = 'Выберите ключ-значение';
+				document.querySelector('#keySelect .optgroup.text').style.display = 'flex';
+				document.querySelectorAll('#keySelect li[data-list="1"]').forEach( i =>{ i.style.display = 'list-item'});
+				document.querySelector('#keySelect .optgroup.list label').style.display = 'block';
+				if ( valuesOnly ) {
+					document.querySelector('#keySelect h').innerText = 'Выберите поле для записи';
+					document.querySelectorAll('#keySelect li[data-list="1"]').forEach( i =>{ i.style.display = 'none'});
+					document.querySelector('#keySelect .optgroup.text').style.display = 'none';
+					document.querySelector('#keySelect .optgroup.list label').style.display = 'none';
+				}
 			},
 		result: function() {
 				let key = document.querySelector('#keySelect input[type="text"]');
@@ -378,7 +422,7 @@ let keyTool = {			// Add key-value floating window operations
 
 
 let keyEdit = {
-		action: function(evt) {
+		keyname: function(evt) {
 				this.target = evt.target;
 				let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
 				keyEdit.preval = evt.target.innerText;
@@ -390,6 +434,20 @@ let keyEdit = {
 				evt.target.appendChild(inpt);
 				inpt.focus();
 				inpt.select();
+			},
+		keyvalue: function(evt) {
+				let keyVal = evt.target;
+				let div = keyVal.closest('.value');
+				keyTool.fire( function(key, val) {
+								let fldName = val.dataset.name;
+								div.dataset.name = fldName;
+								div.title = val.title;
+								if ( dict[val.dataset.dict] ) {			// See `const dict`
+									recoder.assign( {dict:val.dataset.dict, host:keyVal} );
+								} else if ( fldName.length > 0 ) {
+									keyVal.innerText = '$'+ fldName;
+								}
+							}, 'valuesOnly');
 			},
 		killInpt: function(evt) {
 				let host = evt.target.closest('.keyName');
@@ -460,7 +518,7 @@ let jsonEdit = {			// Json elements buttons operations
 								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
 								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
 															'data-name':text,'onclick':jsonEdit.jsonSelect,'title':val.title});
-								el.appendChild(createObj('span',{'className':'keyName','innerText':key,'ondblclick':keyEdit.action}));
+								el.appendChild(createObj('span',{'className':'keyName','innerText':key,'ondblclick':keyEdit.keyname}));
 								el.insertAdjacentText('beforeend',':');
 								let keyVal = createObj('span',{'className':'keyVal','innerText':text});
 								if ( val.dataset.list == '1') {
@@ -477,7 +535,7 @@ let jsonEdit = {			// Json elements buttons operations
 										let mFile = createObj('div',
 														{'className':'domItem value media','data-name':m.name,'title':m.title});
 										let mName = createObj('span',
-														{'className':'keyName','innerText':keyName,'ondblclick':keyEdit.action});
+														{'className':'keyName','innerText':keyName,'ondblclick':keyEdit.keyname});
 										let mVal = createObj('span',{'className':'keyVal','innerText':'$'+m.name});
 										mFile.appendChild(mName);
 										mFile.insertAdjacentText('beforeend',':');
@@ -549,6 +607,78 @@ let jsonEdit = {			// Json elements buttons operations
 					qdata.appendChild(item);
 				}
 				btnActivate();
+			}
+	};
+
+let recoder = {
+		assign: function(param) {
+				Object.keys(param).forEach( k =>{ this[k] = param[k] });
+				this.show();
+			},
+		show: function() {
+				let info = this.host.parentNode;
+				if ( !this.panel ) {				// Create & draw setup panel, unless exists
+					let bbar = createObj('div',{'className':'buttonbar'});
+					bbar.appendChild(createObj('button',{'type':'buttton','className':'ok','innerText':'Ok','onclick':this.done}));
+					bbar.appendChild(createObj('button',{'type':'buttton','className':'esc','innerText':'Отмена','onclick':this.done}));
+					this.panel = createObj('div',{'id':'recoder','className':'over-panel',
+													'style.min-width':'10em','style.position':'absolute'});
+					this.panel.appendChild(createObj('h',{'style.marginBottom':'1em'}));
+					let gr1 = createObj('div',{'className':'panelrow'});
+					let gr2 = gr1.cloneNode(true);
+					gr1.appendChild(createObj('input',{'type':'radio','id':'cod0','name':'codec','value':'0'}));
+					gr1.appendChild(createObj('label',{'htmlFor':'cod0','innerText':'Записать как есть'}));
+					gr2.appendChild(createObj('input',{'type':'radio','id':'cod1','name':'codec','value':'1'}));
+					gr2.appendChild(createObj('label',{'htmlFor':'cod1','innerText':'Перекодировать по таблице:'}));
+					this.panel.appendChild(gr1);
+					this.panel.appendChild(gr2);
+					this.panel.appendChild(createObj('div',{'id':'codec','className':'optgroup'}));
+					this.panel.appendChild(bbar);
+					document.body.appendChild(this.panel);
+				}
+				document.getElementById('codec').innerHTML = '';
+				document.getElementById('cod0').checked = true;
+				this.panel.querySelector('h').innerHTML = info.dataset.name+' &#8212; Значение из словаря.<br>Установите соответствие:';
+				let ord = Object.keys(dict[this.dict]).sort( (a,b) =>{ return dict[this.dict][a].value - dict[this.dict][b].value });
+				ord.forEach( k =>{
+						let row = createObj('div',{'className':'panelrow','data-value':dict[this.dict][k].value,'data-name':k,
+													'title':'Значение = '+dict[this.dict][k].value });
+						row.appendChild(createObj('input',{'id':'rcod'+dict[this.dict][k].value,'type':'text'}));
+						row.appendChild(createObj('label',{'htmlFor':'rcod'+dict[this.dict][k].value,
+															'innerHTML':'&#8680;&nbsp;'+dict[this.dict][k].title}));
+						// U+21E8 RIGHTWARDS WHITE ARROW	&#8680;
+						document.getElementById('codec').appendChild(row);
+					});
+
+				this.panel.style.display = 'block';
+				let [X, Y, W, H] = [this.host.offsetLeft, this.host.offsetTop,
+									this.panel.offsetWidth, this.panel.offsetHeight];
+				if (X < 0) { X = 20 } 
+				else if (X + W > window.innerWidth) { X = window.innerWidth - W - 20 }
+				if (Y < window.scrollY) { Y = window.scrollY + 20 }
+				else if (Y + H > window.scrollY+window.innerHeight) { Y = window.scrollY+window.innerHeight - H - 20 }
+				this.panel.style.left = X+'px';
+				this.panel.style.top = Y+'px';
+			},
+		done: function(evt) {					// Discard/Save panel settings
+				let action = evt.target.className;
+				let info = recoder.host.parentNode;
+				if ( action === 'ok' ) {
+					let result = '$'+info.dataset.name;		// Store data `as is`
+					if (recoder.panel.querySelector('[type="radio"][name="codec"]:checked').value == 1) {	// Need to reencode values
+						result = '';
+						recoder.panel.querySelectorAll('#codec .panelrow').forEach( r =>{
+								let inVal = r.querySelector('input[type="text"]').value;
+								if ( inVal.replace(/\s+/g,'').length > 0 ) {		// Only filled data
+									result += inVal+':'+r.dataset.value+';';
+								}
+							});
+						result = result.replace(/;$/,'');
+						result = '('+result+')';
+					}
+					recoder.host.innerText = result;
+				}
+				recoder.panel.style.display = 'none';
 			}
 	};
 

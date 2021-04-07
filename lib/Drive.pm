@@ -44,10 +44,10 @@ sub startup {
 
 	$r->websocket('/channel')->to( controller => 'support', action => 'wsocket', )->name('wsocket');
 	$r->any('/channel')->to( controller => 'support', action => 'hsocket', )->name('hsocket');
+	$r->route('/channel/media/*path')->to(controller => 'media', action => 'admin_media');
 
 	$r->route('/media')->to(controller => 'media', action => 'operate');
 	$r->route('/media/*path')->to(controller => 'media', action => 'operate');
-	$r->route('/drive/media/*path')->to(controller => 'media', action => 'drive_media');
 
 	$r->route('/drive')->to(controller => 'support', action => 'hello')->name('admin');
 	$r->route('/drive/*path')->to(controller => 'support', action => 'support');

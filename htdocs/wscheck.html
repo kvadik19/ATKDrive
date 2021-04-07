@@ -10,8 +10,7 @@
 		.panel {
 			color: #ffffff;
 			background-color: #016B45;
-			max-width:50%;
-			min-width:30%;
+			max-width:60%;
 			margin:5em auto;
 			border-radius:0.5em;
 			padding:1em 0px;
@@ -38,10 +37,10 @@
 			margin:1em;
 			line-height:1.5;
 			min-height:10em;
+			word-break: break-word;
 		}
 		#response {
 			border:1px dashed;
-			overflow:auto;
 		}
 	</style>
 
@@ -99,11 +98,11 @@
 			};
 		document.addEventListener('DOMContentLoaded', function(e) {
 				document.querySelector('.wsquery').onclick = function(e) {
+						document.getElementById('response').innerText = '';
 						let msg = document.getElementById('message').value;
 						let state;
 						if ( msg.length > 0 ) {
 							state = ask_ws( msg, display);
-							console.log(state);
 						}
 					};
 			});

@@ -59,11 +59,14 @@ my $action = shift;
 	$self->render( type => 'application/json', json => $out );
 }
 #############################
-sub drive_media {				# Mediafiles access for /drive/media/uid/mtype/media_id
+sub admin_media {				# Mediafiles access for /drive/media/uid/mtype/media_id
 #############################
 my $self = shift;
 	my (undef, undef, $uid, $media_role, $media_id) = @{$self->{'qdata'}->{'stack'}};
-	my $filedata = $self->dbh->selectrow_arrayref( "SELECT filename,mime FROM media WHERE id=$media_id" );
+	my $where = "filename='$media_id'";
+	$where = "id=$media_id" if $media_id =~ /^\d+$/;
+
+	my $filedata = $self->dbh->selectrow_arrayref( "SELECT filename,mime FROM media WHERE $where" );
 	my $filename = "$Drive::sys_root$sys->{'user_dir'}/$uid/$media_role/$filedata->[0]";
 	return $self->proxy( $filename);
 }

@@ -1,6 +1,8 @@
 <p class="comment">&mdash;&nbsp;Используйте двойной щелчок для изменения названий ключей в составляемом JSON.<br>
 &mdash;&nbsp;<span class="keyVal">$</span> перед значением ключа обозначает имя переменной/поля.
 </p>
+<p class="comment addition">
+</p>
 <div class="qw_define">
 
 	<ol class="subTabs"  data-type="int">

@@ -131,6 +131,11 @@ my $self = shift;
 			$urec->{$fld} = Drive::mysqlmask( $val, 1) if $val =~ /\D/;
 		}
 
+		my $upath = $urec->{'_setup'}->{'start'};		# Personal start page for root of site
+		$upath =~ s/^\///g;
+		$upath = [ split(/\//, $upath) ];
+		push( @{$self->{'qdata'}->{'stack'}}, @$upath) unless scalar( @{$self->{'qdata'}->{'stack'}} );
+
 		#### Check user permissions, defined at conf_dir/dict.xml
 		my $refstate = { %{$sys->{'user_state'}} };			# Modifying test will be processed, need to use a copy!
 		my $permission = Drive::find_hash( $refstate, sub { my $key = shift; 
@@ -144,19 +149,18 @@ my $self = shift;
 
 		} elsif( $permission =~ /\b$self->{'qdata'}->{'stack'}->[0]\b/i ) {
 			# Permitted page requested, leave query unchanged
-		} elsif( $permission ) {			# Only One allowed? Modify query to retrieve permitted page
+
+		} elsif( $permission =~ /\b$upath->[0]\b/i ) {			# Predefined Start page allowed? Modify query
+			$self->{'qdata'}->{'stack'}->[0] = $upath->[0];
+
+		} elsif( $permission ) {			# Some allowed? Modify query to retrieve permitted page
 			$self->{'qdata'}->{'stack'}->[0] = [split(/,/, $permission)]->[0];
-# 			unshift( @{$self->{'qdata'}->{'stack'}}, $permission);		# To add may be better? See later...
 
 		} else {				# Undescribed cases
 			unshift( @{$self->{'qdata'}->{'stack'}}, 'logout');		# Call logging out.
 		}		#### Addreesing Users depending on their permissions 
 
 		$udata->{'record'} = $urec;
-		my $upath = $urec->{'_setup'}->{'start'};		# Personal start page for root of site
-		$upath =~ s/^\///g;
-		$upath = [ split(/\//, $upath) ];
-		push( @{$self->{'qdata'}->{'stack'}}, @$upath) unless scalar( @{$self->{'qdata'}->{'stack'}} );
 
 	} elsif( $self->{'qdata'}->{'stack'}->[0] ne 'register' ) {		# Not logged can go to registration page, otherwise
 		$self->redirect_to( 'cabinet', query => $param );

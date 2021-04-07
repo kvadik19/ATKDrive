@@ -101,6 +101,7 @@ my $self = shift;
 			$ret->{'success'} = 0;
 			$ret->{'fail'} = $def->{'_xml_fail'};
 		} elsif( $def ) {
+			$ret->{'translate'} = $def->{'translate'};
 			$ret->{'qw_send'} = decode_json($def->{'define_send'});
 			$ret->{'qw_recv'} = decode_json($def->{'define_recv'});
 		} else {

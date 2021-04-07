@@ -104,7 +104,7 @@ my ($self, $qdata) = @_;
 		my $media_flds = "media.owner_field AS 'media.owner_field'";
 		foreach my $fld (  sort { $a->{'ord'}<=>$b->{'ord'} } @$media_keys ) {
 			if ($fld->{'name'} eq 'url' ) {
-				$media_flds .= ",CONCAT_WS('/','$sys->{'our_host'}/drive/media',media.owner_id,media.owner_field,media.id)"
+				$media_flds .= ",CONCAT_WS('/','$sys->{'our_host'}/channel/media',media.owner_id,media.owner_field,media.filename)"
 											." AS 'media.$fld->{'name'}'";
 			} else {
 				$media_flds .= ",media.$fld->{'name'} AS 'media.$fld->{'name'}'";
@@ -116,7 +116,7 @@ my ($self, $qdata) = @_;
 	}
 	my $db_got = [];
 	eval { $db_got = $dbh->selectall_arrayref( $sql, {Slice=>{}} ) };
-	$logger->dump($sql);
+# 	$logger->dump($sql);
 
 	if ( $@ ) {
 		$ret->{'fail'} = "$my_name : $@";
