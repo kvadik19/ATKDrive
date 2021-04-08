@@ -400,6 +400,14 @@ div.options {
 	flex-direction:row;
 	justify-content:flex-start;
 }
+.over-panel .panelrow.reverse {
+	justify-content:flex-end;
+}
+.over-panel .panelrow.rcod:not(.reverse) label::before,
+.over-panel .panelrow.rcod.reverse label::after {
+/* 	content:'\A0\21E8\A0'; */
+	content:'\A0\27A1\A0';
+}
 .over-panel .panelrow input[type="text"] {
 	width:3em;
 	border:thin inset;

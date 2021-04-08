@@ -15,7 +15,7 @@ use IO::Socket;
 use IO::Select;
 use POSIX;
 
-use Utils::NETS;
+use Utils::Tools;
 use Time::HiRes qw( usleep );
 use HTML::Template;
 
@@ -226,14 +226,20 @@ sub get_modules {			# Prepare installed modules
 #####################
 my $self = shift;
 	my $mods;
+	my $translate = {};			# Collect translation tables from modules
 	my $config_path = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/query");
 	mkpath( $config_path, { mode => 0775 } ) unless -d( $config_path );		# Prepare storage, if need
 
 	my $qw_dir = "$Drive::sys_root/lib/Query";
 	if ( -d($qw_dir) ) {			#### Collect available <fromOfficeToGate> QueryDispatcher libs
+		my $sortd = [];
 		opendir( my $dh, $qw_dir );
-		while (my $qw_lib = readdir($dh) ) {
-			next if $qw_lib =~ /^\./ || $qw_lib !~ /\.pm$/;
+		while  (my $fn = readdir($dh) ) {
+			next if $fn =~ /^\./ || $fn !~ /\.pm$/;
+			push( @$sortd, $fn);
+		}
+		closedir( $dh );
+		foreach my $qw_lib ( sort @$sortd ) {
 			$qw_lib =~ s/\.pm$//;
 			$qw_lib = "Query::$qw_lib";
 			eval( "use $qw_lib" );
@@ -249,12 +255,17 @@ my $self = shift;
 				$self->logger->debug($@, 2);
 				push( @{$mods->{'int'}}, {'fail' => $@} );
 			} else {
+				if ( ref($qw_info->{'translate'}) eq 'HASH' ) {
+					while ( my ($int, $ext) = each(%{$qw_info->{'translate'}}) ) {
+						$translate->{$int} = decode_utf8( $ext);
+					}
+					delete( $qw_info->{'translate'} );
+				}
 				push( @{$mods->{'int'}}, $qw_info );
 				$module->DESTROY();
 			}
 			Class::Unload->unload( $qw_lib ) unless $use_fail;		# Class::Unload must be installed
 		}
-		closedir( $dh );
 		push( @{$mods->{'int'}}, {'fail' => 'No modules found'} ) unless scalar( @{$mods->{'int'}});
 	} else {			# Gathering available libraries
 		push( @{$mods->{'int'}}, {'fail' => "$qw_dir not exists"} );
@@ -262,9 +273,14 @@ my $self = shift;
 
 	$qw_dir = "$Drive::sys_root$sys->{'html_dir'}";			#### Collect available <fromUserPageToOffice> templates
 	if ( -d($qw_dir) ) {
+		my $sortd = [];
 		opendir( my $dh, $qw_dir );
-		while (my $qw_tmpl = readdir($dh) ) {
-			next if $qw_tmpl =~ /^\./ || $qw_tmpl !~ /\.tmpl$/;
+		while  (my $fn = readdir($dh) ) {
+			next if $fn =~ /^\./ || $fn !~ /\.tmpl$/;
+			push( @$sortd, $fn);
+		}
+		closedir( $dh );
+		foreach my $qw_tmpl ( sort @$sortd ) {
 			my $qw_info = {'name' => $qw_tmpl, 'title' => $qw_tmpl};
 
 			open( my $fh, "< $qw_dir/$qw_tmpl");
@@ -279,11 +295,11 @@ my $self = shift;
 			$qw_info->{'title'} = $title->text() if $title;
 			push( @{$mods->{'ext'}}, $qw_info );
 		}
-		closedir( $dh );
 		push( @{$mods->{'ext'}}, {'fail' => 'No modules found'} ) unless scalar( @{$mods->{'ext'}});
 	} else {
 		push( @{$mods->{'ext'}}, {'fail' => "$qw_dir not exists"} );
 	}
+	$mods->{'translate'} = $translate;
 	return $mods;
 }
 #####################
@@ -316,7 +332,7 @@ sub connect {		# Setup interconnect settings
 		$ret->{'users'} = $self->access_read( $auth_file, $ret->{'magic_mask'} );
 
 	} elsif( $param->{'code'} eq 'ping' ) {
-		my $resp = Utils::NETS->ask_inet(
+		my $resp = Utils::Tools->ask_inet(
 							host => $param->{'data'}->{'host'},
 							port => $param->{'data'}->{'port'},
 							msg => encode_utf8($param->{'data'}->{'ping_msg'}),
@@ -695,21 +711,21 @@ my ($self, $query) = @_;
 	unless ( $conf && $conf->{'upd'} >= ( stat($conf_dir))[9] ) {			# Update intercom
 		opendir( my $dh, $conf_dir );
 		while( my $fname = readdir($dh) ) {
-			next unless $fname =~ /^\w+$/;
+			next unless $fname =~ /^\w+\.xml$/;
+			my $libname = substr($fname, 0, index($fname, '.'));
 			if ( (stat("$conf_dir/$fname"))[9] > $conf->{'upd'} ) {
-				my $def = Drive::read_xml( "$conf_dir/$fname", $fname, 'utf8' );
+				my $def = Drive::read_xml( "$conf_dir/$fname", $libname, 'utf8' );
 				if ( exists( $def->{'_xml_fail'}) ) {
 					$ret->{'fail'} = $def->{'_xml_fail'};
 				} elsif( $def ) {
-					eval { $intercom->{ decode_json($def->{'define_recv'})->{'code'}} 
-										= { 'upd'=>time, 'lib'=>"Query::$fname" } };
-					$ret->{'fail'} = $@ if $@;
+					eval { $intercom->{ decode_json( $def->{'define_recv'} )->{'code'}} 
+										= { 'upd'=>time, 'lib'=>"Query::$libname" } };
+					$ret->{'fail'} = "$fname : $@" if $@;
 				}
 			}
 		}
 		closedir($dh)
 	}
-
 	if ( exists( $intercom->{ $query->{'code'}}) ) {		# Recheck intercom
 		my $libname = $intercom->{ $query->{'code'}}->{'lib'};
 		eval( "use $libname" );
@@ -725,11 +741,12 @@ my ($self, $query) = @_;
 			$self->logger->debug($@, 2);
 			$ret->{'fail'} = $@;
 		} else {
-			$ret->{'code'} = $query->{'code'};
+			$ret->{'code'} = $query->{'code'} unless $ret->{'code'};
 			$module->DESTROY();
 		}
 		Class::Unload->unload( $libname ) unless $use_fail;		# Class::Unload must be installed
 	}
+
 	return $ret;
 }
 #####################

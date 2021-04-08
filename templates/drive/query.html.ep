@@ -57,6 +57,7 @@
 	const timeout = 3;		// Mins to wait
 	const media = <%== decode_utf8( encode_json($media_keys)) %>;
 	const dict = <%== decode_utf8( encode_json($dict)) %>;
+	var translate = <%== decode_utf8( encode_json($translate)) %>;
 	let url = document.location.origin+document.location.pathname;
 	document.addEventListener('DOMContentLoaded', function() {
 		tabSwitch();

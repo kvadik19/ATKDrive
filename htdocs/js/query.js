@@ -268,24 +268,6 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									console.log( resp.fail);
 								}
 							});
-						dispatch.int.committer = function(e) {
-								let action = document.querySelector('.tabContent.shown .subTab.active');
-								let formData = {'name':action.dataset.name,
-												'qw_recv':{'code':bodyIn.querySelector('.qw_code code').innerText,
-														'data':fromDOM( bodyIn.querySelector('.qw_data'))},
-												'qw_send':{'code':bodyOut.querySelector('.qw_code #code').value,
-														'data':fromDOM( bodyOut.querySelector('.qw_data'))}
-												};
-								flush({'code':'commit','data':formData}, document.location.href, function(resp) {
-										if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
-										if ( resp.fail ) {
-											alert(resp.fail);
-										} else if( resp.data.success == 1) {
-											dispatch.snapshot = dispatch.getSnap();
-											commitEnable();
-										}
-									});
-							};
 						dispatch.int.layout();
 						return true;
 					},
@@ -306,14 +288,13 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									document.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonEdit.jsonSelect});
 									document.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
 									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
-									bodyIn.querySelectorAll('.keyValue').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
+									bodyIn.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
 									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
 								} else {
 									console.log( resp.fail);
 								}
 							});
-						dispatch.int.committer = function(e) {};
 						dispatch.int.layout();
 						return true;
 					},
@@ -324,7 +305,23 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 											'onclick':dispatch.int.committer, 'disabled':1});
 						bbar.appendChild( bsav);
 					},
-				committer: function() {
+				committer: function(evt) {
+						let action = document.querySelector('.tabContent.shown .subTab.active');
+						let formData = {'name':action.dataset.name,
+										'qw_recv':{'code':bodyIn.querySelector('.qw_code code').innerText,
+												'data':fromDOM( bodyIn.querySelector('.qw_data'))},
+										'qw_send':{'code':bodyOut.querySelector('.qw_code #code').value,
+												'data':fromDOM( bodyOut.querySelector('.qw_data'))}
+										};
+						flush({'code':'commit','data':formData}, document.location.href, function(resp) {
+								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+								if ( resp.fail ) {
+									alert(resp.fail);
+								} else if( resp.data.success == 1) {
+									dispatch.snapshot = dispatch.getSnap();
+									commitEnable();
+								}
+							});
 					}
 			},
 		ext: {
@@ -336,14 +333,21 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 	};
 
 let keyTool = {			// Add key-value floating window operations
+		preset:{},
 		init: function( tgtType, tgtMethod ) {
-				document.querySelectorAll('#keySelect li.choosd').forEach( i =>{ i.className = i.className.replace(/\s*choosd/g,'')});
-				document.querySelectorAll('#keySelect li').forEach( i =>{ i.onclick = keyTool.liChoose;
-																		i.ondblclick = keyTool.result });
+				document.querySelectorAll('#keySelect li.choosd').forEach( li =>{ li.className = li.className.replace(/\s*choosd/g,'')});
+				document.querySelectorAll('#keySelect li').forEach( li =>{ li.onclick = keyTool.liChoose;
+																		li.ondblclick = keyTool.result });
 				document.querySelector('#keySelect button.esc').onclick = this.keyHide;
 				document.querySelector('#keySelect button.ok').onclick = this.result;
 				document.querySelector('#keySelect input[type="text"]').oninput = this.inpCheck;
 				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
+				Object.keys(this.preset).forEach( k =>{ delete( this.preset[k] ) });
+				return this;
+			},
+		set: function(param) {
+				Object.keys(param).forEach( k =>{ this.preset[k] = param[k] });
+				return this;
 			},
 		keyList: document.querySelectorAll('#keySelect li'),
 		panel: document.getElementById('keySelect'),
@@ -356,8 +360,9 @@ let keyTool = {			// Add key-value floating window operations
 			},
 		fire: function( callbk, valuesOnly ) {
 				this.callbk = callbk;
-				document.querySelectorAll('#keySelect li.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
+				document.querySelectorAll('#keySelect li.active').forEach( li =>{ li.className = li.className.replace(/\s*active/g,'')});
 				document.querySelector('#keySelect input[type="text"]').value = '';
+
 				document.documentElement.onclick = this.keyTrap;
 				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
 				bodyOut.querySelector('button[data-action="key"]').setAttribute('disabled',1);
@@ -367,12 +372,22 @@ let keyTool = {			// Add key-value floating window operations
 					this.panel.style.left = bodyOut.offsetLeft+'px';
 				}
 				this.panel.style.display = 'block';
+				if ( this.preset.info ) {			// Preset choiced values
+					let sel = document.querySelector('#keySelect li[data-name="'+this.preset.info.dataset.name+'"]');
+					if ( sel ) {
+						sel.className += ' active';
+						document.querySelector('#keySelect input[type="text"]').value = this.preset.info.dataset.name;
+						let port = document.querySelector('#keySelect ul');
+						port.scrollTo(0,0);									// Bring selected LI into viewport
+						if ( sel.offsetTop > port.clientHeight ) port.scrollTo(0, sel.offsetTop - port.clientHeight);
+					}
+				}
 				let [X, Y, W, H] = [this.panel.offsetLeft, this.panel.offsetTop,
-									this.panel.offsetWidth, this.panel.offsetHeight];
+									this.panel.offsetWidth, this.panel.offsetHeight];		// Bring PANEL into viewport
 				if (X < 0) { X = 20 } 
 				else if (X + W > window.innerWidth) { X = window.innerWidth - W - 20 }
 				if (Y < window.scrollY) { Y = window.scrollY + 20 }
-				else if (Y + H > window.scrollY+window.innerHeight) { Y = window.scrollY+window.innerHeight - H - 20 }
+				else if (Y + H > window.scrollY+window.innerHeight) { Y=window.scrollY+window.innerHeight-H-20 }
 				this.panel.style.left = X+'px';
 				this.panel.style.top = Y+'px';
 
@@ -386,13 +401,14 @@ let keyTool = {			// Add key-value floating window operations
 					document.querySelector('#keySelect .optgroup.text').style.display = 'none';
 					document.querySelector('#keySelect .optgroup.list label').style.display = 'none';
 				}
+				return this;
 			},
 		result: function() {
 				let key = document.querySelector('#keySelect input[type="text"]');
 				let val = document.querySelector('#keySelect li.active') 
 										|| {'innerText':'','className':''};		// NOW Allow empty value!
 				val.className = val.className.replace(/\s*choosd/g,'');		// Prevent
-				val.className += ' choosd';
+				val.className += ' choosd';								// Obsoleted markup?
 				if ( typeof(keyTool.callbk) === 'function' ) {
 					keyTool.callbk(key.value, val.cloneNode(true) );		// Pass into callback just a LI copy
 				}
@@ -438,16 +454,18 @@ let keyEdit = {
 		keyvalue: function(evt) {
 				let keyVal = evt.target;
 				let div = keyVal.closest('.value');
-				keyTool.fire( function(key, val) {
-								let fldName = val.dataset.name;
-								div.dataset.name = fldName;
-								div.title = val.title;
-								if ( dict[val.dataset.dict] ) {			// See `const dict`
-									recoder.assign( {dict:val.dataset.dict, host:keyVal} );
-								} else if ( fldName.length > 0 ) {
-									keyVal.innerText = '$'+ fldName;
-								}
-							}, 'valuesOnly');
+				keyTool.set( {info:div, value:keyVal.innerText})
+						.fire( function(key, val) {
+									let fldName = val.dataset.name;
+									div.dataset.name = fldName;
+									div.title = val.title;
+									if ( dict[val.dataset.dict] ) {			// See `const dict`
+										recoder.assign( {dict:val.dataset.dict, host:keyVal} );
+									} else if ( fldName.length > 0 ) {
+										keyVal.innerText = '$'+ fldName;
+									}
+									commitEnable();
+								}, 'valuesOnly');
 			},
 		killInpt: function(evt) {
 				let host = evt.target.closest('.keyName');
@@ -465,6 +483,7 @@ let keyEdit = {
 				} else {
 					host.innerText = keyEdit.preval;
 				}
+				commitEnable();
 			},
 		keyOut: function(evt) {
 				if ( evt.code.match(/Enter|Tab/) ) {
@@ -547,10 +566,14 @@ let jsonEdit = {			// Json elements buttons operations
 									keyVal.appendChild(createObj('div',{'className':'domItem same','innerText':'<--->',
 															'title':'Подразумевается что массив ['+text
 															+'] содержит равнозначные по типу и структуре элементы' }));
+									el.appendChild(keyVal);
+								} else if ( dict[text] ) {			// See `const dict`
+									el.appendChild(keyVal);
+									recoder.assign( {dict:text, host:keyVal, reverse:true} );
 								} else if ( text.length > 0 ) {
 									keyVal.innerText = '$'+ text;
+									el.appendChild(keyVal);
 								}
-								el.appendChild(keyVal);
 								jsonEdit.place(body, el);
 
 							});
@@ -610,8 +633,9 @@ let jsonEdit = {			// Json elements buttons operations
 			}
 	};
 
-let recoder = {
+let recoder = {			// Assign codec table to recoding dictionary values
 		assign: function(param) {
+				this.reverse = false;		// Reset this param
 				Object.keys(param).forEach( k =>{ this[k] = param[k] });
 				this.show();
 			},
@@ -638,25 +662,43 @@ let recoder = {
 				}
 				document.getElementById('codec').innerHTML = '';
 				document.getElementById('cod0').checked = true;
+				let decod = {};
+				let pairs = this.host.innerText.match(/^\$\((.+)\)$/);		// Prepare predefined values
+				if ( pairs ) {			// Has predefined table?
+					if ( this.reverse ) {
+						pairs[1].split(';').forEach( p =>{ let [dic, man] = p.split(':'); decod[dic] = man });
+					} else {
+						pairs[1].split(';').forEach( p =>{ let [man, dic] = p.split(':'); decod[dic] = man });
+					}
+					document.getElementById('cod1').checked = true;
+				}
 				this.panel.querySelector('h').innerHTML = info.dataset.name+' &#8212; Значение из словаря.<br>Установите соответствие:';
 				let ord = Object.keys(dict[this.dict]).sort( (a,b) =>{ return dict[this.dict][a].value - dict[this.dict][b].value });
 				ord.forEach( k =>{
-						let row = createObj('div',{'className':'panelrow','data-value':dict[this.dict][k].value,'data-name':k,
-													'title':'Значение = '+dict[this.dict][k].value });
-						row.appendChild(createObj('input',{'id':'rcod'+dict[this.dict][k].value,'type':'text'}));
-						row.appendChild(createObj('label',{'htmlFor':'rcod'+dict[this.dict][k].value,
-															'innerHTML':'&#8680;&nbsp;'+dict[this.dict][k].title}));
-						// U+21E8 RIGHTWARDS WHITE ARROW	&#8680;
+						let dictId = dict[this.dict][k].value;
+						let row = createObj('div',{'className':'panelrow rcod','data-value':dictId,'data-name':k,
+													'title':'Значение = '+dictId });
+						let inp = createObj('input',{'id':'rcod'+dictId,'type':'text'});
+						let mod = createObj('label',{'htmlFor':'rcod'+dictId, 'innerHTML':dict[this.dict][k].title});
+						if ( decod[dictId] ) inp.value = decod[dictId];		// Assign stored value
+						if ( this.reverse ) {
+							row.className += ' reverse';
+							row.appendChild(mod);
+							row.appendChild(inp);
+						} else {
+							row.appendChild(inp);
+							row.appendChild(mod);
+						}
 						document.getElementById('codec').appendChild(row);
 					});
 
 				this.panel.style.display = 'block';
-				let [X, Y, W, H] = [this.host.offsetLeft, this.host.offsetTop,
+				let [X, Y, W, H] = [keyTool.panel.offsetLeft, keyTool.panel.offsetTop,
 									this.panel.offsetWidth, this.panel.offsetHeight];
 				if (X < 0) { X = 20 } 
 				else if (X + W > window.innerWidth) { X = window.innerWidth - W - 20 }
 				if (Y < window.scrollY) { Y = window.scrollY + 20 }
-				else if (Y + H > window.scrollY+window.innerHeight) { Y = window.scrollY+window.innerHeight - H - 20 }
+				else if (Y + H > window.scrollY+window.innerHeight) { Y=window.scrollY+window.innerHeight-H-20 }
 				this.panel.style.left = X+'px';
 				this.panel.style.top = Y+'px';
 			},
@@ -667,18 +709,28 @@ let recoder = {
 					let result = '$'+info.dataset.name;		// Store data `as is`
 					if (recoder.panel.querySelector('[type="radio"][name="codec"]:checked').value == 1) {	// Need to reencode values
 						result = '';
-						recoder.panel.querySelectorAll('#codec .panelrow').forEach( r =>{
-								let inVal = r.querySelector('input[type="text"]').value;
-								if ( inVal.replace(/\s+/g,'').length > 0 ) {		// Only filled data
-									result += inVal+':'+r.dataset.value+';';
+						recoder.panel.querySelectorAll('#codec .panelrow.rcod').forEach( r =>{
+								let man = r.querySelector('input[type="text"]').value;		// Manually entered code
+								let dic = r.dataset.value;						// Dictionary's code
+								if ( man.replace(/\s+/g,'').length > 0 ) {		// Only filled data
+									if (r.matches('.reverse')) {
+										result += dic+':'+man+';';
+									} else {
+										result += man+':'+dic+';';
+									}
 								}
 							});
 						result = result.replace(/;$/,'');
-						result = '('+result+')';
+						if ( result.length === 0) {			// Ignore unfilled codecs
+							result = '$'+info.dataset.name;
+						} else {
+							result = '$('+result+')';
+						}
 					}
 					recoder.host.innerText = result;
 				}
 				recoder.panel.style.display = 'none';
+				commitEnable();
 			}
 	};
 

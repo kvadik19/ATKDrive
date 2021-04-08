@@ -14,7 +14,7 @@ use File::Path qw(make_path mkpath remove_tree rmtree);
 use Time::HiRes;
 use HTML::Template;
 use MIME::Lite;
-use Utils::NETS;
+use Utils::Tools;
 use Drive::Media;
 
 our $templates;
@@ -414,7 +414,7 @@ sub check_email {		# Chack email availability
 my $self = shift;
 my $email = shift;
 	my $out = {'data' => {'email' => lc($email) } };
-	$out->{'code'} = Utils::NETS->email_good( \$out->{'data'}->{'email'} );
+	$out->{'code'} = Utils::Tools->email_good( \$out->{'data'}->{'email'} );
 	my $exists = $self->dbh->selectcol_arrayref("SELECT _uid FROM users WHERE _email='$out->{'data'}->{'email'}'"
 										." AND NOT _uid='$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'}'");
 	$out->{'data'}->{'warn'} = 'exists '.scalar(@$exists) if scalar(@$exists);		# Check early used email

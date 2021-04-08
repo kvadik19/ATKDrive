@@ -2,7 +2,7 @@
 # 2021 (c) mac-t@yandex.ru
 # File encoding UTF8!
 
-package Query::GetNew;
+package Query::zTest;
 
 use utf8;
 use Encode;
@@ -11,6 +11,7 @@ use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use Utils::Tools;
 
+# use XML::XML2JSON;
 use Data::Dumper;
 
 my ($dbh, $logger, $config_path, $my_name, $sys);
@@ -25,9 +26,8 @@ sub describe {		# Report module information
 #####################
 my $self = shift;
 	$self->load();
-	return { 'name' => __PACKAGE__, 'title' => 'Сдать новых клиентов', 'type' => 'read',
-			'descr' => 'Предоставить список клиентов, прошедших автоматическую проверку, '.
-						'для рассмотрения кандидатур администратором',
+	return { 'name' => __PACKAGE__, 'title' => 'DELEVOPE MODULE', 'type' => 'write',
+			'descr' => '**** DON\'T TOUCH! ****',
 			'translate' => $self->{'translate'}
 			};
 }
@@ -41,28 +41,36 @@ my $class = shift;
 	$sys = \%Drive::sys;
 	$dbh = $self->{'dbh'};
 	$logger = $self->{'logger'};
-
 	$config_path = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/query");
 	$my_name = $self->describe->{'name'};
 	$my_name = substr( $my_name, rindex( $my_name, ':')+1);
 	return $self;
 }
-
 #################
 sub execute {	#			# Make main operation
 #################
 my ($self, $qdata) = @_;
-
-	my $ret = {'fail' => 'Unusable defines', 'data' => {}};
+	my $ret;
 	my $def = $self->load();
 	return $ret unless $def->{'success'} == 1;
 
-	$ret = Utils::Tools->map_read( map => $def->{'qw_send'}->{'data'},
+	my $linkfield;
+	$ret = Utils::Tools->map_write( map => $def->{'qw_recv'}->{'data'},
+									data => $qdata,
 									caller => $my_name,
 									dbh => $dbh,
-									sys => $sys
+									sys => $sys,
+									logger => $logger
 								);
-	$ret->{'code'} = $def->{'qw_send'}->{'code'};
+	if ( $def->{'qw_send'}->{'data'} ) {
+		$ret = Utils::Tools->map_read( map => $def->{'qw_send'}->{'data'},
+										caller => $my_name,
+										dbh => $dbh,
+										sys => $sys,
+# 										where => "FIND_IN_SET($linkfield,'')"
+									);
+		$ret->{'code'} = $def->{'qw_send'}->{'code'};
+	}
 	return $ret;
 }
 #################
@@ -74,14 +82,15 @@ my $qdata = shift;
 
 	my $table = {};
 	Utils::Tools->add_translate( $table, $qdata->{'qw_send'}->{'data'} );
+	Utils::Tools->add_translate( $table, $qdata->{'qw_recv'}->{'data'} );
 	my $def = { 
 				'translate' => $table, 
 				'define_recv' => encode_json({'code' => $qdata->{'qw_recv'}->{'code'}, 'data' =>$qdata->{'qw_recv'}->{'data'} }),
 				'define_send' => encode_json({'code' => $qdata->{'qw_send'}->{'code'}, 'data' =>$qdata->{'qw_send'}->{'data'} }),
 			};
 	my $result = Drive::write_xml( $def, "$config_path/$my_name.xml", $my_name);
-	$ret = {'success'=>0, 'fail'=>$result} if $result;
 
+	$ret = {'success'=>0, 'fail'=>$result} if $result;
 	return $ret;
 }
 #################
@@ -96,8 +105,8 @@ my $self = shift;
 			$ret->{'fail'} = $def->{'_xml_fail'};
 		} elsif( $def ) {
 			$self->{'translate'} = $def->{'translate'};
-			$ret->{'qw_send'} = decode_json( $def->{'define_send'});
-			$ret->{'qw_recv'} = decode_json( $def->{'define_recv'});
+			$ret->{'qw_send'} = decode_json($def->{'define_send'});
+			$ret->{'qw_recv'} = decode_json($def->{'define_recv'});
 		} else {
 			$ret->{'success'} = 0;
 		}
@@ -107,6 +116,7 @@ my $self = shift;
 	}
 	return $ret;
 }
+
 #####################
 sub DESTROY {		#
 #####################
