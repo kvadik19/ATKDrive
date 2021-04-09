@@ -56,19 +56,22 @@ my ($self, $qdata) = @_;
 	return $ret unless $def->{'success'} == 1;
 
 	my $linkfield;
-	$ret = Utils::Tools->map_write( map => $def->{'qw_send'}->{'data'},
+	$ret = Utils::Tools->map_write( map => $def->{'qw_recv'}->{'data'},
 									data => $qdata,
 									caller => $my_name,
 									dbh => $dbh,
+									mode => 'add',
 									sys => $sys,
 									logger => $logger
 								);
-	if ( $def->{'qw_send'}->{'data'} ) {
+	if ( $def->{'qw_send'}->{'data'} && $ret->{'success'} == 1 ) {
+		my $where = "FIND_IN_SET($ret->{'data'}->{'key'},'".join(',', @{$ret->{'data'}->{'list'}})."')";
 		$ret = Utils::Tools->map_read( map => $def->{'qw_send'}->{'data'},
 										caller => $my_name,
 										dbh => $dbh,
 										sys => $sys,
-										where => "FIND_IN_SET($linkfield,'')"
+										where => $where,
+										logger => $logger
 									);
 		$ret->{'code'} = $def->{'qw_send'}->{'code'};
 	}
@@ -81,40 +84,18 @@ my $self = shift;
 my $qdata = shift;
 	my $ret = {'success'=>1};
 
-	my $table = {};
-	Utils::Tools->add_translate( $table, $qdata->{'qw_send'}->{'data'} );
-	Utils::Tools->add_translate( $table, $qdata->{'qw_recv'}->{'data'} );
-	my $def = { 
-				'translate' => $table, 
-				'define_recv' => encode_json({'code' => $qdata->{'qw_recv'}->{'code'}, 'data' =>$qdata->{'qw_recv'}->{'data'} }),
-				'define_send' => encode_json({'code' => $qdata->{'qw_send'}->{'code'}, 'data' =>$qdata->{'qw_send'}->{'data'} }),
-			};
-	my $result = Drive::write_xml( $def, "$config_path/$my_name.xml", $my_name);
-
-	$ret = {'success'=>0, 'fail'=>$result} if $result;
+	my $ret = Utils::Tools->module_save($my_name, $qdata);
+	$ret = {'success'=>0, 'fail'=>$ret->{'fail'}} if $ret->{'fail'};
 	return $ret;
 }
 #################
 sub load {		#			# Load settings for editing
 #################
 my $self = shift;
-	my $ret = {'success'=>1};
-	if ( -e("$config_path/$my_name.xml") ) {
-		my $def = Drive::read_xml("$config_path/$my_name.xml", $my_name, 'utf8');
-		if ( exists( $def->{'_xml_fail'}) ) {
-			$ret->{'success'} = 0;
-			$ret->{'fail'} = $def->{'_xml_fail'};
-		} elsif( $def ) {
-			$self->{'translate'} = $def->{'translate'};
-			$ret->{'qw_send'} = decode_json($def->{'define_send'});
-			$ret->{'qw_recv'} = decode_json($def->{'define_recv'});
-		} else {
-			$ret->{'success'} = 0;
-		}
-	} else {
-		$ret->{'success'} = 0;
-		$ret->{'fail'} = "File $config_path/$my_name.xml not found";
-	}
+	my $ret = Utils::Tools->module_read($my_name);
+	$self->{'translate'} = $ret->{'translate'};
+	$ret->{'success'} = 1;
+	$ret->{'success'} = 0 if $ret->{'fail'};
 	return $ret;
 }
 

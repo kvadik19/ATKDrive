@@ -328,7 +328,7 @@ my ($hash, $xml_file, $root) = @_;
 		copy( $xml_file, "$xml_file.bkup" );
 	}
 
-	my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value', force_array=>1 );
+	my $x2 = XML::XML2JSON->new( attribute_prefix=>'', pretty=>1, content_key=>'value' );		#, force_array=>1
 	my $out = $x2->obj2json( { $root => $hash }) ;
 
 	my $sig_die = $SIG{'__DIE__'};
@@ -353,16 +353,15 @@ my ($hash, $xml_file, $root) = @_;
 #############################
 sub write_json {					# Store JSON file
 #############################
-my ($hashref, $file_name) = @_;
-	if ( -e( $file_name ) ) {
-		copy( $file_name, "$file_name.bkup" );
-	}
+my ($hashref, $filename) = @_;
+# 	copy( "$filename.bkup", "$filename.bkup.0" ) if -e( "$filename.bkup");
+	copy( $filename, "$filename.bkup" ) if -e( $filename);
 	my $buffered = $|; $| = 1;					# Set unbuffered
-	open( my $fh, "+>> $file_name" ) || return "JSON Open $!";
-	flock( $fh, LOCK_EX ) || return "JSON Lock $!";
+	open( my $fh, "+>> $filename" ) || return "JSON $filename Open : $!";
+	flock( $fh, LOCK_EX ) || return "JSON $filename  Lock : $!";
 	truncate( $fh, 0 );				# Reset file contents
 	eval { print $fh encode_json( $hashref ) };
-	return "JSON Encode $@" if $@;
+	return "$filename JSON Encode : $@" if $@;
 	chmod( 0600, $fh);
 	flock( $fh, LOCK_UN );
 	close $fh;
@@ -376,14 +375,14 @@ my ($filename ) = @_;
 my $hash;
 
 	if ( -e( $filename ) ) {
-		open( my $fh, "< $filename" ) || die "Open $!";
+		open( my $fh, "< $filename" ) || return "JSON $filename Open : $!";
 		my $content = join('', <$fh>);
 		close( $fh );
-		
 		my $sig_die = $SIG{'__DIE__'};
 		undef $SIG{'__DIE__'};
 		eval{ $hash = decode_json( $content ) };
 		$SIG{'__DIE__'} = $sig_die;
+		return "$filename : $@" if $@;
 	}
 	return $hash;
 }

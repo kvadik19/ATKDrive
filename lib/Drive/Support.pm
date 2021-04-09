@@ -171,6 +171,7 @@ my $self = shift;
 				close($fh);
 			}
 		} elsif ( $param->{'code'} =~ /^load|commit$/ ) {
+
 			my $action = $param->{'code'};
 			my $mod_lib = $param->{'data'}->{'name'};
 			eval( "use $mod_lib" );
@@ -257,7 +258,7 @@ my $self = shift;
 			} else {
 				if ( ref($qw_info->{'translate'}) eq 'HASH' ) {
 					while ( my ($int, $ext) = each(%{$qw_info->{'translate'}}) ) {
-						$translate->{$int} = decode_utf8( $ext);
+						$translate->{$int} = $ext;
 					}
 					delete( $qw_info->{'translate'} );
 				}
@@ -707,20 +708,21 @@ my ($self, $query) = @_;
 	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/query");
 	return $ret unless -d($conf_dir);
 
+	my $module;			# Query Pocessor Object
 	my $conf = $intercom->{ $query->{'code'}};
 	unless ( $conf && $conf->{'upd'} >= ( stat($conf_dir))[9] ) {			# Update intercom
 		opendir( my $dh, $conf_dir );
 		while( my $fname = readdir($dh) ) {
-			next unless $fname =~ /^\w+\.xml$/;
-			my $libname = substr($fname, 0, index($fname, '.'));
+			next unless $fname =~ /^\w+\.json$/;
 			if ( (stat("$conf_dir/$fname"))[9] > $conf->{'upd'} ) {
-				my $def = Drive::read_xml( "$conf_dir/$fname", $libname, 'utf8' );
-				if ( exists( $def->{'_xml_fail'}) ) {
-					$ret->{'fail'} = $def->{'_xml_fail'};
-				} elsif( $def ) {
-					eval { $intercom->{ decode_json( $def->{'define_recv'} )->{'code'}} 
-										= { 'upd'=>time, 'lib'=>"Query::$libname" } };
-					$ret->{'fail'} = "$fname : $@" if $@;
+				my $libname = substr($fname, 0, index($fname, '.'));
+				my $def = Drive::read_json( "$conf_dir/$fname" );
+				if ( ref($def) ) {
+					$intercom->{ $def->{'define_recv'}->{'code'} } 
+										= { 'upd'=>time, 'lib'=>"Query::$libname" };
+				} else {
+					$self->logger->debug("$libname : $def", 2);
+					$ret->{'fail'} = "$libname : $def";
 				}
 			}
 		}
@@ -730,8 +732,6 @@ my ($self, $query) = @_;
 		my $libname = $intercom->{ $query->{'code'}}->{'lib'};
 		eval( "use $libname" );
 		$self->logger->debug($@, 2) if $@;
-		my $module;
-		my $qw_info;
 		eval{ $module = $libname->new(  dbh => $self->dbh, 
 										logger => $self->logger, 
 										qdata => $self->{'qdata'} );

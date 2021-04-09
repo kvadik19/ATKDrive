@@ -358,7 +358,7 @@ my $uid = shift;
 	foreach my $fld ( @$struct ) {				# Store only storable values!
 		if ( exists( $param->{'data'}->{$fld->{'name'}}) ) {
 			my $val = $param->{'data'}->{$fld->{'name'}};
-			$val = Drive::mysqlmask( $val ) if $fld->{'type'} =~ /^char/;
+			$val =~ s/([\'%;])/'%'.unpack( 'H*', $1 )/eg if $fld->{'type'} =~ /^char/;
 			$db_update->{$fld->{'name'}} = $val;
 		}
 	}

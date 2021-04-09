@@ -813,6 +813,7 @@ document.getElementById('listen').onclick = function(e) {		// Income query liste
 					if ( typeof(msg.data) === 'string' && msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
 					bodyIn.querySelector('.qw_data').innerHTML='';
 					showQRY(bodyIn, msg);
+					commitEnable();
 					qState(0);
 
 				} else if( Date.now() > tstart+timeout*60000 ) {

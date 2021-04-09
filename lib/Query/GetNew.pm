@@ -60,7 +60,8 @@ my ($self, $qdata) = @_;
 	$ret = Utils::Tools->map_read( map => $def->{'qw_send'}->{'data'},
 									caller => $my_name,
 									dbh => $dbh,
-									sys => $sys
+									sys => $sys,
+									logger => $logger
 								);
 	$ret->{'code'} = $def->{'qw_send'}->{'code'};
 	return $ret;
@@ -72,39 +73,18 @@ my $self = shift;
 my $qdata = shift;
 	my $ret = {'success'=>1};
 
-	my $table = {};
-	Utils::Tools->add_translate( $table, $qdata->{'qw_send'}->{'data'} );
-	my $def = { 
-				'translate' => $table, 
-				'define_recv' => encode_json({'code' => $qdata->{'qw_recv'}->{'code'}, 'data' =>$qdata->{'qw_recv'}->{'data'} }),
-				'define_send' => encode_json({'code' => $qdata->{'qw_send'}->{'code'}, 'data' =>$qdata->{'qw_send'}->{'data'} }),
-			};
-	my $result = Drive::write_xml( $def, "$config_path/$my_name.xml", $my_name);
-	$ret = {'success'=>0, 'fail'=>$result} if $result;
-
+	my $ret = Utils::Tools->module_save($my_name, $qdata);
+	$ret = {'success'=>0, 'fail'=>$ret->{'fail'}} if $ret->{'fail'};
 	return $ret;
 }
 #################
 sub load {		#			# Load settings for editing
 #################
 my $self = shift;
-	my $ret = {'success'=>1};
-	if ( -e("$config_path/$my_name.xml") ) {
-		my $def = Drive::read_xml("$config_path/$my_name.xml", $my_name, 'utf8');
-		if ( exists( $def->{'_xml_fail'}) ) {
-			$ret->{'success'} = 0;
-			$ret->{'fail'} = $def->{'_xml_fail'};
-		} elsif( $def ) {
-			$self->{'translate'} = $def->{'translate'};
-			$ret->{'qw_send'} = decode_json( $def->{'define_send'});
-			$ret->{'qw_recv'} = decode_json( $def->{'define_recv'});
-		} else {
-			$ret->{'success'} = 0;
-		}
-	} else {
-		$ret->{'success'} = 0;
-		$ret->{'fail'} = "File $config_path/$my_name.xml not found";
-	}
+	my $ret = Utils::Tools->module_read($my_name);
+	$self->{'translate'} = $ret->{'translate'};
+	$ret->{'success'} = 1;
+	$ret->{'success'} = 0 if $ret->{'fail'};
 	return $ret;
 }
 #####################

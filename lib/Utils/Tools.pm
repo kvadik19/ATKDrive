@@ -108,6 +108,47 @@ sub email_good {			# Precheck email address fnd fix possible miss
 	}
 	return $good;
 }
+#################
+sub module_save {	#			# Store settings after editing
+#################
+my ($self, $owner, $qdata) = @_;
+
+	my $config_path = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/query");
+
+	my $table = {};
+	$self->add_translate( $table, $qdata->{'qw_send'}->{'data'} );
+	$self->add_translate( $table, $qdata->{'qw_recv'}->{'data'} );
+	my $def = { 
+				'translate' => $table, 
+				'define_recv' => {'code' => $qdata->{'qw_recv'}->{'code'}, 'data' =>$qdata->{'qw_recv'}->{'data'} },
+				'define_send' => {'code' => $qdata->{'qw_send'}->{'code'}, 'data' =>$qdata->{'qw_send'}->{'data'} },
+			};
+	my $result = Drive::write_json( $def, "$config_path/$owner.json");
+	return {'fail' => $result} if $result;
+}
+#################
+sub module_read {		#			# Load settings for editing
+#################
+my ($self, $owner) = @_;
+
+	my $config_path = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/query");
+	my $filename = "$config_path/$owner.json";
+
+	my $ret = {};
+	if ( -e( $filename ) ) {
+		my $def = Drive::read_json( $filename, undef, 'utf8');
+		if( ref($def) ) {
+			$ret->{'translate'} = $def->{'translate'};
+			$ret->{'qw_send'} = $def->{'define_send'};
+			$ret->{'qw_recv'} = $def->{'define_recv'};
+		} else {
+			$ret->{'fail'} = "$filename : $def";
+		}
+	} else {
+		$ret->{'fail'} = "File $filename not found";
+	}
+	return $ret;
+}
 #########################
 sub add_translate {			# Collect data from JSONs for further translations
 #########################
@@ -145,7 +186,7 @@ sub map_write {			# Store data in json format
 #########################
 my $self = shift;
 my $init = { @_ };
-	my $ret = {'fail' => 'Unusable defines for write', 'data' => {}};
+	my $ret = {'fail' => 'Unusable defines for write', 'data' => {}, 'success' => 0};
 
 	my $map = $init->{'map'};
 	if ( ref( $map) eq 'ARRAY' ) {			# Find for structure map define
@@ -157,7 +198,6 @@ my $init = { @_ };
 	$data_in = [ $data_in ] unless ref( $data_in) eq 'ARRAY';
 	return $ret unless ref($data_in->[0]) eq 'HASH';			# Assumed array of hashes
 
-
 	my $keyfld;
 	my $utable = {};				# Pickup users table field definition
 	my $conf_dir = Drive::upper_dir("$Drive::sys_root$init->{'sys'}->{'conf_dir'}");
@@ -165,13 +205,14 @@ my $init = { @_ };
 	my $idx = Drive::find_first( $utable, sub { my $fld = shift; return $fld->{'link'} == 1 } );
 	$keyfld = $utable->[$idx]->{'name'} if $idx > -1;					# Detect control field
 
+	my ($can_add, $can_upd);			# Check for available keys
 	my $fldmap = {};				# Prepare names translation table
 	while ( my ($key, $val) = each( %$map) ) {		# Process definition map
-		next if $key eq '==manifest';			# Service info, not scalar = ignored
+		next if $key eq '==manifest';			# Service info = ignored
 		my ($uname, $name) = split(/;/, $key);			# Extract fieldname and alias for field
 
 		my $codec;
-		if ( ref($val) ) {		# Need some values decoding
+		if ( ref($val) ) {		# Only SCALARs musk be processed
 			next
 		} elsif ( $val =~ /^\$\((.+)\)$/ ) {		# Need some values decoding
 			my @codes = split(/;/, $1);			# Translate definition into hash
@@ -184,44 +225,125 @@ my $init = { @_ };
 		} else {			# Map value is not defined
 			next
 		}
+
+		if ( $init->{'mode'} eq 'add' && $name eq $keyfld ) {		# Assign data_in row condition check
+			$can_add = $keyfld;
+		} elsif( $init->{'mode'} eq 'upd' && $name eq '_uid' ) {
+			$can_upd = '_uid';
+		} elsif( $init->{'mode'} eq 'upd' && $name eq $keyfld ) {	# Prefer _uid for checking
+			$can_upd = $keyfld unless $can_upd;
+		}
+
 		$fldmap->{$uname} = {'name' => $name, 'codec' => $codec};
+	}		# Definition map processing
+
+	if ( ($init->{'mode'} eq 'add' && !$can_add) 
+			|| ($init->{'mode'} eq 'upd' && !$can_upd) ) {			# Stop processing on errors
+		$ret->{'fail'} = "$init->{'caller'} : Keyfield for '$init->{'mode'}' not defined";
+		return $ret;
 	}
 
-	my $stoplist = '';
-	my $data_out = [];
+	my $updlist = [];			# IDs to process ( Gates _uid)
+	my $addlist = [];			# IDs to process (1C codes)
+	my $data_out = [];				# Records to process
 	foreach my $row_in ( @$data_in ) {			# Process received JSON
 		next unless ref($row_in) eq 'HASH';
 		my $row_out = {};
 		while ( my ($uname, $val) = each( %$row_in) ) {
 			next if ref($val);			# Some bugs in datarow
+			next if $init->{'mode'} eq 'add' && $fldmap->{$uname}->{'name'} eq '_uid';		# Can't insert AUTO_INCREMENTed field
+
 			if ( exists( $fldmap->{$uname}) ) {
-				$stoplist .= ",$val" if $fldmap->{$uname}->{'name'} eq $keyfld;			# Prepare list for unique checking
+				push( @$addlist, $val) if $fldmap->{$uname}->{'name'} eq $keyfld;		# Prepare list for unique checking
+				push( @$updlist, $val) if $fldmap->{$uname}->{'name'} eq '_uid';		# Prepare list for exists checking
 				$val = $fldmap->{$uname}->{'codec'}->{$val} if $fldmap->{$uname}->{'codec'};		# Reencode value, if need
 				$row_out->{$fldmap->{$uname}->{'name'}} = $val;
 			}
 		}
-		push( @$data_out, $row_out);
-	}
-	$stoplist =~ s/^,//;
-	if ( $stoplist ) {			# Prevent duplicates
-		my $exists;
-		eval {
-			$exists = $init->{'dbh'}->selectall_arrayref("SELECT _uid,$keyfld FROM users WHERE FIND_IN_SET($keyfld,'$stoplist')");
-		};
-		$init->{'logger'}->dump("$init->{'caller'} : $@") if $init->{'logger'} && $@;
-		foreach my $row ( @$exists ) {
-			my $idx = Drive::find_first( $data_out, sub { my $r = shift; return $r->{$keyfld} eq $row->[1]} );
-			if ( $idx > -1 ) {
-				if ( $row->[0] > 0 && $data_out->[$idx]->{'_uid'} != $row->[0] ) {
-					splice( @$data_out, $idx, 1);
-				}
-			}
+		if ( ( $init->{'mode'} eq 'add' && exists( $row_out->{$can_add}) ) 
+				|| ( $init->{'mode'} eq 'upd' && exists( $row_out->{$can_upd}) ) ) {
+			push( @$data_out, $row_out);		# Validate dataOut rows
 		}
 	}
 
-$init->{'logger'}->dump($stoplist) if $init->{'logger'};
-# $init->{'logger'}->dump(Dumper($data_out)) if $init->{'logger'};
-	return {'data'=>[], 'success' => 1};
+	my $processed;			# Report processed IDs
+	my $sql;
+	if ( $init->{'mode'} eq 'add' ) {
+		if ( scalar( @$addlist) ) {			# Prevent duplicates
+			my $keylist = join(',', @$addlist);
+			my $exists;
+			eval {
+				$exists = $init->{'dbh'}->selectcol_arrayref("SELECT $keyfld FROM users WHERE FIND_IN_SET($keyfld,'$keylist')");
+				};
+			if ( $@ ) {
+				$init->{'logger'}->dump("$init->{'caller'} : $@") if $init->{'logger'};
+			} else {
+				foreach my $code ( @$exists ) {
+					my $idx = Drive::find_first( $data_out, sub { my $r = shift; return $r->{$keyfld} eq $code} );
+					splice( @$data_out, $idx, 1) if $idx > -1;
+				}
+			}
+		}
+
+	} elsif( $init->{'mode'} eq 'upd' ) {
+		$keyfld = '_uid';		# Reassign for report
+		my $keylist = join(',', @$updlist);
+		my $exists;
+		eval {
+			$exists = $init->{'dbh'}->selectall_arrayref("SELECT * FROM users WHERE FIND_IN_SET(_uid,'$keylist')", {Slice=>{}});
+			};
+		if ( $@ ) {
+			$init->{'logger'}->dump("$init->{'caller'} : $@") if $init->{'logger'};
+		} else {
+			foreach my $row ( @$exists ) {
+				my $idx = Drive::find_first( $data_out, sub { my $r = shift; return $r->{'_uid'} eq $row->{'_uid'}} );
+				if ( $idx > -1 ) {
+					while ( my($fld, $dat) = each( %{$data_out->[$idx]}) ) {
+						$row->{$fld} = $dat;
+					}
+				}
+			}
+			$data_out = $exists;
+		}
+	}
+
+	if ( scalar( @$data_out) ) {			# Now create SQL
+		my $flist = [ keys( %{$data_out->[0]}) ];
+		foreach my $reqrd ( qw( _rtime ) ) {		# Some fields must be present
+			my $exst = Drive::find_first( $flist, sub { my $fn = shift; return $fn eq $reqrd } );
+			push( @$flist, $reqrd ) if $exst < 0;
+		}
+
+		my $fields = join(',', @$flist);
+		my $values;
+		foreach my $row ( @$data_out) {
+			my $valrow = '';
+			foreach my $fld ( @$flist) {
+				my $val = $row->{$fld};
+				if ( $fld =~ /^(_rtime)$/ ) {
+					$val = time unless $val;
+				}
+				$val =~ s/([\'%;])/'%'.unpack( 'H*', $1 )/eg;
+				$valrow .= "'$val',";
+				push( @$processed, $row->{$fld} ) if $fld eq $keyfld;
+			}
+			$valrow =~ s/,$//;
+			$values .= "($valrow),";
+		}
+		$values =~ s/,$//;
+		my $sql = "REPLACE INTO users ($fields) VALUES $values";
+		eval {
+			$init->{'dbh'}->do( $sql );
+			};
+		if ( $@ ) {
+			$init->{'logger'}->dump("$@\n\t$sql", 2) if $init->{'logger'};
+			$ret = {'fail' => "$init->{'caller'} : $@", 'success' => 0};
+		} else {
+			$ret = {'data'=>{'key'=>$keyfld, 'list'=>$processed}, 'success' => 1};
+		}
+	} else {
+		$ret->{'fail'} = "$init->{'caller'} : No data to process $init->{'mode'}.";
+	}
 	return $ret;
 }
 #########################
@@ -273,14 +395,14 @@ my $init = { @_ };
 		$user_flds = "$uid_name,$user_flds";
 	}
 
-	my $where = "users._ustate=$init->{'sys'}->{'user_state'}->{'verify'}->{'value'}";
-	$where = $init->{'where'} if $init->{'where'};
+	my $where = "users._ustate=$init->{'sys'}->{'user_state'}->{'verify'}->{'value'}";		# Default user state filtered
+	$where = $init->{'where'} if $init->{'where'};					# Any other filter
 
 	my $sql = "SELECT $user_flds FROM users"
 					." WHERE $where ORDER BY users._uid";
-	if ( $media_names ) {			# Plug in media table if need
+	if ( $media_names ) {							# Plug in media table if need
 		my $media_flds = "media.owner_field AS 'media.owner_field'";
-		foreach my $fld (  sort { $a->{'ord'}<=>$b->{'ord'} } @$media_keys ) {
+		foreach my $fld (  sort { $a->{'ord'}<=>$b->{'ord'} } @$media_keys ) {		# Sorted fields need
 			if ($fld->{'name'} eq 'url' ) {
 				$media_flds .= ",CONCAT_WS('/','$init->{'sys'}->{'our_host'}/channel/media',media.owner_id,media.owner_field,media.filename)"
 											." AS 'media.$fld->{'name'}'";
@@ -297,6 +419,7 @@ my $init = { @_ };
 
 	if ( $@ ) {
 		$ret->{'fail'} = "$init->{'caller'} : $@";
+		$init->{'logger'}->dump("$@\n\t$sql", 2) if $init->{'logger'};
 	} else {
 		my $data = [];
 		my $row_out;
@@ -308,7 +431,7 @@ my $init = { @_ };
 				if ( $row_in->{'media.owner_field'} && exists($media_names->{$row_in->{'media.owner_field'}}) ) {
 					my $mediadata = {};
 					foreach my $fld ( @$media_keys ) {
-						$mediadata->{$fld->{'uname'}} = $row_in->{"media.$fld->{'name'}"};
+						$mediadata->{$fld->{'uname'}} = Drive::mysqlmask($row_in->{"media.$fld->{'name'}"}, 1);
 					}
 					push( @{$data->[-1]->{ $media_names->{$row_in->{'media.owner_field'}}}}, $mediadata );
 				}
@@ -320,13 +443,13 @@ my $init = { @_ };
 				}
 				while ( my ($fld, $val) = each( %$row_in) ) {
 					if ( $fld =~ /^users\.(.+)$/ ) {
-						$row_out->{ decode_utf8($1)  } = $val;
+						$row_out->{ decode_utf8($1)  } = Drive::mysqlmask( $val, 1);
 					}
 				}
 				if ( $row_in->{'media.owner_field'} && exists($media_names->{$row_in->{'media.owner_field'}}) ) {
 					my $mediadata = {};
 					foreach my $fld ( @$media_keys ) {
-						$mediadata->{$fld->{'uname'}} = $row_in->{"media.$fld->{'name'}"};
+						$mediadata->{$fld->{'uname'}} = Drive::mysqlmask($row_in->{"media.$fld->{'name'}"}, 1);
 					}
 					push( @{$row_out->{ $media_names->{$row_in->{'media.owner_field'}}} }, $mediadata );
 				}
