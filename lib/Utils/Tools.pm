@@ -314,12 +314,18 @@ my $init = { @_ };
 			push( @$flist, $reqrd ) if $exst < 0;
 		}
 
+		my $updates = [];
 		my $fields = join(',', @$flist);
 		my $values;
 		foreach my $row ( @$data_out) {
+			my $updrow;
 			my $valrow = '';
 			foreach my $fld ( @$flist) {
 				my $val = $row->{$fld};
+				if ( "_email,fullname,compname,_ustate,_uid,$keyfld" =~ /$fld/ ) {			# Some interesting fields must be returned
+					$updrow->{$fld} = $val;
+				}
+
 				if ( $fld =~ /^(_rtime)$/ ) {
 					$val = time unless $val;
 				}
@@ -329,6 +335,7 @@ my $init = { @_ };
 			}
 			$valrow =~ s/,$//;
 			$values .= "($valrow),";
+			push( @$updates, $updrow) if ref( $updrow) eq 'HASH';		# Prepare return values
 		}
 		$values =~ s/,$//;
 		my $sql = "REPLACE INTO users ($fields) VALUES $values";
@@ -339,7 +346,7 @@ my $init = { @_ };
 			$init->{'logger'}->dump("$@\n\t$sql", 2) if $init->{'logger'};
 			$ret = {'fail' => "$init->{'caller'} : $@", 'success' => 0};
 		} else {
-			$ret = {'data'=>{'key'=>$keyfld, 'list'=>$processed}, 'success' => 1};
+			$ret = {'data'=>{'keyfield'=>$keyfld, 'keylist'=>$processed, 'updates' => $updates}, 'success' => 1};
 		}
 	} else {
 		$ret->{'fail'} = "$init->{'caller'} : No data to process $init->{'mode'}.";
@@ -360,6 +367,7 @@ my $init = { @_ };
 	}
 	return $ret unless ref($map) eq 'HASH';
 
+	my $codec;
 	my $uid_name;				# Anyway wee need to select _uid in sql
 	my $user_names;			# Fields from users
 	my $media_names;		# Fields from media
@@ -387,6 +395,14 @@ my $init = { @_ };
 			$uid_name = "users.$uname" if $name eq '_uid';		# _uid field user defined name in query result
 			$user_names->{$name} = $uname;		# Users fields.
 			$user_flds .= ",users.$name AS 'users.$uname'";
+
+			if ( $val =~ /^\$\((.+)\)$/ ) {		# Need some values decoding
+				my @codes = split(/;/, $1);			# Translate definition into hash
+				foreach my $def ( @codes ) {
+					my ($from, $to) = split(/:/, $def);
+					$codec->{"users.$uname"}->{$from} = $to;
+				}
+			}
 		}
 	}
 	$user_flds =~ s/^,//;
@@ -443,7 +459,13 @@ my $init = { @_ };
 				}
 				while ( my ($fld, $val) = each( %$row_in) ) {
 					if ( $fld =~ /^users\.(.+)$/ ) {
-						$row_out->{ decode_utf8($1)  } = Drive::mysqlmask( $val, 1);
+						$fld = decode_utf8($1);
+						if ( exists( $codec->{"users.$fld"}) ) {		# Have decoder table?
+							$val = $codec->{"users.$fld"}->{$val};
+						} else {
+							$val = Drive::mysqlmask( $val, 1);
+						}
+						$row_out->{ $fld} = $val;
 					}
 				}
 				if ( $row_in->{'media.owner_field'} && exists($media_names->{$row_in->{'media.owner_field'}}) ) {

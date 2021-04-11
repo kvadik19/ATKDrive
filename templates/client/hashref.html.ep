@@ -33,14 +33,22 @@
 		</div>
 % } elsif ( $udata->{'_uid'} && $udata->{'_ustate'} > $ustate->{'confirm'} ) {
 % $uid = 1;
-		<h1 class="form__title">Восстановление пароля<br>в личном кабинете АЛВЕ&nbsp;ТрансКарго</h1>
+% my $title = 'Восстановление пароля<br>в личном кабинете АЛВЕ&nbsp;ТрансКарго';
+% my $label = ' (не меняется)';
+% my $disbl = ' disabled';
+% if ( $referer ) {
+%	$title = 'Настройка доступа<br>к личному кабинету АЛВЕ&nbsp;ТрансКарго';
+%	$label = '';
+%	$disbl = '';
+% }
+		<h1 class="form__title"><%== $title %></h1>
 		<p>
 		Пожалуйста, придумайте надежный, но хорошо запоминающийся пароль.
 		<p>
 		<div class="optgroup wide">
-			<label for="login">Логин (не меняется)</label>
+			<label for="login">Логин<%== $label %></label>
 			<div class="optrow">
-				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" value="<%== $udata->{'_login'} %>" disabled />
+				<input id="login" type="text" class="form__input udata" placeholder="Имя для входа" value="<%== $udata->{'_login'} %>"<%== $disbl %> />
 			</div>
 			<label for="pwd">Пароль</label>
 			<div class="optrow">

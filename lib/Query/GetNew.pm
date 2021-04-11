@@ -11,7 +11,7 @@ use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use Utils::Tools;
 
-use Data::Dumper;
+# use Data::Dumper;
 
 my ($dbh, $logger, $config_path, $my_name, $sys);
 my @options = qw(

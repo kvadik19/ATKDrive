@@ -110,6 +110,7 @@ my $self = shift;
 		}
 		$self->stash( 'udata' => $urec,
 					'ustate' => $ustate,
+					'referer' => $param->{'m'},
 					'sys' => $sys,
 					);
 		$template = 'client/hashref'
@@ -504,7 +505,7 @@ my $uid = shift;
 		} elsif( $urec->{'state'} == 4 ) {			# email match
 			$where = "_email='$param->{'login'}'";
 		}
-		$mdata->{'_ustate'} = $urec->{'_ustate'};
+		$mdata->{'_ustate'} = $urec->{'_ustate'};			# User always registered on gate
 		$mdata->{'_email'} = $urec->{'_email'};
 		$mdata->{'_login'} = $urec->{'_login'};
 	}

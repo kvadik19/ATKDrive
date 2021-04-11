@@ -590,6 +590,7 @@ div.options {
 	font-family:SansMono, monospace;
 	margin-left:1.5em;
 	cursor:default;
+	overflow-x:hidden;
 }
 .array {
 	border-left:1px dashed var(--balloon-sel-back,'#6699aa');

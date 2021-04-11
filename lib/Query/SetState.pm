@@ -11,7 +11,7 @@ use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use Utils::Tools;
 
-use Data::Dumper;
+# use Data::Dumper;
 
 my ($dbh, $logger, $config_path, $my_name, $sys);
 my @options = qw(
@@ -55,7 +55,6 @@ my ($self, $qdata) = @_;
 	my $def = $self->load();
 	return $ret unless $def->{'success'} == 1;
 
-	my $linkfield;
 	$ret = Utils::Tools->map_write( map => $def->{'qw_recv'}->{'data'},
 									data => $qdata,
 									caller => $my_name,
@@ -65,7 +64,7 @@ my ($self, $qdata) = @_;
 									logger => $logger
 								);
 	if ( $def->{'qw_send'}->{'data'} && $ret->{'success'} == 1 ) {
-		my $where = "FIND_IN_SET($ret->{'data'}->{'key'},'".join(',', @{$ret->{'data'}->{'list'}})."')";
+		my $where = "FIND_IN_SET($ret->{'data'}->{'keyfield'},'".join(',', @{$ret->{'data'}->{'keylist'}})."')";
 		$ret = Utils::Tools->map_read( map => $def->{'qw_send'}->{'data'},
 										caller => $my_name,
 										dbh => $dbh,
