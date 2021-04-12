@@ -142,7 +142,7 @@ let keySplit = function( keyName ) {
 	
 let toDOM = function(val, key) {
 		let div = createObj('div',{'className':'domItem'});
-		if ( !val ) return div;
+		if ( !(val || key) ) return div;
 
 		if ( val.constructor.toString().match(/Array/) ) {
 			let manifest = '';
@@ -777,14 +777,6 @@ let btnActivate = function() {		// Buttons for OUT message JSON composer
 			});
 		commitEnable();
 	};
-
-let tabs = document.querySelectorAll('.subTab:not(.fail)');
-tabs.forEach( st =>{
-		st.onclick = function(e) { if (e.target.matches('.active')) return;
-					let tab = e.target;
-						subSwitch( tab );
-				};
-	});
 
 let qState = function(state) {		// Income Awaiting service fn
 		if (state == 1) {

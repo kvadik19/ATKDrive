@@ -2,7 +2,7 @@
 home=/var/www/atk/htdocs/js
 if [ $# -ne 1 ]
 then
-	for scr in support account query
+	for scr in support account query template
 	do
 		if [ ! -f "$home/$scr.min.js" ] || [ "$home/$scr.js" -nt "$home/$scr.min.js" ]
 		then

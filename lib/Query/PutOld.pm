@@ -9,6 +9,7 @@ use Encode;
 use Mojo::Base 'Mojolicious';
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
+use Mojo::Util qw(url_escape url_unescape b64_encode trim md5_sum);
 use Utils::Tools;
 use Time::HiRes;
 use HTML::Template;
@@ -66,7 +67,6 @@ my ($self, $qdata) = @_;
 									logger => $logger
 								);
 	if ( $ret->{'success'} == 1 ) {
-		my $where = "FIND_IN_SET($ret->{'data'}->{'keyfield'},'".join(',', @{$ret->{'data'}->{'keylist'}})."')";
 		if ( scalar( @{$ret->{'data'}->{'updates'}}) ) {
 			foreach my $urow ( @{$ret->{'data'}->{'updates'}} ) {
 				next unless $urow->{'_email'};
@@ -79,6 +79,7 @@ my ($self, $qdata) = @_;
 			}
 		}
 		if ( $def->{'qw_send'}->{'data'} ) {
+			my $where = "FIND_IN_SET($ret->{'data'}->{'keyfield'},'".join(',', @{$ret->{'data'}->{'keylist'}})."')";
 			$ret = Utils::Tools->map_read( map => $def->{'qw_send'}->{'data'},
 											caller => $my_name,
 											dbh => $dbh,

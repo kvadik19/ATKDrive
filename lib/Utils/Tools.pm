@@ -265,6 +265,8 @@ my $init = { @_ };
 			push( @$data_out, $row_out);		# Validate dataOut rows
 		}
 	}
+# $Drive::logger->dump(Dumper($addlist));
+# $Drive::logger->dump($can_add);
 
 	my $processed;			# Report processed IDs
 	my $sql;
@@ -408,7 +410,7 @@ my $init = { @_ };
 	$user_flds =~ s/^,//;
 	unless ( $uid_name ) {		# Wee need to select _uid in sql anyway
 		$uid_name = 'users._uid';
-		$user_flds = "$uid_name,$user_flds";
+		$user_flds = "$uid_name AS '$uid_name',$user_flds";
 	}
 
 	my $where = "users._ustate=$init->{'sys'}->{'user_state'}->{'verify'}->{'value'}";		# Default user state filtered
@@ -439,10 +441,10 @@ my $init = { @_ };
 	} else {
 		my $data = [];
 		my $row_out;
+
+
 		my $curr_id;
-
 		foreach my $row_in ( @$db_got) {		# Collect output table
-
 			if ( $row_in->{$uid_name} == $curr_id ) {			# More files for same client
 				if ( $row_in->{'media.owner_field'} && exists($media_names->{$row_in->{'media.owner_field'}}) ) {
 					my $mediadata = {};

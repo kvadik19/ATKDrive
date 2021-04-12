@@ -1,0 +1,54 @@
+<style type="text/css">
+	.qw_define {
+		margin:0px 1em;
+	}
+	.tmpl_data {
+		display:block !important;
+	}
+</style>
+<div class="action">
+	<p class="comment">
+		Редактировать шаблоны лучше привычным лично для Вас редактором. <br>
+		Если Ваш редактор может работать через <code>ssh</code> или <code>ftp</code> и у Вас есть доступ к серверу по этим протоколам,<br>
+		Вы можете открывать файлы по их сетевым адресам.
+	</p>
+	<div class="qw_define">
+		<ol class="tmpl_list subTabs" data-type="ext">
+% foreach my $row ( @$tmpl_list ) {
+%	if ( $row->{'fail'} ) {
+	<li class="subTab tmpl_item fail" data-name="fail" title="<%= $row->{'fail'}%>"><%= $row->{'fail'}%></li>
+%	} else {
+	<li class="subTab tmpl_item" data-name="<%= $row->{'name'}%>" data-filename="<%= $row->{'filename'}%>" title="<%= $row->{'title'}%>"><%= $row->{'name'}%></li>
+%	}
+% }
+		</ol><!-- tmpl_list -->
+		<div class="subHolder tmpl_data">
+			<p class="comment addition">
+				Адрес файла: <code id="netaddr"></code>
+			</p>
+			<div id="fileBox" class="listingBox">
+				<div id="fileBody" class="listingBody">
+				</div>
+			</div>
+		</div>
+	</div><!-- qw_define -->
+	<div id="eCommit" class="buttonbar">
+		<a href="<%= url_for('admin') %>" class="button esc static">Выход</a>
+	</div>
+</div>
+<script type="text/javascript" src="/js/template.js?<%== $stats->{'js'} %>"></script>
+<script type="text/javascript">
+% while ( my ($var,$val) = each(%$constant) ) {
+const <%== $var %> = '<%== $val %>'
+% }
+document.addEventListener('DOMContentLoaded', function() {
+	let tabs = document.querySelectorAll('.subTab:not(.fail)');
+	tabs.forEach( st =>{
+			st.onclick = function(e) { if (e.target.matches('.active')) return;
+						let tab = e.target;
+							switchWiew( tab );
+					};
+		});
+	switchWiew();
+});
+</script>

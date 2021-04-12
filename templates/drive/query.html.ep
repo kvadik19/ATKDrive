@@ -62,5 +62,13 @@
 	document.addEventListener('DOMContentLoaded', function() {
 		tabSwitch();
 		document.getElementById('tout').innerText = timeout;
+		let tabs = document.querySelectorAll('.subTab:not(.fail)');
+		tabs.forEach( st =>{
+				st.onclick = function(e) { if (e.target.matches('.active')) return;
+							let tab = e.target;
+								subSwitch( tab );
+						};
+			});
+
 	});
 </script>

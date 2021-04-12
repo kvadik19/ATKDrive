@@ -13,7 +13,7 @@
 %	}
 % }
 	</ol>
-	<div class=subHolder>
+	<div class="subHolder">
 		<div class="message qw_recv">
 			<h4>Получаемый запрос</h4>
 			<div class="qw_body">

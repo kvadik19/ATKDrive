@@ -304,6 +304,65 @@ my $self = shift;
 	return $mods;
 }
 #####################
+sub template {			# Client pages templates/functionality
+#####################
+my $self = shift;
+
+	my $ret;
+	my $tmpl_list;
+	my $tmpl_dir = Drive::upper_dir("$Drive::sys_root$sys->{'html_dir'}");	#### Collect available <fromUserPageToOffice> templates
+	my $param = $self->{'qdata'}->{'http_params'};
+
+	if ( $param->{'code'} ) {			# Some AJAX received
+		$ret->{'json'} = {'code'=>$param->{'code'}, 'data'=>{'filename'=>$param->{'filename'}}};
+
+		if ( $param->{'code'} eq 'load' && $param->{'filename'} ) {		# Load file's content
+			if ( -e("$tmpl_dir/$param->{'filename'}") ) {
+				open( my $fh, "< $tmpl_dir/$param->{'filename'}");
+				$ret->{'json'}->{'data'}->{'content'} = decode_utf8(join('', <$fh>));
+				close( $fh);
+			} else {
+				$ret->{'fail'} = "$tmpl_dir/$param->{'filename'} : Not found";
+			}
+		} elsif ( $param->{'code'} eq 'store' ) {
+		}
+	} else {
+		$ret = {'constant' => { 'hostname' => ( $sys->{'our_host'} =~ /\/([^\/]+)$/ )[0],
+								'tmpl_dir' => $tmpl_dir
+								}
+				};
+		if ( -d($tmpl_dir) ) {
+			my $sortd = [];
+			opendir( my $dh, $tmpl_dir );
+			while  (my $fn = readdir($dh) ) {
+				next if $fn =~ /^\./ || $fn !~ /\.tmpl$/;
+				push( @$sortd, $fn);
+			}
+			closedir( $dh );
+			foreach my $tmpl ( sort @$sortd ) {
+				my $tmpl_info = {'filename' => $tmpl, 'name' => $tmpl, 'title' => $tmpl};
+
+				open( my $fh, "< $tmpl_dir/$tmpl");
+				my $template = decode_utf8( join('', <$fh>));
+				close( $fh);
+				next if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
+
+				my $dom = Mojo::DOM->new( $template );
+				my $title = $dom->find('h1')->[0];			# Extract page title as module name
+
+				$tmpl_info->{'name'} =~ s/\.tmpl$//;
+				$tmpl_info->{'title'} = $title->text() if $title;
+				push( @$tmpl_list, $tmpl_info );
+			}
+			push( @$tmpl_list, {'fail' => 'No modules found'} ) unless scalar( @$tmpl_list);
+		} else {
+			push( @$tmpl_list, {'fail' => "$tmpl_dir not exists"} );
+		}
+		$ret->{'tmpl_list'} = $tmpl_list;
+	}
+	return $ret;
+}
+#####################
 sub connect {		# Setup interconnect settings
 #####################
 	my $self = shift;
@@ -640,15 +699,15 @@ my $self = shift;
 	my $msg_recv = $self->req->content->asset->{'content'};
 	if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 		my $qry;
-		eval{ $qry = decode_json( encode_utf8($msg_recv) )};
+		eval{ $qry = decode_json( encode_utf8($msg_recv)) };
 		if ( $@) {
 			$msg_send->{'fail'} = "Decode JSON : $@";
 			$self->logger->dump( $msg_send->{'fail'} );
 		} else {
 			if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
-				$qry = decode_utf8( encode_json( $qry));
+				my $qry_out = decode_utf8( encode_json( $qry));
 				open( my $fh, "> $Drive::sys_root/watchdog" );
-				print $fh $qry;
+				print $fh $qry_out;
 				close($fh);
 			}
 			delete( $msg_send->{'fail'});
@@ -679,9 +738,9 @@ my $self = shift;
 								$self->logger->dump( $msg_send->{'fail'} );
 							} else {
 								if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {	# Report received msg 
-									$qry = decode_utf8( encode_json( $qry));
+									my $qry_out = decode_utf8( encode_json( $qry));
 									open( my $fh, "> $Drive::sys_root/watchdog" );
-									print $fh $qry;
+									print $fh $qry_out;
 									close($fh);
 								}
 								delete( $msg_send->{'fail'});

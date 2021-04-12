@@ -3,5 +3,18 @@
 	<div id="finance-body" class="panel light wide">
 		<p>Здеся финансы
 		</p>
+		<h2>Доходы</h2>
+		<div class="fintable">
+<TMPL_LOOP NAME="list">
+		<div class="finrow">
+		<div class="fin-date">
+	<TMPL_VAR NAME="date">
+		</div>
+		<div class="fin-sum">
+		</div>
+	<TMPL_VAR NAME="sum">
+		</div>
+</TMPL_LOOP>
+		</div>
 	</div>
 </div>
