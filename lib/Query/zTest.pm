@@ -99,7 +99,7 @@ my $self = shift;
 my $init = shift;
 
 	my $message;
-	my $tmpl_file = "$Drive::sys_root$sys->{'mail_dir'}/access.tmpl";
+	my $tmpl_file = "$Drive::sys_root$sys->{'mail_dir'}/invite.tmpl";
 	return $message unless -e( $tmpl_file );
 
 	my $timestamp = Time::HiRes::time();
