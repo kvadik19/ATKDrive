@@ -274,34 +274,56 @@ my $self = shift;
 
 	$qw_dir = "$Drive::sys_root$sys->{'html_dir'}";			#### Collect available <fromUserPageToOffice> templates
 	if ( -d($qw_dir) ) {
-		my $sortd = [];
-		opendir( my $dh, $qw_dir );
-		while  (my $fn = readdir($dh) ) {
-			next if $fn =~ /^\./ || $fn !~ /\.tmpl$/;
-			push( @$sortd, $fn);
-		}
-		closedir( $dh );
-		foreach my $qw_tmpl ( sort @$sortd ) {
-			my $qw_info = {'name' => $qw_tmpl, 'title' => $qw_tmpl};
-
-			open( my $fh, "< $qw_dir/$qw_tmpl");
-			my $template = decode_utf8( join('', <$fh>));
-			close( $fh);
-			next if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
-
-			my $dom = Mojo::DOM->new( $template );
-			my $title = $dom->find('h1')->[0];			# Extract page title as module name
-
-			$qw_info->{'name'} =~ s/\.tmpl$//;
-			$qw_info->{'title'} = $title->text() if $title;
-			push( @{$mods->{'ext'}}, $qw_info );
-		}
+		$mods->{'ext'} = $self->tmpl_collect( $qw_dir);
 		push( @{$mods->{'ext'}}, {'fail' => 'No modules found'} ) unless scalar( @{$mods->{'ext'}});
 	} else {
 		push( @{$mods->{'ext'}}, {'fail' => "$qw_dir not exists"} );
 	}
 	$mods->{'translate'} = $translate;
 	return $mods;
+}
+#####################
+sub tmpl_collect {			# Read templates definition
+#####################
+my $self = shift;
+my $dirname = shift;
+
+	my $list = [];
+	if ( -d($dirname) ) {
+		my $sortd = [];
+		opendir( my $dh, $dirname );
+		while  (my $fn = readdir($dh) ) {
+			next if $fn =~ /^\./ || $fn !~ /\.tmpl$/;
+			push( @$sortd, $fn);
+		}
+		closedir( $dh );
+		foreach my $tmpl ( sort @$sortd ) {
+			my $tmpl_info = $self->tmpl_info( "$dirname/$tmpl" );
+			push( @$list, $tmpl_info ) if $tmpl_info;
+		}
+	}
+	return $list;
+}
+#####################
+sub tmpl_info {			# Read single template definition
+#####################
+my $self = shift;
+my $filename = shift;
+
+	my ( $tmpl ) = $filename =~ /\/([^\/]+)$/;
+	my $tmpl_info = {'name'=>$tmpl, 'filename'=>$tmpl, 'title'=>$tmpl};
+
+	open( my $fh, "< $filename");
+	my $template = decode_utf8( join('', <$fh>));
+	close( $fh);
+	return undef if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
+
+	my $dom = Mojo::DOM->new( $template );
+	my $title = $dom->find('h1')->[0];			# Extract page title as module name
+
+	$tmpl_info->{'name'} =~ s/\.tmpl$//;
+	$tmpl_info->{'title'} = $title->text() if $title;
+	return $tmpl_info;
 }
 #####################
 sub template {			# Client pages templates/functionality
@@ -324,36 +346,25 @@ my $self = shift;
 			} else {
 				$ret->{'fail'} = "$tmpl_dir/$param->{'filename'} : Not found";
 			}
-		} elsif ( $param->{'code'} eq 'store' ) {
+		} elsif ( $param->{'code'} eq 'upload' ) {
+			my $done = $self->loadfile( "$tmpl_dir" );
+			if ( ref($done) eq 'ARRAY' ) {
+				$done = $done->[0];
+				my $tmpl_info = $self->tmpl_info( "$tmpl_dir/$done->{'filename'}");
+				$ret->{'json'}->{'data'} = $tmpl_info;
+				$ret->{'json'}->{'fail'} = "Error reading info from $tmpl_dir/$done->{'filename'}" unless $tmpl_info;
+			} else {
+				$ret->{'json'}->{'fail'} = $done;
+			}
 		}
+
 	} else {
 		$ret = {'constant' => { 'hostname' => ( $sys->{'our_host'} =~ /\/([^\/]+)$/ )[0],
 								'tmpl_dir' => $tmpl_dir
 								}
 				};
-		if ( -d($tmpl_dir) ) {
-			my $sortd = [];
-			opendir( my $dh, $tmpl_dir );
-			while  (my $fn = readdir($dh) ) {
-				next if $fn =~ /^\./ || $fn !~ /\.tmpl$/;
-				push( @$sortd, $fn);
-			}
-			closedir( $dh );
-			foreach my $tmpl ( sort @$sortd ) {
-				my $tmpl_info = {'filename' => $tmpl, 'name' => $tmpl, 'title' => $tmpl};
-
-				open( my $fh, "< $tmpl_dir/$tmpl");
-				my $template = decode_utf8( join('', <$fh>));
-				close( $fh);
-				next if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
-
-				my $dom = Mojo::DOM->new( $template );
-				my $title = $dom->find('h1')->[0];			# Extract page title as module name
-
-				$tmpl_info->{'name'} =~ s/\.tmpl$//;
-				$tmpl_info->{'title'} = $title->text() if $title;
-				push( @$tmpl_list, $tmpl_info );
-			}
+		if ( -d( $tmpl_dir) ) {
+			$tmpl_list = $self->tmpl_collect( $tmpl_dir);
 			push( @$tmpl_list, {'fail' => 'No modules found'} ) unless scalar( @$tmpl_list);
 		} else {
 			push( @$tmpl_list, {'fail' => "$tmpl_dir not exists"} );
@@ -699,7 +710,7 @@ my $self = shift;
 	my $msg_recv = $self->req->content->asset->{'content'};
 	if ( $msg_recv =~ /^[\{\[].+[\}\]]$/s ) {		# Got JSON?
 		my $qry;
-		eval{ $qry = decode_json( encode_utf8($msg_recv)) };
+		eval{ $qry = decode_json( $msg_recv) };
 		if ( $@) {
 			$msg_send->{'fail'} = "Decode JSON : $@";
 			$self->logger->dump( $msg_send->{'fail'} );
@@ -716,11 +727,13 @@ my $self = shift;
 				$msg_send->{$key} = $val;
 			}
 		}
-		$msg_send = decode_utf8(encode_json( $msg_send ));
 	} else {
-		$msg_send ="ECHO: $msg_recv";
+		$msg_send = {'ECHO' => $msg_recv};
 	}
-	$self->render( type => 'application/json', json => $msg_send );
+# 	$msg_send = encode_json( $msg_send );
+# 	$self->render( data => $msg_send, format => 'json' );
+	$self->render( json => $msg_send );
+	return;
 }
 #####################
 sub wsocket {		# Process websocket admin queries
@@ -749,10 +762,10 @@ my $self = shift;
 									$msg_send->{$key} = $val;
 								}
 							}
-							$msg_send = decode_utf8(encode_json( $msg_send ));
 						} else {
-							$msg_send ="ECHO: $msg_recv";
+							$msg_send = {'ECHO' => $msg_recv};
 						}
+						$msg_send = decode_utf8(encode_json( $msg_send ));
 						$ws->send( $msg_send );
 					});
 	$self->on( finish => sub { my ( $ws, $code, $reason ) = @_;
@@ -807,6 +820,40 @@ my ($self, $query) = @_;
 	}
 
 	return $ret;
+}
+#############################
+sub loadfile {				# Decompose file uploads
+#############################
+my $self = shift;
+my $path = shift;
+my $res;
+	if ( $self->req->{'finished'} ) {
+		foreach my $part ( @{$self->req->content->parts} ) {
+			my $finfo;
+			my $descriptor = $part->headers->content_disposition;
+			foreach my $data ( (split(/;/, $descriptor)) ) {
+				next unless $data =~ /=/;
+				my ($name, $value) = split(/=/, $data);
+				$name =~ s/^\s+|\s+$//g;
+				$value =~ s/^["']|["']$//g;
+				$finfo->{$name} = decode_utf8($value);
+			}
+			if ( $finfo->{'filename'} ) {
+				eval { $part->asset->move_to("$path/$finfo->{'filename'}") };
+				if ( $@ ) {
+					$res = $@;
+					last;
+				}
+				chmod(0666, "$path/$finfo->{'filename'}");
+				push( @$res, {'filename' => $finfo->{'filename'}, 'size'=> $part->asset->size(),
+							'mime' => $part->headers->content_type} );
+			}
+		}		# For each parts
+
+	} else {
+		$res = "Upload not finished";
+	}
+	return $res;
 }
 #####################
 sub reboot {		# Manually reboot backserver

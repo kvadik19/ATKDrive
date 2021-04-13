@@ -61,7 +61,7 @@ sub startup {
 	our $mimeTypes = {
 				'ttf'=>'application/x-font-ttf', 'ttc'=>'application/x-font-ttf', 'otf'=>'application/x-font-opentype', 
 				'woff'=>'application/font-woff', 'woff2'=>'application/font-woff2', 'svg'=>'image/svg+xml',
-				'tif'=>'image/tiff', 'tiff'=>'image/tiff', 'bmp'=>'image/x-ms-bmp',
+				'tif'=>'image/tiff', 'tiff'=>'image/tiff', 'bmp'=>'image/x-ms-bmp','json'=>'application/json',
 				'jpg'=>'image/jpeg', 'jpeg'=>'image/jpeg', 'jpe'=>'image/jpeg', 'png'=>'image/png', 'gif'=>'image/gif',
 				'sfnt'=>'application/font-sfnt', 'eot'=>'application/vnd.ms-fontobject','zip'=>'application/zip', 
 				};

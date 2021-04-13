@@ -206,7 +206,7 @@ ol.subTabs li.subTab {
 }
 ol.subTabs li.subTab.active {
 	background-color:var(--body-back,'#ffffff');
-	border-right-color:var(--body-back,'#ffffff');
+	border-right:2px solid var(--body-back,'#ffffff');
 	font-family:SansCondBold, sans-serif;
 	position:relative;
 	z-index:1;
@@ -321,44 +321,6 @@ div.options {
 	background: var(--btn-bg-alt);
 }
 
-/* SOME PRETTYFY */
-.tooltip {
-	position: relative;
-	display: inline-block;
-}
-
-.tooltip .tooltiptext {
-	visibility: hidden;
-	width: 140px;
-	background-color: var(--balloon-back,'#ffffcc');
-	color: var(--balloon-text,'#663333');
-	border: 1px solid var(--balloon-text,'#663333');
-	text-align: center;
-	border-radius: 6px;
-	padding: 5px;
-	position: absolute;
-	z-index: 1;
-	bottom: 60%;
-	opacity: 0;
-	transition: opacity 0.3s;
-}
-
-.tooltip .tooltiptext::after {
-	content: "";
-	position: absolute;
-	top: 100%;
-	left: 50%;
-	margin-left: -5px;
-	border-width: 5px;
-	border-style: solid;
-	border-color: var(--balloon-text,'#663333') transparent transparent transparent;
-}
-
-.tooltip:hover .tooltiptext {
-	visibility: visible;
-	opacity: 0.8;
-}
-/* /PRETTYFY */
 /* Context menu panel */
 .popup-menu {
 	position:absolute;

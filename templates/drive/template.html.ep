@@ -5,6 +5,19 @@
 	.tmpl_data {
 		display:block !important;
 	}
+	.progressbar {
+		visibility:hidden;
+		height: 8px;
+		border-radius: 4px;
+		margin-bottom: 0.5em;
+		border: 1px solid var(--panel-back);		
+	}
+	button[data-action="fup"] {
+		cursor:n-resize;
+	}
+	button[data-action="fdn"] {
+		cursor:s-resize;
+	}
 </style>
 <div class="action">
 	<p class="comment">
@@ -18,7 +31,8 @@
 %	if ( $row->{'fail'} ) {
 	<li class="subTab tmpl_item fail" data-name="fail" title="<%= $row->{'fail'}%>"><%= $row->{'fail'}%></li>
 %	} else {
-	<li class="subTab tmpl_item" data-name="<%= $row->{'name'}%>" data-filename="<%= $row->{'filename'}%>" title="<%= $row->{'title'}%>"><%= $row->{'name'}%></li>
+	<li class="subTab tmpl_item" data-name="<%= $row->{'name'}%>" data-filename="<%= $row->{'filename'}%>" title="<%= $row->{'title'}%>">
+		<%= $row->{'name'}%> <br>(<%= $row->{'title'}%>)</li>
 %	}
 % }
 		</ol><!-- tmpl_list -->
@@ -29,6 +43,12 @@
 			<div id="fileBox" class="listingBox">
 				<div id="fileBody" class="listingBody">
 				</div>
+			</div>
+			<div class="buttonbar">
+				<div class="progressbar"></div>
+				<button type="button" class="dataDo" data-action="fup">Загрузить на сервер</button>
+				<button type="button" class="dataDo" data-action="fdn">Скачать на компьютер</button>
+				<input id="tmpload" type="file" style="display:none" />
 			</div>
 		</div>
 	</div><!-- qw_define -->
@@ -41,14 +61,14 @@
 % while ( my ($var,$val) = each(%$constant) ) {
 const <%== $var %> = '<%== $val %>'
 % }
+var tabClick = function(e) { if (e.target.matches('.active')) return;
+					switchWiew( e.target);
+				};
 document.addEventListener('DOMContentLoaded', function() {
 	let tabs = document.querySelectorAll('.subTab:not(.fail)');
-	tabs.forEach( st =>{
-			st.onclick = function(e) { if (e.target.matches('.active')) return;
-						let tab = e.target;
-							switchWiew( tab );
-					};
-		});
+	tabs.forEach( st =>{ st.onclick = tabClick});
+	document.querySelectorAll('button.dataDo').forEach( b =>{ b.onclick = dispatch[b.dataset.action] });
+	document.getElementById('tmpload').onchange = dispatch.traceFile, 
 	switchWiew();
 });
 </script>

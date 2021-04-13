@@ -58,6 +58,8 @@ my ($self, $qdata) = @_;
 	my $def = $self->load();
 	return $ret unless $def->{'success'} == 1;
 
+$dbh->do("DELETE FROM users WHERE code='000000140'");
+
 	$ret = Utils::Tools->map_write( map => $def->{'qw_recv'}->{'data'},
 									data => $qdata,
 									caller => $my_name,

@@ -227,6 +227,42 @@ function actionSet(node, set) {		// ReStores event handlers for cloned node and 
 	return true;
 }
 
+function base64Encode( stringInput ) {
+	let normalizedInput = encodeURIComponent( stringInput ).replace(/%([0-9A-F]{2})/g,
+				function( $0, hex ) {		// toSolidBytes
+					return String.fromCharCode( "0x" + hex );
+				}
+			);
+	return btoa( normalizedInput );
+}
+
+function blobToDataURL(blob, callback) {
+	let a = new FileReader();
+	a.onload = function(e) { callback(e.target.result) }
+	a.readAsDataURL(blob);
+}
+
+function dataURLtoBlob(dataurl) {		// https://stackoverflow.com/questions/7845892/create-data-uris-on-the-fly
+		let parts = dataurl.split(',');
+		let mime = 'text/plain';
+		if ( parts[0].match(/:(.*?);/) ) {
+			mime = parts[0].match(/:(.*?);/)[1];
+		} else {
+			parts[1] = 'Error: Nothing to dataURLtoBlob';
+			console.log('Nothing to dataURLtoBlob: '+dataurl);
+		}
+		if(parts[0].indexOf('base64') !== -1) {
+			let bstr = atob(parts[1]), n = bstr.length, u8arr = new Uint8Array(n)
+			while(n--){
+				u8arr[n] = bstr.charCodeAt(n)
+			}
+			return new Blob([u8arr], {type:mime})
+		} else {
+			let raw = decodeURIComponent(parts[1])
+			return new Blob([raw], {type: mime})
+		}
+	};
+
 function getPosition ( element ) {
 	let offsetLeft = 0, offsetTop = 0;
 	do {

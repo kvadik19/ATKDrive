@@ -265,8 +265,6 @@ my $init = { @_ };
 			push( @$data_out, $row_out);		# Validate dataOut rows
 		}
 	}
-# $Drive::logger->dump(Dumper($addlist));
-# $Drive::logger->dump($can_add);
 
 	my $processed;			# Report processed IDs
 	my $sql;
@@ -332,6 +330,7 @@ my $init = { @_ };
 					$val = time unless $val;
 				}
 				$val =~ s/([\'%;])/'%'.unpack( 'H*', $1 )/eg;
+				
 				$valrow .= "'$val',";
 				push( @$processed, $row->{$fld} ) if $fld eq $keyfld;
 			}
@@ -394,15 +393,15 @@ my $init = { @_ };
 			}
 			$media_names->{$name} = $uname;
 		} else {
-			$uid_name = "users.$uname" if $name eq '_uid';		# _uid field user defined name in query result
+			$uid_name = "users.$name" if $name eq '_uid';		# _uid field user defined name in query result
 			$user_names->{$name} = $uname;		# Users fields.
-			$user_flds .= ",users.$name AS 'users.$uname'";
+			$user_flds .= ",users.$name AS 'users.$name'";
 
 			if ( $val =~ /^\$\((.+)\)$/ ) {		# Need some values decoding
 				my @codes = split(/;/, $1);			# Translate definition into hash
 				foreach my $def ( @codes ) {
 					my ($from, $to) = split(/:/, $def);
-					$codec->{"users.$uname"}->{$from} = $to;
+					$codec->{"users.$name"}->{$from} = $to;
 				}
 			}
 		}
@@ -441,8 +440,6 @@ my $init = { @_ };
 	} else {
 		my $data = [];
 		my $row_out;
-
-
 		my $curr_id;
 		foreach my $row_in ( @$db_got) {		# Collect output table
 			if ( $row_in->{$uid_name} == $curr_id ) {			# More files for same client
@@ -461,13 +458,14 @@ my $init = { @_ };
 				}
 				while ( my ($fld, $val) = each( %$row_in) ) {
 					if ( $fld =~ /^users\.(.+)$/ ) {
-						$fld = decode_utf8($1);
+						$fld = $1;
+						my $ufld = $user_names->{$fld};
 						if ( exists( $codec->{"users.$fld"}) ) {		# Have decoder table?
 							$val = $codec->{"users.$fld"}->{$val};
 						} else {
 							$val = Drive::mysqlmask( $val, 1);
 						}
-						$row_out->{ $fld} = $val;
+						$row_out->{ $ufld} = $val if $ufld;
 					}
 				}
 				if ( $row_in->{'media.owner_field'} && exists($media_names->{$row_in->{'media.owner_field'}}) ) {
