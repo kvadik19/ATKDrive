@@ -20,6 +20,7 @@ use Drive::Media;
 our $templates;
 our $my_name = 'client';
 our $sys = \%Drive::sys;
+my $uncheck = 'logout';
 
 use Data::Dumper;
 
@@ -124,8 +125,10 @@ sub checked {	# All of operations dispatcher for authorized user
 my $self = shift;
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $param = $self->{'qdata'}->{'http_params'};
+	if ( $self->{'qdata'}->{'stack'}->[0] && $uncheck =~ /$self->{'qdata'}->{'stack'}->[0]/ ) {
+		# Some url must be passed as-is
 
-	if ( $udata->{'logged'} == 1 ) {
+	} elsif ( $udata->{'logged'} == 1 ) {
 		my $urec = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE _uid='$udata->{'cookie'}->{'uid'}'", {Slice=>{}})->[0];
 		$urec->{'_setup'} = decode_json( $urec->{'_setup'} ) if $urec->{'_setup'} =~ /^\{.+\}$/;
 		while ( my ($fld, $val) = each( %$urec) ) {
@@ -238,6 +241,7 @@ sub logout {	# Close user connection
 #################
 my $self = shift;
 	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'} = 0;
+	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'fp'} = '';
 	return {'redirect' => 'cabinet'};
 }
 #################

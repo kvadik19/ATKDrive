@@ -11,6 +11,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use File::Path qw(make_path mkpath remove_tree rmtree);
+use Fcntl ':mode';
 use IO::Socket;
 use IO::Select;
 use POSIX;
@@ -332,27 +333,62 @@ my $self = shift;
 
 	my $ret;
 	my $tmpl_list;
+	my $mail_list;
 	my $tmpl_dir = Drive::upper_dir("$Drive::sys_root$sys->{'html_dir'}");	#### Collect available <fromUserPageToOffice> templates
+	my $mail_dir = Drive::upper_dir("$Drive::sys_root$sys->{'mail_dir'}");	#### Collect available email templates
 	my $param = $self->{'qdata'}->{'http_params'};
 
 	if ( $param->{'code'} ) {			# Some AJAX received
-		$ret->{'json'} = {'code'=>$param->{'code'}, 'data'=>{'filename'=>$param->{'filename'}}};
+		my $filedir = $tmpl_dir;
+
+		if ( $param->{'type'} eq 'mail' ) {
+			$filedir = $mail_dir;
+		} elsif ( $param->{'type'} eq 'dir' ) {
+			$filedir = Drive::upper_dir( "$Drive::sys_root$param->{'path'}");
+		}
+		my $filename = "$filedir/$param->{'filename'}";
+		$filename =~ s/\/{2,}/\//g;
+
+		$ret->{'json'} = {'code'=>$param->{'code'}, 'data'=>{'filename'=>$param->{'filename'}, 'path'=>$filedir} };
 
 		if ( $param->{'code'} eq 'load' && $param->{'filename'} ) {		# Load file's content
-			if ( -e("$tmpl_dir/$param->{'filename'}") ) {
-				open( my $fh, "< $tmpl_dir/$param->{'filename'}");
-				$ret->{'json'}->{'data'}->{'content'} = decode_utf8(join('', <$fh>));
-				close( $fh);
+
+			if ( -d( $filename) ) {
+				$ret->{'json'}->{'data'}->{'content'} = $self->dirlist($filename);
+				$ret->{'json'}->{'data'}->{'path'} = Drive::upper_dir( $filename);
+
+			} elsif ( -f( $filename) ) {
+				my ($ext) = $filename =~ /\.(\w+)$/;
+				if ( exists( $Drive::mimeTypes->{$ext} ) ) {
+					$ret->{'json'}->{'data'}->{'content'} = "Known mime type $Drive::mimeTypes->{$ext}";
+					$ret->{'json'}->{'data'}->{'mime'} = $Drive::mimeTypes->{$ext};
+				} else {
+					open( my $fh, "< $filename");
+					$ret->{'json'}->{'data'}->{'content'} = decode_utf8(join('', <$fh>));
+					close( $fh);
+				}
 			} else {
-				$ret->{'fail'} = "$tmpl_dir/$param->{'filename'} : Not found";
+				$ret->{'json'}->{'fail'} = "$filename : Not found";
 			}
+
+		} elsif ( $param->{'code'} eq 'delete' ) {
+			if ( -f( $filename) ) {
+				unlink( $filename ) or $ret->{'json'}->{'fail'} = $!;
+			} else {
+				$ret->{'json'}->{'fail'} = "$filename : Not found";
+			}
+
 		} elsif ( $param->{'code'} eq 'upload' ) {
-			my $done = $self->loadfile( "$tmpl_dir" );
-			if ( ref($done) eq 'ARRAY' ) {
-				$done = $done->[0];
-				my $tmpl_info = $self->tmpl_info( "$tmpl_dir/$done->{'filename'}");
-				$ret->{'json'}->{'data'} = $tmpl_info;
-				$ret->{'json'}->{'fail'} = "Error reading info from $tmpl_dir/$done->{'filename'}" unless $tmpl_info;
+			my $done = $self->loadfile( $filedir );
+			if ( ref( $done) eq 'ARRAY' ) {
+				my $file_info = $done->[0];
+				if ( $param->{'type'} eq 'dir' ) {
+					$file_info = $self->file_info( "$filedir/$file_info->{'filename'}");
+				} else {
+					$file_info = $self->tmpl_info( "$filedir/$file_info->{'filename'}");
+				}
+				$ret->{'json'}->{'data'} = $file_info;
+				$ret->{'json'}->{'fail'} = "Error reading info from $filedir/$done->{'filename'}" unless $file_info;
 			} else {
 				$ret->{'json'}->{'fail'} = $done;
 			}
@@ -360,7 +396,7 @@ my $self = shift;
 
 	} else {
 		$ret = {'constant' => { 'hostname' => ( $sys->{'our_host'} =~ /\/([^\/]+)$/ )[0],
-								'tmpl_dir' => $tmpl_dir
+								'tmpl_dir' => $tmpl_dir, 'mail_dir' => $mail_dir,
 								}
 				};
 		if ( -d( $tmpl_dir) ) {
@@ -369,14 +405,61 @@ my $self = shift;
 		} else {
 			push( @$tmpl_list, {'fail' => "$tmpl_dir not exists"} );
 		}
+		if ( -d( $mail_dir) ) {
+			$mail_list = $self->tmpl_collect( $mail_dir);
+			push( @$mail_list, {'fail' => 'No modules found'} ) unless scalar( @$mail_list);
+		} else {
+			push( @$mail_list, {'fail' => "$mail_dir not exists"} );
+		}
+		$ret->{'mail_list'} = $mail_list;
 		$ret->{'tmpl_list'} = $tmpl_list;
+		$ret->{'sys'} = $sys;
 	}
 	return $ret;
 }
 #####################
+sub file_info {			# Read single template definition
+#####################
+my $self = shift;
+my $filename = shift;
+	my @stat = stat( $filename );
+	my ( $file ) = $filename =~ /\/([^\/]+)$/;
+	my @ftime = Drive::timestr( $stat[9] );
+	return { 'filename' => $file,
+					'size' => Drive::bytes( $stat[7]),
+					'dir' => S_ISDIR( $stat[2]),
+					'mtime' => "$ftime[0]-$ftime[1]-$ftime[2] $ftime[3]:$ftime[4]",
+					};
+}
+#####################
+sub dirlist {		# Create directory listing
+#####################
+my $self = shift;
+my $dirname = shift;
+	my $dirs = [];
+	my $files = [];
+
+	opendir( my $dh, $dirname);
+	my $dlist = [ sort( readdir($dh))];
+	closedir( $dh);
+	
+	foreach my $file ( @$dlist ) {
+		next if $file =~ /^\./;
+		
+		my $row = $self->file_info( "$dirname/$file" );
+		if ( $row->{'dir'} ) {
+			push( @$dirs, $row  );
+		} else {
+			push( @$files, $row )
+		}
+	}
+	push( @$dirs, @$files);			# Place directorys first
+	return $dirs;
+}
+#####################
 sub connect {		# Setup interconnect settings
 #####################
-	my $self = shift;
+my $self = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
 	my $conf_file = "$conf_dir/config.xml";

@@ -118,8 +118,9 @@ sub startup {
 						my $self = shift;
 						$logger->debug(">>>> ".$self->req->headers->every_header('x-real-ip')->[0]." => ".
 											$self->req->method.": ".$self->req->url->base.$self->req->url->path );
+						
 						foreach my $dir ( qw(js css img) ) {			# Compose js/css version numbers to prevent browser caching
-							$self->{'stats'}->{$dir} = (stat("$sys_root/$sys{'url_prefix'}/$dir"))[9];
+							$self->{'stats'}->{$dir} = ( stat($sys_root.$sys{"$dir\_dir"}))[9];
 						}
 						$self->{'qdata'} = query_data($self);
 						my @date = timestr();

@@ -72,7 +72,7 @@ function traceFile (host) {
 	let pBar = document.getElementById(host.id+'progr');
 
 	let to_url = host.dataset.url;
-	pBar.style.backgroundImage = "url('/img/progress_bar.png')";
+	pBar.style.backgroundImage = "url('/img/progress_barg.png')";
 	pBar.style.backgroundSize = "5% 110%";
 	pBar.style.backgroundRepeat = "no-repeat";
 	pBar.style.backgroundPosition = "-1em center";

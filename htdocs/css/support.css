@@ -320,7 +320,41 @@ div.options {
 .buttonbar .button:active {
 	background: var(--btn-bg-alt);
 }
-
+/* File listing */
+.commander {
+	display:flex;
+	flex-direction:row;
+	justify-content:space-between;
+}
+.commander >*{
+	width:48%;
+	margin: 0px 1em 1em 1em;
+}
+.filerow {
+	display: grid;
+	grid-column-gap:1em;
+	grid-template-columns: 45% 20% 30%;
+	font-family:SansMono, monospace;
+	line-height:1.5;
+	cursor:default;
+	width:100%;
+	padding:0px 10px;
+}
+.filerow.dir .name {
+	font-weight:bold;
+}
+.filerow.active {
+	background-color:var(--balloon-back,'#ffffcc');
+	color:var(--balloon-text, '#663333');
+}
+.filerow .name {
+	overflow-x:hidden;
+	white-space:nowrap;
+}
+.filerow .size,
+.filerow .mtime {
+	text-align:right;
+}
 /* Context menu panel */
 .popup-menu {
 	position:absolute;

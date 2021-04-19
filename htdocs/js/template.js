@@ -1,4 +1,4 @@
-let switchWiew = function(tab) {			// Click on subTabs
+let subSwitch = function(tab) {			// Click on subTabs
 		let cook = getCookie('acTab');
 		let def = {};
 		if ( cook ) def = JSON.parse( decodeURIComponent(cook) );
@@ -13,7 +13,7 @@ let switchWiew = function(tab) {			// Click on subTabs
 			dispatch.display();
 
 		} else {			// Apply stored subtab state
-			let list = document.querySelector('.tmpl_list.subTabs');
+			let list = document.querySelector('.tabContent.shown .tmpl_list.subTabs');
 			if ( def[list.dataset.type] ) {		// Have cookie?
 				let tab = list.querySelector('.subTab[data-name="'+def[list.dataset.type]+'"]');
 				if ( tab ) {
@@ -21,22 +21,74 @@ let switchWiew = function(tab) {			// Click on subTabs
 					tab.className += ' active';
 					dispatch.display();
 				} else {
-					switchWiew(list.firstElementChild);		// Or activate first
+					subSwitch(list.firstElementChild);		// Or activate first
 				}
 			} else {
-				switchWiew(list.firstElementChild);		// Or activate first
+				subSwitch(list.firstElementChild);		// Or activate first
 			}
 		}
 	};
 
+let onLoaded = function(def) { 		// When upload success
+		let tab = document.querySelector('.tabContent.shown .subTab.active');
+		let fname;
+		if ( tab ) fname = tab.dataset.filename;
+		if ( def.title ) {		// Ordinary template uploaded.
+			if ( fname != def.filename ) {		// Create new tab to display it
+				document.querySelectorAll('.tabContent.shown li.subTab.tmpl_item.active')
+						.forEach( li =>{li.className = li.className.replace(/\s*active/g,'')});
+				let tab = createObj('li',{'className':'subTab tmpl_item active',
+											'onclick':tabClick,'title':def.title,
+											'data-name':def.name,'data-filename':def.filename,
+											'innerHTML':def.name+'<br>('+def.title+')'});
+				document.querySelector('.tabContent.shown ol.tmpl_list').appendChild(tab);
+				let fail = document.querySelector('.tabContent.shown .subTab.tmpl_item.fail');
+				if ( fail ) fail.parentNode.removeChild(fail);
+			}
+			dispatch.display();
+		} else {			// Just anyfile uploaded
+			let box = document.querySelector('.tabContent.shown .fileBox.filelist');
+			let row = createObj('div',{'className':'filerow','title':def.filename,'onclick':fileSelect});
+			Object.keys(def).forEach( k=>{ row.dataset[k] = def[k] });
+			row.appendChild(createObj('span',{'className':'name','innerText':def.filename}));
+			row.appendChild(createObj('span',{'className':'size','innerText':def.size}));
+			row.appendChild(createObj('span',{'className':'mtime','innerText':def.mtime}));
+			let exist = box.querySelector('.filerow[data-filename="'+def.filename+'"]');
+			if ( exist ) {
+				box.replaceChild( row, exist);
+			} else {
+				box.appendChild( row );
+			}
+		}
+	};
+	
+let fileSelect = function(evt) {
+		let list = document.querySelector('.tabContent.shown ol.tmpl_list');
+		let tab = list.querySelector('.subTab.active');
+		let row = evt.target.closest('.filerow');
+		row.parentNode.querySelectorAll('.filerow.active').forEach( r =>{ r.className = r.className.replace(/\s*active/g,'')});
+		row.className += ' active';
+		let param = {'code':'load','filename':row.dataset.filename,'type':list.dataset.type,
+					'path':tab.dataset.filename+tab.dataset.subdir };
+		if ( row.dataset.dir ) {
+			param = {'code':'load','filename':row.dataset.filename,'type':list.dataset.type };
+		}
+		flush( param, document.location.href, dispatch.load );
+	};
+
 let dispatch = {
 		display: function() {
-				let tmpl = document.querySelector('.subTab.active');
-				if (tmpl) {
-					this.cache = '';
-					document.getElementById('netaddr').innerText = '';
-					document.getElementById('fileBody').innerHTML = '';
-					flush({'code':'load','filename':tmpl.dataset.filename}, document.location.href, this.load );
+				let tab = document.querySelector('.tabContent.shown .subTab.active');
+				this.cache = '';
+				let list = document.querySelector('.tabContent.shown ol.tmpl_list');
+				if (tab && tab.dataset.filename || list.dataset.type === 'dir') {
+					if ( list.dataset.type === 'dir' ) {
+						document.querySelector('button[data-action="fdel"]').setAttribute('disabled', 1);
+					} else {
+						document.querySelector('button[data-action="fdel"]').removeAttribute('disabled');
+					}
+					flush({'code':'load','filename':tab.dataset.filename,'type':list.dataset.type}, 
+							document.location.href, this.load );
 				}
 			},
 		load: function(resp) {
@@ -44,57 +96,133 @@ let dispatch = {
 				if ( resp.fail ) {
 					alert( resp.fail);
 				} else if (resp.data) {
-					document.getElementById('netaddr').innerText = '//'+hostname+tmpl_dir+'/'+resp.data.filename;
-					dispatch.cache = resp.data.content;
-					let lines = resp.data.content.split('\n');
-					let line = createObj('div',{'className':'listingLine'});
-					lines.forEach( l =>{ let str = line.cloneNode();
-											l = l.replace(/</g,'&lt;');
-											l = l.replace(/>/g,'&gt;');
-											l = l.replace(/(&lt;\/?TMPL_[\w+\s]+(=\s*['"]\w*['"])?&gt;)/ig,'<span>$1</span>');
-											str.innerHTML = l;
-											document.getElementById('fileBody').appendChild(str);
-										});
+					if ( typeof(resp.data.content) === 'string' ) {			// Got plain file
+						document.querySelector('.tabContent.shown code.filename').innerText 
+								= '//'+document.location.hostname+resp.data.path+'/'+resp.data.filename;
+						let box = document.querySelector('.tabContent.shown .fileBody');
+						box.innerHTML = '';
+						box.dataset.filename = resp.data.filename;
+						dispatch.cache = resp.data.content;
+						let lines = resp.data.content.split('\n');
+						let line = createObj('div',{'className':'listingLine'});
+						lines.forEach( l =>{ let str = line.cloneNode();
+												l = l.replace(/</g,'&lt;');
+												l = l.replace(/>/g,'&gt;');
+												if ( resp.data.filename.match(/css$/) ) {			// Colouring syntax
+// 													l = l.replace(/(.+){.+}/g,'<span>$1</span>');
+												} else if ( resp.data.filename.match(/js$/) ) {			// Colouring syntax
+													l = l.replace(/(function\s*[^\(\)]*\s*\([^\)]*\))/ig,'<span>$1</span>');
+												} else {
+													l = l.replace(/(&lt;\/?TMPL_[\w+\s]+(=\s*['"]\w*['"])?&gt;)/ig,'<span>$1</span>');
+												}
+												str.innerHTML = l;
+												box.appendChild(str);
+											});
+					} else if( resp.data.content.constructor.toString().match(/Array/i) ) {		// Got filelist
+						document.querySelector('.tabContent.shown .netaddr').innerText = resp.data.path;
+// 						document.querySelector('.tabContent.shown code.filename').innerText = '';
+						let fbody = document.querySelector('.tabContent.shown .fileBody');
+						let box = document.querySelector('.tabContent.shown .fileBox.filelist');
+						let tab = document.querySelector('.tabContent.shown .subTab.active');
+						box.innerHTML = '';
+						tab.dataset.subdir = '';
+						resp.data.content.forEach( ff =>{
+								let row = createObj('div',{'className':'filerow','title':ff.filename,'onclick':fileSelect});
+								Object.keys(ff).forEach( k=>{ row.dataset[k] = ff[k] });
+								if ( ff.dir ) {
+									row.className += ' dir';
+									row.dataset.filename = resp.data.filename+'/'+ff.filename;
+									ff.size = '';
+								}
+								row.appendChild(createObj('span',{'className':'name','innerText':ff.filename}));
+								row.appendChild(createObj('span',{'className':'size','innerText':ff.size}));
+								row.appendChild(createObj('span',{'className':'mtime','innerText':ff.mtime}));
+								if ( fbody && fbody.dataset.filename === ff.filename) row.className += ' active';
+								box.appendChild(row);
+							});
+						if ( tab.dataset.filename != resp.data.filename) {		// Skipped into subdir
+							tab.dataset.subdir = resp.data.filename.replace(tab.dataset.filename, '');
+							let upper = resp.data.filename.substr(0, resp.data.filename.lastIndexOf('/'));
+							let row = createObj('div',{'className':'filerow dir','title':upper,'onclick':fileSelect,
+													'data-filename':upper,'data-dir':'1' });
+							row.appendChild(createObj('span',{'className':'name','innerText':'..'}));
+							row.appendChild(createObj('span',{'className':'size','innerText':''}));
+							row.appendChild(createObj('span',{'className':'mtime','innerText':''}));
+							if ( box.firstElementChild ) {
+								box.insertBefore( row, box.firstElementChild );
+							} else {
+								box.appendChild( row );
+							}
+						}
+					}
 				} else {
 					console.log(resp);
 				}
 			},
 		fup: function(evt) {
-				let tmpl = document.querySelector('.subTab.active');
-				if ( tmpl ) {
-					let fload = document.getElementById('tmpload');
-					fload.dataset.name = tmpl.dataset.filename;
-					fload.dataset.url = document.location.href;
-					fload.callback = function(resp) { 
-							if ( tmpl.dataset.filename != resp.filename ) {
-								document.querySelectorAll('li.subTab.tmpl_item.active')
-										.forEach( li =>{li.className = li.className.replace(/\s*active/g,'')});
-								let tab = createObj('li',{'className':'subTab tmpl_item active',
-															'onclick':tabClick,'title':resp.title,
-															'data-name':resp.name,'data-filename':resp.filename,
-															'innerHTML':resp.name+'<br>('+resp.title+')'});
-								document.querySelector('ol.tmpl_list.subTabs').appendChild(tab);
-							}
-							dispatch.display();
-						};
-					fload.click();
-				}
+				let fname;
+				let fload = document.getElementById('tmpload');
+				let tab = document.querySelector('.tabContent.shown .subTab.active');
+				if ( tab ) fname = tab.dataset.filename;
+				fload.dataset.type = document.querySelector('.tabContent.shown ol.tmpl_list').dataset.type;
+				if ( fload.dataset.type === 'dir' ) fload.dataset.path = tab.dataset.filename+tab.dataset.subdir;
+				fload.dataset.filename = fname;
+				fload.dataset.url = document.location.href;
+				fload.callback = onLoaded;
+				fload.click();
 			},
 		fdn: function(evt) {
-				let tmpl = document.querySelector('.subTab.active');
-				if (tmpl && dispatch.cache.length > 0 ) {
+				let tab = document.querySelector('.tabContent.shown .subTab.active');
+				let filename = document.querySelector('.tabContent.shown .fileBody').dataset.filename;
+				if ( tab && dispatch.cache.length > 0 ) {
 					let data = 'data:text/plain;charset=utf-8;base64,'+base64Encode( dispatch.cache);
 					let url = window.URL.createObjectURL( dataURLtoBlob(data) );
-					let link = createObj('a', {'href':url, 'download':tmpl.dataset.filename});
+					let link = createObj('a', {'href':url, 'download':filename});
 					link.click();
 					window.URL.revokeObjectURL(url);
 				}
 			},
+		fdel: function() {
+				let list = document.querySelector('.tabContent.shown ol.tmpl_list');
+				if ( list.type === 'dir' ) return;
+				let tab = document.querySelector('.tabContent.shown .subTab.active');
+				let msg = 'Вы собираетесь удалить шаблон \xAB'+tab.dataset.filename+'\xBB';
+				if ( document.querySelector('.tabContent.shown ol.tmpl_list').dataset.type == 'ext') 
+							msg += '\nи этим отключить URL '+document.location.origin+'/'+tab.dataset.name;
+				if ( tab && confirm(msg + '?') ) {
+					flush({'code':'delete','filename':tab.dataset.filename,
+							'type':document.querySelector('.tabContent.shown ol.tmpl_list').dataset.type}, 
+							document.location.href, 
+							function( resp ) {
+								if( resp.match(/^[\{\[]/) ) {
+									resp = JSON.parse(resp);
+									if ( resp.fail ) {
+										window.alert('Удалить \xAB'+tab.dataset.filename+'\xBB не удалось\n'+resp.fail);
+									} else if ( resp.data && resp.data.filename == tab.dataset.filename ) {
+										let other = tab.previousElementSibling || tab.nextElementSibling;
+										if ( other ) other.className += ' active';
+										tab.parentNode.removeChild(tmpl);
+										dispatch.display();
+									} else {
+										window.alert('Удаление \xAB'+tab.dataset.filename+'\xBB:\nПерезагрузим страницу');
+										document.location.reload();
+									}
+								} else {
+									window.alert('Удаление \xAB'+tab.dataset.filename+'\xBB:\n'+resp+'\nПерезагрузим страницу');
+									document.location.reload();
+								}
+							}
+						);
+				}
+			},
 		traceFile: function(evt) {
 			let host = evt.target;
-			if ( host.files[0].name != host.dataset.name ) {
+			if ( host.dataset.path ) {
+				host.dataset.filename = host.files[0].name;
+			} else if ( host.dataset.filename != 'undefined' 
+					&& host.files[0].name != host.dataset.filename ) {
 				if ( !confirm('Имя загружаемого файла ('+host.files[0].name
-						+')\nне совпадает с именем открытого файла ('+host.dataset.name
+						+')\nне совпадает с именем открытого файла ('+host.dataset.filename
 						+').\nХотите завести новый шаблон?') ) return
 			}
 
@@ -111,11 +239,13 @@ let dispatch = {
 									bar.style.backgroundSize = (value+10)+'% 110%';
 								};
 
+			let formData = {'code':'upload'};
+			Object.keys(host.dataset).forEach( k =>{ formData[k] = host.dataset[k]} );
 			new uploaderObject({			// Described at support.js
 					file: host.files[0],
 					url: to_url,
-					fieldName: host.dataset.name,
-					formData: {'code':'upload', 'filename':host.dataset.name},
+					fieldName: host.dataset.filename,
+					formData: formData,
 					onprogress: function(percents) {
 								updateProgress(pBar, percents);
 							},

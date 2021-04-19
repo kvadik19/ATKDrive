@@ -18,42 +18,117 @@
 	button[data-action="fdn"] {
 		cursor:s-resize;
 	}
+	button[data-action="fdel"] {
+		float:right;
+		color:var(--red);
+	}
+	button.dataDo:disabled {
+		opacity:0.6;
+	}
+	p.comment code {
+		color:var(--body-text);
+	}
 </style>
 <div class="action">
 	<p class="comment">
-		Редактировать шаблоны лучше привычным лично для Вас редактором. <br>
-		Если Ваш редактор может работать через <code>ssh</code> или <code>ftp</code> и у Вас есть доступ к серверу по этим протоколам,<br>
-		Вы можете открывать файлы по их сетевым адресам.
 	</p>
-	<div class="qw_define">
-		<ol class="tmpl_list subTabs" data-type="ext">
+	<ul id="Tabs" class="Tabs">
+		<li id="t0" class="Tab active" onclick="tabSwitch(this)">Шаблоны страниц</li>
+		<li id="t1" class="Tab" onclick="tabSwitch(this)">Шаблоны писем</li>
+		<li id="t2" class="Tab" onclick="tabSwitch(this)">Статические ресурсы</li>
+	</ul>
+
+<div id="tabHolder" class="tabHolder">
+	<div id="tab_0" class="tabContent">
+		<div class="qw_define">
+			<ol class="tmpl_list subTabs" data-type="ext">
 % foreach my $row ( @$tmpl_list ) {
 %	if ( $row->{'fail'} ) {
-	<li class="subTab tmpl_item fail" data-name="fail" title="<%= $row->{'fail'}%>"><%= $row->{'fail'}%></li>
+		<li class="subTab tmpl_item fail" data-name="fail" title="<%= $row->{'fail'}%>"><%= $row->{'fail'}%></li>
 %	} else {
-	<li class="subTab tmpl_item" data-name="<%= $row->{'name'}%>" data-filename="<%= $row->{'filename'}%>" title="<%= $row->{'title'}%>">
-		<%= $row->{'name'}%> <br>(<%= $row->{'title'}%>)</li>
+		<li class="subTab tmpl_item" data-name="<%= $row->{'name'}%>" data-filename="<%= $row->{'filename'}%>" title="<%= $row->{'title'}%>">
+			<%= $row->{'name'}%> <br>(<%= $row->{'title'}%>)</li>
 %	}
 % }
-		</ol><!-- tmpl_list -->
-		<div class="subHolder tmpl_data">
-			<p class="comment addition">
-				Адрес файла: <code id="netaddr"></code>
-			</p>
-			<div id="fileBox" class="listingBox">
-				<div id="fileBody" class="listingBody">
+			</ol><!-- tmpl_list -->
+			<div class="subHolder tmpl_data">
+				<p class="comment addition">
+		Редактировать шаблоны лучше привычным лично для Вас редактором. <br>
+		Если Ваш редактор может работать через <code>ssh</code> или <code>ftp</code> и у Вас есть доступ к серверу по этим протоколам,<br>
+		Вы можете открывать файлы по их сетевым адресам.<br>
+					Адрес файла: <code class="netaddr filename"></code>
+				</p>
+				<div class="fileBox listingBox">
+					<div class="fileBody listingBody">
+					</div>
 				</div>
-			</div>
-			<div class="buttonbar">
-				<div class="progressbar"></div>
-				<button type="button" class="dataDo" data-action="fup">Загрузить на сервер</button>
-				<button type="button" class="dataDo" data-action="fdn">Скачать на компьютер</button>
-				<input id="tmpload" type="file" style="display:none" />
-			</div>
-		</div>
-	</div><!-- qw_define -->
+			</div><!-- tmpl_data -->
+		</div><!-- qw_define -->
+	</div><!-- tabContent0 -->
+
+	<div id="tab_1" class="tabContent">
+		<div class="qw_define">
+			<ol class="tmpl_list subTabs" data-type="mail">
+% foreach my $row ( @$mail_list ) {
+%	if ( $row->{'fail'} ) {
+		<li class="subTab tmpl_item fail" data-name="fail" title="<%= $row->{'fail'}%>"><%= $row->{'fail'}%></li>
+%	} else {
+		<li class="subTab tmpl_item" data-name="<%= $row->{'name'}%>" data-filename="<%= $row->{'filename'}%>" title="<%= $row->{'title'}%>">
+			<%= $row->{'name'}%> <br>(<%= $row->{'title'}%>)</li>
+%	}
+% }
+			</ol>
+			<div class="subHolder tmpl_data">
+				<p class="comment addition">
+					Адрес файла: <code class="netaddr filename"></code>
+				</p>
+				<div class="fileBox listingBox">
+					<div class="fileBody listingBody">
+					</div>
+				</div>
+			</div><!-- tmpl_data -->
+		</div><!-- qw_define -->
+	</div><!-- tabContent1 -->
+
+	<div id="tab_2" class="tabContent">
+		<div class="qw_define">
+			<ol class="tmpl_list subTabs" data-type="dir">
+				<li class="subTab tmpl_item" data-name="<%== $sys->{'img_dir'} %>" data-filename="<%== $sys->{'img_dir'} %>">
+						<%== substr($sys->{'img_dir'}, rindex($sys->{'img_dir'},'/')) %></li>
+				<li class="subTab tmpl_item" data-name="<%== $sys->{'css_dir'} %>" data-filename="<%== $sys->{'css_dir'} %>">
+						<%== substr($sys->{'css_dir'}, rindex($sys->{'css_dir'},'/')) %></li>
+				<li class="subTab tmpl_item" data-name="<%== $sys->{'js_dir'} %>" data-filename="<%== $sys->{'js_dir'} %>">
+						<%== substr($sys->{'js_dir'}, rindex($sys->{'js_dir'},'/')) %></li>
+			</ol>
+			<div class="subHolder tmpl_data">
+				<p class="comment addition">
+					Файлы в этом разделе доступны по HTTP. 
+					Например, <code><%= "$sys->{'our_host'}/css/filename.css" %></code><br>
+					Директория: <code class="netaddr"></code><br>
+					Файл: <code class="filename"></code>
+				</p>
+				<div class="commander">
+					<div class="fileBox filelist">
+					</div>
+					<div class="fileBox listingBox">
+						<div class="fileBody listingBody">
+						</div>
+					</div>
+				</div>
+			</div><!-- tmpl_data -->
+		</div><!-- qw_define -->
+	</div><!-- tabContent2 -->
+
+	<div class="buttonbar">
+		<div class="progressbar"></div>
+		<button type="button" class="dataDo" data-action="fup">Загрузить на сервер</button>
+		<button type="button" class="dataDo" data-action="fdn">Скачать на компьютер</button>
+		<button type="button" class="dataDo" data-action="fdel">&#10008;&nbsp;Удалить файл</button>
+		<input id="tmpload" type="file" style="display:none" />
+	</div>
+</div><!-- tabHolder-->
 	<div id="eCommit" class="buttonbar">
-		<a href="<%= url_for('admin') %>" class="button esc static">Выход</a>
+		<a href="<%= url_for('admin') %>" class="button esc static">Закрыть</a>
 	</div>
 </div>
 <script type="text/javascript" src="/js/template.js?<%== $stats->{'js'} %>"></script>
@@ -62,13 +137,13 @@
 const <%== $var %> = '<%== $val %>'
 % }
 var tabClick = function(e) { if (e.target.matches('.active')) return;
-					switchWiew( e.target);
+					subSwitch( e.target);
 				};
 document.addEventListener('DOMContentLoaded', function() {
 	let tabs = document.querySelectorAll('.subTab:not(.fail)');
 	tabs.forEach( st =>{ st.onclick = tabClick});
 	document.querySelectorAll('button.dataDo').forEach( b =>{ b.onclick = dispatch[b.dataset.action] });
 	document.getElementById('tmpload').onchange = dispatch.traceFile, 
-	switchWiew();
+	tabSwitch();
 });
 </script>

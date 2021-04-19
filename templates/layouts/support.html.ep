@@ -18,7 +18,7 @@
 
 	<link rel="stylesheet" type="text/css" href="/css/defines.css?<%== $stats->{'css'} %>" />
 	<link rel="stylesheet" type="text/css" href="/css/support.css?<%== $stats->{'css'} %>" />
-	<script type="text/javascript" defer src="/js/support.js?<%== $stats->{'js'} %>"></script>
+	<script type="text/javascript" defer src="/js/support.min.js?<%== $stats->{'js'} %>"></script>
 % if ( $user->{'on_mobile'} ) {
 	<meta name="viewport" content="width=device-width, target-densityDpi=144, user-scalable=yes" />
 	<meta name="HandHeldFriendly" content="false" />

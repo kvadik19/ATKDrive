@@ -22,7 +22,7 @@
 		</div><!--Tab Users-->
 	</div>
 	<div id="eCommit" class="buttonbar">
-		<a href="<%= url_for('admin') %>" class="button esc static">Выход</a>
+		<a href="<%= url_for('admin') %>" class="button esc static">Закрыть</a>
 	</div>
 
 	<div id="keySelect" class="floatbar over-panel" style="display:none;">
