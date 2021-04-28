@@ -350,7 +350,7 @@ my $item = shift;
 				undef $varname;
 				undef $keyname;
 			} elsif ( $tagname =~ /^tmpl_(if|unless)/i ) {		# Binary condition tag
-				$keyname = "$varname;$varname;\%bin" ;		# See usage at query.js->toDOM()
+				$keyname = "$varname;\%bool" ;		# See usage at query.js->toDOM()
 				$map->{$keyname} = "\$$varname";
 			} elsif ( $tagname =~ /^tmpl_loop/i ) {			# Array process
 				$map->{$keyname} = [];
