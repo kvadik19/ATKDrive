@@ -55,7 +55,7 @@
 <script type="text/javascript">
 	const period = 5;			// Secs between requests
 	const timeout = 3;		// Mins to wait
-	const media = <%== decode_utf8( encode_json($media_keys)) %>;
+	const media_keys = <%== decode_utf8( encode_json($media_keys)) %>;
 	const dict = <%== decode_utf8( encode_json($dict)) %>;
 	var translate = <%== decode_utf8( encode_json($translate)) %>;
 	let url = document.location.origin+document.location.pathname;

@@ -35,10 +35,14 @@
 				<div class="detail">
 	<TMPL_LOOP NAME="machines">
 					<div class="line">Модель: <TMPL_VAR NAME="model"></div>
-					<TMPL_IF NAME="is_power"><div class="line">Мощность: <TMPL_VAR NAME="power"></div>
-					<TMPL_ELSE><div class="line">Грузоподъемность: <TMPL_VAR NAME="load"></div>
+					<TMPL_IF NAME="is_power">
+						<div class="line">Мощность: <TMPL_VAR NAME="power"></div>
+					<TMPL_ELSE>
+						<div class="line">Грузоподъемность: <TMPL_VAR NAME="load"></div>
 					</TMPL_IF>
-					<TMPL_UNLESS NAME="is_power"></TMPL_UNLESS>
+					<TMPL_UNLESS NAME="is_power">
+						<div class="line">Другие характеристики отсутсвуют</div>
+					</TMPL_UNLESS>
 	</TMPL_LOOP>
 				</div>
 			</div>

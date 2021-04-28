@@ -440,7 +440,8 @@ let keyTool = {			// Add key-value floating window operations
 		panel: document.getElementById('keySelect'),
 		keyHide:function() { document.getElementById('keySelect').style.display = 'none'; 
 				document.documentElement.onclick = null;
-				bodyOut.querySelector('button[data-action="key"]').removeAttribute('disabled');
+				btnActivate();
+// 				bodyOut.querySelector('button[data-action="key"]').removeAttribute('disabled');
 			},
 		keyTrap: function(evt) {			// Click outside of keySelect window
 				if ( evt.path.findIndex( i =>{ return ( i.nodeType === 1 && i.matches('.over-panel')) }) < 0 ) keyTool.keyHide();
@@ -452,7 +453,7 @@ let keyTool = {			// Add key-value floating window operations
 
 				document.documentElement.onclick = this.keyTrap;
 				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
-				bodyOut.querySelector('button[data-action="key"]').setAttribute('disabled',1);
+// 				bodyOut.querySelector('button[data-action="key"]').setAttribute('disabled',1);
 
 				if ( !this.panel.style.top ) {
 					this.panel.style.top = bodyOut.offsetTop+'px';
@@ -464,9 +465,9 @@ let keyTool = {			// Add key-value floating window operations
 					if ( sel ) {
 						sel.className += ' active';
 						document.querySelector('#keySelect input[type="text"]').value = this.preset.info.dataset.name;
-						let port = document.querySelector('#keySelect ul');
-						port.scrollTo(0,0);									// Bring selected LI into viewport
-						if ( sel.offsetTop > port.clientHeight ) port.scrollTo(0, sel.offsetTop - port.clientHeight);
+						let vport = document.querySelector('#keySelect ul');
+						vport.scrollTo(0,0);									// Bring selected LI into viewport
+						if ( sel.offsetTop > vport.clientHeight ) vport.scrollTo(0, sel.offsetTop - vport.clientHeight);
 					}
 				}
 				let [X, Y, W, H] = [this.panel.offsetLeft, this.panel.offsetTop,
@@ -619,7 +620,7 @@ let jsonEdit = {			// Json elements buttons operations
 				el.appendChild(createObj('div',{'id':Date.now(),'className':'jsonItem object active','innerHTML':'&nbsp;','onclick':jsonEdit.jsonSelect}));
 				this.place(body, el);
 			},
-		key: function(body) {				// Append values from users, media tables
+		key: function(body) {				// Append values from users, media tables. 
 				keyTool.fire( function(key, val) {
 								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
 								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
@@ -633,17 +634,21 @@ let jsonEdit = {			// Json elements buttons operations
 												{'className':'domItem array preset shorten','onclick': jsonEdit.rollUp});	// Unchangeable item
 									let mBox = createObj('div',{'className':'domItem'});
 									let mDef = createObj('div',{'className':'object media','data-name':text});
-									media.forEach( m =>{
-										let keyName = m.name;
+									media_keys.forEach( mk =>{	// See also const media_keys at templates/drive/query.html.ep
+										let keyName = mk.name;
 										let keySample = bodyOut.querySelector('.domItem.array.preset '
 															+'.domItem.value.media[data-name="'
-															+m.name+'"] .keyName');	// Obtain changed name
-										if ( keySample ) keyName = keySample.innerText;
+															+mk.name+'"] .keyName');	// Obtain changed name
+										if ( keySample ) {
+											keyName = keySample.innerText;
+										} else if ( translate[mk.name] ) {
+											keyName = translate[mk.name];
+										}
 										let mFile = createObj('div',
-														{'className':'domItem value media','data-name':m.name,'title':m.title});
+														{'className':'domItem value media','data-name':mk.name,'title':mk.title});
 										let mName = createObj('span',
 														{'className':'keyName','innerText':keyName,'ondblclick':keyEdit.keyname});
-										let mVal = createObj('span',{'className':'keyVal','innerText':'$'+m.name});
+										let mVal = createObj('span',{'className':'keyVal','innerText':'$'+mk.name});
 										mFile.appendChild(mName);
 										mFile.insertAdjacentText('beforeend',':');
 										mFile.appendChild(mVal);
