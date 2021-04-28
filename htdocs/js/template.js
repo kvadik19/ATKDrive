@@ -109,9 +109,10 @@ let dispatch = {
 												l = l.replace(/</g,'&lt;');
 												l = l.replace(/>/g,'&gt;');
 												if ( resp.data.filename.match(/css$/) ) {			// Colouring syntax
-// 													l = l.replace(/(.+){.+}/g,'<span>$1</span>');
+													l = l.replace(/(\S+)(\s*:)/g,'<b>$1</b>$2');
 												} else if ( resp.data.filename.match(/js$/) ) {			// Colouring syntax
 													l = l.replace(/(function\s*[^\(\)]*\s*\([^\)]*\))/ig,'<span>$1</span>');
+													l = l.replace(/\b(let|var|const)\b/ig,'<b><i>$1</i></b>');
 												} else {
 													l = l.replace(/(&lt;\/?TMPL_[\w+\s]+(=\s*['"]\w*['"])?&gt;)/ig,'<span>$1</span>');
 												}

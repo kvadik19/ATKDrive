@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-  <connect js_wsocket="&lt;script type=&quot;text/javascript&quot;&gt;&#10;&#9;// Не забудьте указать данные для авторизации&#10;&#9;const URL = 'ws://username:password@atk.onpoz.ru/channel';&#10;&#10;&#9;let ask_ws = function(msg, callbk) {&#10;&#9;&#9;&#9;if (typeof(msg) === 'object') msg = JSON.stringify(msg);&#10;&#9;&#9;&#9;let agent = new WebSocket(URL);&#10;&#9;&#9;&#9;agent.onerror = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;console.log('WS Closed on error: ', evt);&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onclose = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;if ( evt.code != 1005 ) console.log('Something wrong with WS')&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onopen = function() {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.send( msg );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onmessage = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;let msg = evt.data;&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( msg.match(/^[\{\[].+[\]\}]$/s) ) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;try { msg = JSON.parse( evt.data );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;} catch(e) { console.log(e) };&#10;&#9;&#9;&#9;&#9;&#9;&#9;}&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( callbk ) callbk(msg);&#10;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;};&#10;&#10;&#9;let whenGotResponse = function(data) {&#10;&#9;&#9;&#9;console.log(data);&#10;&#9;&#9;&#9;console.log('При получении ответа он будет передан в функцию');&#10;&#9;&#9;};&#10;&#10;&#9;document.addEventListener('DOMContentLoaded', function(e) {&#10;&#9;&#9;&#9;// Подразумевается, что в странице есть элемент класса '.wsquery' для отправки ws-запроса&#10;&#9;&#9;&#9;document.querySelector('.wsquery').onclick = function(e) {&#10;&#9;&#9;&#9;&#9;&#9;let msg = {'description':'В этой переменной можно текст либо объект'};&#10;&#9;&#9;&#9;&#9;&#9;ask_ws( msg, whenGotResponse );&#10;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;});&#10;&lt;/script&gt;&#10;" port="25202" host="https://atk.alvetk.ru/alve_test/hs/atk-api/GET_data_client" htlogin="exchangesite" htpasswd="000000" ping_msg="{&quot;code&quot;:&quot;GET_USERS&quot;,&quot;data&quot;:&quot;635543&quot;}"/>
-  <utable type="int(11)" name="_uid" title="Внутренний идентификатор для шлюза" scr=""/>
-  <utable title="Идентификатор сесии клиента" scr="" type="char(32)" name="_fp"/>
-  <utable title="IP-адрес последнего запроса клиента" scr="" name="_ip" type="bigint(20)"/>
-  <utable title="Идентификатор для входа по ссылке" scr="" type="char(64)" name="_hash"/>
+  <connect ping_msg="{&quot;code&quot;:&quot;GET_USERS&quot;,&quot;data&quot;:&quot;635543&quot;}" emulate="1" port="25202" js_wsocket="&lt;script type=&quot;text/javascript&quot;&gt;&#10;&#9;// Не забудьте указать данные для авторизации&#10;&#9;const URL = 'ws://username:password@atk.onpoz.ru/channel';&#10;&#10;&#9;let ask_ws = function(msg, callbk) {&#10;&#9;&#9;&#9;if (typeof(msg) === 'object') msg = JSON.stringify(msg);&#10;&#9;&#9;&#9;let agent = new WebSocket(URL);&#10;&#9;&#9;&#9;agent.onerror = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;console.log('WS Closed on error: ', evt);&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onclose = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;if ( evt.code != 1005 ) console.log('Something wrong with WS')&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onopen = function() {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;this.send( msg );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;&#9;agent.onmessage = function(evt) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;let msg = evt.data;&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( msg.match(/^[\{\[].+[\]\}]$/s) ) {&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;try { msg = JSON.parse( evt.data );&#10;&#9;&#9;&#9;&#9;&#9;&#9;&#9;} catch(e) { console.log(e) };&#10;&#9;&#9;&#9;&#9;&#9;&#9;}&#10;&#9;&#9;&#9;&#9;&#9;&#9;if ( callbk ) callbk(msg);&#10;&#9;&#9;&#9;&#9;&#9;&#9;this.close();&#10;&#9;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;};&#10;&#10;&#9;let whenGotResponse = function(data) {&#10;&#9;&#9;&#9;console.log(data);&#10;&#9;&#9;&#9;console.log('При получении ответа он будет передан в функцию');&#10;&#9;&#9;};&#10;&#10;&#9;document.addEventListener('DOMContentLoaded', function(e) {&#10;&#9;&#9;&#9;// Подразумевается, что в странице есть элемент класса '.wsquery' для отправки ws-запроса&#10;&#9;&#9;&#9;document.querySelector('.wsquery').onclick = function(e) {&#10;&#9;&#9;&#9;&#9;&#9;let msg = {'description':'В этой переменной можно текст либо объект'};&#10;&#9;&#9;&#9;&#9;&#9;ask_ws( msg, whenGotResponse );&#10;&#9;&#9;&#9;&#9;};&#10;&#9;&#9;});&#10;&lt;/script&gt;&#10;" htlogin="exchangesite" host="https://atk.alvetk.ru/alve_test/hs/atk-api/GET_data_client" htpasswd="000000"/>
+  <utable name="_uid" type="int(11)" title="Внутренний идентификатор для шлюза" scr=""/>
+  <utable title="Идентификатор сесии клиента" type="char(32)" name="_fp" scr=""/>
+  <utable scr="" type="bigint(20)" name="_ip" title="IP-адрес последнего запроса клиента"/>
+  <utable scr="" name="_hash" type="char(64)" title="Идентификатор для входа по ссылке"/>
   <utable scr="" title="Состояние регистрации клиента" type="tinyint(4)" name="_ustate"/>
-  <utable type="int(10)" name="_ltime" scr="" title="Время последнего запроса, unixtime"/>
-  <utable name="_rtime" type="int(10)" title="Время регистрации, unixtime" scr=""/>
-  <utable scr="" title="MD5 пароля клиента" type="char(32)" name="_pwd"/>
-  <utable type="char(128)" name="_login" title="Login при регистрации" scr="1"/>
-  <utable type="char(128)" name="_email" scr="1" title="eMail при регистрации"/>
-  <utable scr="1" title="Субъект гражданского права" type="tinyint(4)" name="_usubj"/>
+  <utable name="_ltime" type="int(10)" title="Время последнего запроса, unixtime" scr=""/>
+  <utable scr="" title="Время регистрации, unixtime" type="int(10)" name="_rtime"/>
+  <utable type="char(32)" name="_pwd" title="MD5 пароля клиента" scr=""/>
+  <utable title="Login при регистрации" type="char(128)" name="_login" scr="1"/>
+  <utable name="_email" type="char(128)" title="eMail при регистрации" scr="1"/>
+  <utable name="_usubj" type="tinyint(4)" title="Субъект гражданского права" scr="1"/>
   <utable scr="1" title="Тип клиента 1С" type="tinyint(4)" name="_umode"/>
-  <utable type="char(255)" name="_setup" title="Какие-то личные настройки клиента, JSON" scr="1"/>
-  <utable name="code" type="char(9)" title="Код контрагента в 1С" scr="1" link="1"/>
-  <utable scr="1" title="Фамилия, имя, отчество" type="char(128)" name="fullname"/>
-  <utable type="char(128)" name="compname" title="Наименование организации/ИП" scr="1"/>
-  <utable scr="1" title="Основной номер телефона" type="char(20)" name="phone"/>
-  <utable title="Скан паспорта" scr="1" type="file" name="passport"/>
-  <utable name="director" type="file" scr="1" title="Документ о назначении руководителя"/>
-  <utable title="Устав в последней редакции" scr="1" type="file" name="ustav"/>
-  <utable scr="1" title="Свидетельство о государственной регистрации" name="ogrn" type="file"/>
-  <utable title="Свидетельство о постановке на учет в налоговом органе (ИНН)" scr="1" type="file" name="inn"/>
-  <utable title="Выписка из Единого государственного реестра юридических лиц (ЕГРЮЛ)" scr="1" name="egrul" type="file"/>
-  <utable type="file" name="stat" scr="1" title="Уведомление Территориального органа Федеральной службы государственной статистики"/>
+  <utable scr="1" title="Какие-то личные настройки клиента, JSON" type="char(255)" name="_setup"/>
+  <utable scr="1" link="1" title="Код контрагента в 1С" type="char(9)" name="code"/>
+  <utable title="Фамилия, имя, отчество" name="fullname" type="char(128)" scr="1"/>
+  <utable title="Наименование организации/ИП" name="compname" type="char(128)" scr="1"/>
+  <utable type="char(20)" name="phone" title="Основной номер телефона" scr="1"/>
+  <utable name="passport" type="file" title="Скан паспорта" scr="1"/>
+  <utable name="director" type="file" title="Документ о назначении руководителя" scr="1"/>
+  <utable title="Устав в последней редакции" type="file" name="ustav" scr="1"/>
+  <utable type="file" name="ogrn" title="Свидетельство о государственной регистрации" scr="1"/>
+  <utable scr="1" title="Свидетельство о постановке на учет в налоговом органе (ИНН)" name="inn" type="file"/>
+  <utable scr="1" title="Выписка из Единого государственного реестра юридических лиц (ЕГРЮЛ)" name="egrul" type="file"/>
+  <utable type="file" name="stat" title="Уведомление Территориального органа Федеральной службы государственной статистики" scr="1"/>
 </config>

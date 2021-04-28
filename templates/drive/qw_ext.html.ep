@@ -14,24 +14,48 @@
 % }
 	</ol>
 	<div class="subHolder">
-		<div class="message qw_recv">
-			<h4>Получаемый запрос</h4>
-			<div class="qw_body">
-				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <code></code></div>
-				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
-				<div class="qw_data">
+		<h4>Данные для загрузки страницы <code class="pageurl"></code></h4>
+		<div class="qw_talks">
+			<div class="message qw_send init">
+				<h4>Запрос, отправляемый при загрузке</h4>
+				<div class="qw_body">
+					<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <input type="text" class="udata code" />
+					</div>
+					<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
+					<div class="qw_data">
+					</div>
+					<div class="buttonbar">
+						<p class="comment">Управление элементами сообщения
+						</p>
+						<button class="dataDo" type="button" data-action="list" data-skip=".domItem && !.jsonItem.value.active">Массив</button>
+						<button class="dataDo" type="button" data-action="hash" data-skip=".domItem && !.jsonItem.array.active && !.jsonItem.value.active">Объект</button>
+						<button class="dataDo" type="button" data-action="key" data-skip="!.jsonItem.object.active && !.jsonItem.array.active">Ключ</button>
+						<button class="dataDo" type="button" data-action="del" data-skip="!.jsonItem.active" disabled>Удалить</button>
+					</div>
+				</div>
+			</div>
+			<div class="message qw_recv init">
+				<h4>Ожидаемые данные (определены шаблоном)</h4>
+				<div class="qw_body">
+					<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <input type="text" class="udata code" />
+					</div>
+					<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
+					<div class="qw_data">
+					</div>
+					<div class="buttonbar">
+						<p class="comment">Настроечный &laquo;запрос при загрузке&raquo; к серверу 1С
+						от имени любого клиента с правами выполнения запросов
+						</p>
+						<button type="button" id="checkload">Отправить</button>
+					</div>
 				</div>
 			</div>
 		</div>
-		<div class="message qw_send">
-			<h4>Передаваемый ответ</h4>
-			<div class="qw_body">
-				<div class="qw_code qwHdr">Ключ &laquo;code&raquo;: <input type="text" id="code" class="udata" />
-					<span class="inbtn codeSync" title="Установить такой же, как в полученном">&#9851;</span>
-				</div>
-				<div class="qwHdr">Ключ &laquo;data&raquo;:</div>
-				<div class="qw_data">
-				</div>
+		<h4>AJAX запросы на адрес <code class="pageurl"></code></h4>
+		<div class="qw_talks ajax">
+			<div class="message qw_send">
+			</div>
+			<div class="message qw_recv">
 			</div>
 		</div>
 	</div>

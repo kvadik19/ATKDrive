@@ -213,12 +213,20 @@ ol.subTabs li.subTab.active {
 }
 .subHolder {
 	display:flex;
-	flex-direction:row;
+	flex-direction:column;
+/*	flex-direction:row;*/
 	background-color:var(--body-back,'#ffffff');
 	border:1px solid var(--panel-back-lt, '#00b171');
 	margin-left:15px;
 	width:90%;
 }
+.subHolder >h4 {
+	color:var(--balloon-sel-back);
+	background-image:var(--bg-grad-h);
+	text-align:center;
+	font-weight:normal;
+}
+
 @media screen and (min-width:800px) {
 	#Tabs li.Tab { padding:15px 20px 5px 20px; }
 	ul#Tabs { padding:0px 0px 40px 0px; }
@@ -495,8 +503,17 @@ div.options {
 }
 
 /* Query display support */
+.qw_talks {
+	display:flex;
+	flex-direction:row;
+	width:100%;
+}
 .message {
 	width:50%;
+	margin:5px;
+}
+.message.wide {
+	width:100%;
 	margin:5px;
 }
 .message h4 {

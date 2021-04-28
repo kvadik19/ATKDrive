@@ -148,9 +148,10 @@ my $self = shift;
 	my $ret = {'int' => [], 'ext' => []};
 
 	if ( $param->{'code'} ) {			# Some AJAX received
-		$ret->{'json'} = {'code' => $param->{'code'}, 'data' => $param->{'data'} };
+		my $action = $param->{'code'};
+		$ret->{'json'} = {'code' => $action, 'data' => $param->{'data'} };
 
-		if ( $param->{'code'} eq 'watchdog' ) {		# Await incoming query for administrative purposes
+		if ( $action eq 'watchdog' ) {		# Await incoming query for administrative purposes
 			$ret->{'json'} = {'code' => 'watching'};
 			my $watchfile = Drive::upper_dir("$Drive::sys_root/watchdog");
 			if ( -e($watchfile) && -s($watchfile) ) {
@@ -171,9 +172,41 @@ my $self = shift;
 				open( my $fh, "> $Drive::sys_root/watchdog" );		# Zeroing buffer file
 				close($fh);
 			}
-		} elsif ( $param->{'code'} =~ /^load|commit$/ ) {
 
-			my $action = $param->{'code'};
+		} elsif ( $action eq 'checkload' ) {				# Debug query from templates during page load
+
+			my $keyfld = '_uid';	# Pickup any random accepted user
+			my $config = Drive::read_xml( "$Drive::sys_root$sys->{'conf_dir'}/config.xml" );
+
+			my $idx = Drive::find_first( $config->{'utable'}, sub { my $fld = shift; return $fld->{'link'} == 1 } );
+			$keyfld = $config->{'utable'}->[$idx]->{'name'} if $idx > -1;					# Detect control field
+			my $urand = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE LENGTH($keyfld)>0 ".
+									"AND _ustate=$sys->{'user_state'}->{'accepted'}->{'value'} ".
+									"ORDER BY _uid DESC LIMIT 0,1", { Slice=>{}})->[0];
+			my $qdata = $param->{'data'}->{'data'};
+			$self->apply_user( $qdata, $urand );
+			$qdata = {'code' => $param->{'data'}->{'code'}, 'data' => $qdata};
+			$qdata = encode_json( $qdata);
+
+			if ( $config->{'connect'}->{'emulate'} ) {			# See at script/1Cemulate.pl
+				$config->{'connect'}->{'host'} = 'localhost';
+				$config->{'connect'}->{'port'} = '10001';
+			}
+			my $resp = Utils::Tools->ask_inet(
+								host => $config->{'connect'}->{'host'},
+								port => $config->{'connect'}->{'port'},
+								msg => $qdata,
+								login => $config->{'connect'}->{'htlogin'},
+								pwd => $config->{'connect'}->{'htpasswd'},
+							);
+			$ret->{'json'}->{'data'} = decode_json($resp);
+
+		} elsif ( $param->{'data'}->{'type'} eq 'ext' ) {		# Queries from templates
+			my $oper = $self->template_query( $param );
+			$ret->{'json'}->{'fail'} = $oper->{'fail'} if exists( $oper->{'fail'}); 
+			$ret->{'json'}->{'data'} = $oper;
+
+		} elsif ( $param->{'data'}->{'type'} eq 'int' && $action =~ /^(load|commit)$/ ) {		# Queries from *.pm(s)
 			my $mod_lib = $param->{'data'}->{'name'};
 			eval( "use $mod_lib" );
 			$self->logger->debug($@, 2) if $@;
@@ -224,6 +257,123 @@ my $self = shift;
 	return $ret;
 }
 #####################
+sub apply_user {			# Apply User Data to query data model
+#####################
+my ($self, $dataref, $udata) = @_;
+	if ( ref( $dataref) eq 'HASH' ) {
+		while ( my ($k, $v) = each( %$dataref)) {
+			$dataref->{$k} = $self->apply_user( $dataref->{$k}, $udata);
+		}
+	} elsif ( ref( $dataref) eq 'ARRAY') {
+		foreach my $ai ( @$dataref) {
+			$ai = $self->apply_user( $ai, $udata);
+		}
+	} else {
+		$dataref =~ s/^\$//;
+		$dataref = $udata->{$dataref};
+	}
+	return $dataref;
+}
+#####################
+sub template_query {			# Operations for query templates
+#####################
+my $self = shift;
+my $param = shift;
+	my $ret = { 'fail' => '405 Method Not Allowed' };
+	my $tmpl_dir = Drive::upper_dir("$Drive::sys_root$sys->{'html_dir'}");
+	my ( $tmpl_name, $action, ) = ( $param->{'data'}->{'name'}, $param->{'code'} );
+
+	if ( $action eq 'load'
+			&& -f( "$tmpl_dir/$tmpl_name.tmpl") ) {
+		open( my $fh, "< $tmpl_dir/$tmpl_name.tmpl");
+		my $tmpl_data = decode_utf8(join('', <$fh>));
+		close( $fh);
+
+		my $defdata = {'_uid'=>'$_uid', 'code'=>'$code'};		# Default data always must present
+		my $define = $self->template_map( $tmpl_name);			# Load translaton map defines for template
+
+		unless ( exists($define->{'init'}->{'send'}->{'data'} ) ) {		# Assign required query data
+			$define->{'init'}->{'send'} = {'code' => $tmpl_name, 'data' => $defdata};
+		}
+		my $dom = Mojo::DOM->new( $tmpl_data );
+		$ret->{'qw_init'}->{'qw_send'} = $define->{'init'}->{'send'};
+		$ret->{'qw_init'}->{'qw_recv'} = {'code' => $define->{'init'}->{'recv'}->{'code'}, 'data' => $self->dom_json( $dom) };
+		while ( my ($code, $query) = each( %{$define->{'ajax'}}) ) {
+			$ret->{'qw_ajax'}->{$code} = $query;
+		}
+		$ret->{'success'} = 1;
+		delete( $ret->{'fail'} );
+	}
+
+	return $ret;
+}
+#####################
+sub template_map {			# Read template translation map
+#####################
+my $self = shift;
+my $owner = shift;
+	my $config_path = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/query");
+	my $filename = "$config_path/$owner.json";
+
+	my $ret = {};
+	if ( -e( $filename ) ) {
+		my $def = Drive::read_json( $filename, undef, 'utf8');
+		if( ref($def) ) {
+			$ret->{'translate'} = $def->{'translate'};
+			$ret->{'init'} = $def->{'define_init'};
+			$ret->{'ajax'} = $def->{'define_ajax'};
+		} else {
+			$ret->{'fail'} = "$filename : $def";
+		}
+	} else {
+		$ret->{'fail'} = "File $filename not found";
+	}
+	return $ret;
+}
+#####################
+sub dom_json {			# Translate template code into JSON model
+#####################
+my $self = shift;
+my $item = shift;
+	my $map = {};
+	return $map unless $item;
+	my $cnt = $item->children->size;
+	for ( 0..$cnt-1 ) {
+		my $tagname = $item->children->[$_]->tag;
+		my ($varname, $keyname);
+
+		if ( $tagname =~ /^tmpl_/i ) {				# HTML::Template's tag
+			$varname = $item->children->[$_]->attr('name');
+			$keyname = $varname;
+
+			if ( $tagname =~ /^tmpl_else/i ) {			# Ignore tag
+				undef $varname;
+				undef $keyname;
+			} elsif ( $tagname =~ /^tmpl_(if|unless)/i ) {		# Binary condition tag
+				$keyname = "$varname;$varname;\%bin" ;		# See usage at query.js->toDOM()
+				$map->{$keyname} = "\$$varname";
+			} elsif ( $tagname =~ /^tmpl_loop/i ) {			# Array process
+				$map->{$keyname} = [];
+			} else {								# Show that variable
+				$map->{$keyname} = "\$$varname";
+			}
+		}
+		if ( $item->children->[$_]->children ) {
+			my $branch = $self->dom_json( $item->children->[$_] );		# Skip into hole
+			if ( $branch ) {
+				if ( ref($map->{$keyname}) eq 'ARRAY' ) {
+					push( @{$map->{$keyname}}, $branch);
+				} else {
+					while( my ($var, $val) = each( %$branch) ) {
+						$map->{$var} = $val;
+					}
+				}
+			}
+		}
+	}
+	return $map;
+}
+#####################
 sub get_modules {			# Prepare installed modules
 #####################
 my $self = shift;
@@ -259,7 +409,7 @@ my $self = shift;
 			} else {
 				if ( ref($qw_info->{'translate'}) eq 'HASH' ) {
 					while ( my ($int, $ext) = each(%{$qw_info->{'translate'}}) ) {
-						$translate->{$int} = $ext;
+						$translate->{$int} = $ext if $int ne $ext;
 					}
 					delete( $qw_info->{'translate'} );
 				}
@@ -418,14 +568,13 @@ my $self = shift;
 	return $ret;
 }
 #####################
-sub file_info {			# Read single template definition
+sub file_info {			# Read single file stats
 #####################
 my $self = shift;
 my $filename = shift;
 	my @stat = stat( $filename );
-	my ( $file ) = $filename =~ /\/([^\/]+)$/;
 	my @ftime = Drive::timestr( $stat[9] );
-	return { 'filename' => $file,
+	return { 'filename' => $filename,
 					'size' => Drive::bytes( $stat[7]),
 					'dir' => S_ISDIR( $stat[2]),
 					'mtime' => "$ftime[0]-$ftime[1]-$ftime[2] $ftime[3]:$ftime[4]",
@@ -444,9 +593,10 @@ my $dirname = shift;
 	closedir( $dh);
 	
 	foreach my $file ( @$dlist ) {
-		next if $file =~ /^\./;
+		next if $file =~ /^\./;			# Skip upper dirs and hidden
 		
 		my $row = $self->file_info( "$dirname/$file" );
+		$row->{'filename'} = $file;
 		if ( $row->{'dir'} ) {
 			push( @$dirs, $row  );
 		} else {
@@ -486,16 +636,20 @@ my $self = shift;
 		$ret->{'users'} = $self->access_read( $auth_file, $ret->{'magic_mask'} );
 
 	} elsif( $param->{'code'} eq 'ping' ) {
+		if ( $param->{'data'}->{'emulate'} ) {			# See at script/1Cemulate.pl
+			$param->{'data'}->{'host'} = 'localhost';
+			$param->{'data'}->{'port'} = '10001';
+		}
 		my $resp = Utils::Tools->ask_inet(
 							host => $param->{'data'}->{'host'},
 							port => $param->{'data'}->{'port'},
-							msg => encode_utf8($param->{'data'}->{'ping_msg'}),
+							msg => encode_utf8( $param->{'data'}->{'ping_msg'}),
 							login => $param->{'data'}->{'htlogin'},
 							pwd => $param->{'data'}->{'htpasswd'},
 						);
 		$ret->{'json'} = { 'code' => $param->{'code'}, 'response' => decode_utf8($resp) };
 
-	} elsif( $param->{'code'} eq 'connect' ) {
+	} elsif( $param->{'code'} eq 'connect' ) {			# Save settings here
 		$ret->{'json'} = {'code' => $param->{'code'}, 'success' => 1, 'params' => []};
 
 		if ( $param->{'data'}->{'users'} ) {
@@ -512,7 +666,7 @@ my $self = shift;
 				$config->{'connect'}->{$key} = $val;
 				push( @{$ret->{'json'}->{'params'}}, $key);
 			}
-			my $op = Drive::write_xml( $config, $conf_file );
+			my $op = Drive::write_xml( $config, $conf_file );		# Write config.xml
 			if ( $op ) {
 				$self->logger->dump("Save $conf_file: $op", 3);
 				$ret->{'json'}->{'success'} = 0;

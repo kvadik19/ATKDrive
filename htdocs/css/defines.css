@@ -24,6 +24,8 @@
 	--panel-text-dk:#b7bfc3;
 	--panel-font:Roboto, Verdana, sans-serif;
 
+	--bg-grad-h:linear-gradient(to right, #ffffff, #ebf5ef, #ffffff);
+
 	--btn-bg:linear-gradient(0deg,#cccccc,#fafafa);
 	--btn-bg-alt:linear-gradient(180deg,#cccccc,#fafafa);
 	--btn-fg:#333333;

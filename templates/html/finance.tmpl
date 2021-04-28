@@ -1,20 +1,51 @@
 <div class="container">
-		<h1 class="form__title">Мои финансы клиента</h1>
+	<h1 class="form__title">Мои финансы клиента</h1>
+	<TMPL_VAR NAME="fullname">
 	<div id="finance-body" class="panel light wide">
 		<p>Учет доходов и расходов по выполненным поездкам
+<TMPL_VAR NAME="date">
 		</p>
 		<h2>Доходы</h2>
 		<div class="fintable">
-<TMPL_LOOP NAME="list">
-		<div class="finrow">
-		<div class="fin-date">
-	<TMPL_VAR NAME="date">
-		</div>
-		<div class="fin-sum">
-		</div>
-	<TMPL_VAR NAME="sum">
-		</div>
+<TMPL_LOOP NAME="credits">
+			<div class="finrow">
+				<div class="fin-date"><TMPL_VAR NAME="date"></div>
+				<div class="fin-sum"><TMPL_VAR NAME="sum"></div>
+				<div class="detail">
+	<TMPL_LOOP NAME="machines">
+					<div class="line">Модель: <TMPL_VAR NAME="model"></div>
+					<div class="line">Мощность: <TMPL_VAR NAME="power"></div>
+					<div class="line">Грузоподъемность: <TMPL_VAR NAME="load"></div>
+	</TMPL_LOOP>
+				</div>
+			</div>
 </TMPL_LOOP>
 		</div>
-	</div>
+		<div class="fin-sum total">
+			Итого: <TMPL_VAR NAME="cr_total">
+		</div>
+	<br>
+<TMPL_IF NAME="is_debit">
+		<h2>Расходы</h2>
+		<div class="fintable">
+<TMPL_LOOP NAME="debits">
+			<div class="finrow">
+				<div class="fin-date"><TMPL_VAR NAME="date"></div>
+				<div class="fin-sum"><TMPL_VAR NAME="sum"></div>
+				<div class="detail">
+	<TMPL_LOOP NAME="machines">
+					<div class="line">Модель: <TMPL_VAR NAME="model"></div>
+					<TMPL_IF NAME="is_power"><div class="line">Мощность: <TMPL_VAR NAME="power"></div>
+					<TMPL_ELSE><div class="line">Грузоподъемность: <TMPL_VAR NAME="load"></div>
+					</TMPL_IF>
+					<TMPL_UNLESS NAME="is_power"></TMPL_UNLESS>
+	</TMPL_LOOP>
+				</div>
+			</div>
+</TMPL_LOOP>
+		</div>
+		<div class="fin-sum total">
+			Итого: <TMPL_VAR NAME="db_total">
+		</div>
+</TMPL_IF>
 </div>

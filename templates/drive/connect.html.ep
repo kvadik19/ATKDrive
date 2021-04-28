@@ -1,4 +1,12 @@
 <style type="text/css">
+	.optrow.narrow {
+		justify-content:center;
+		align-items:center;
+	}
+	.optrow input[type="checkbox"] {
+		width:1em;
+		height:1em;
+	}
 	.optrow div.quant {
 		display:flex;
 		flex-direction:column;
@@ -56,7 +64,7 @@
 	</p>
 	<div id="connect" class="options">
 		<h4>Запросы к модулю 1С</h4>
-		<div class="optgroup">
+		<div id="to_office" class="optgroup">
 			<div class="optrow">
 				<div class="quant">
 					<label for="host">Имя или адрес хоста<br>Или URL для HTTP-запросов</label>
@@ -85,6 +93,10 @@
 					<input type="text" id="htpasswd" class="udata" value="<%= $config->{'htpasswd'} %>" />
 				</div>
 			</div>
+			<div class="optrow narrow">
+					<input type="checkbox" id="emulate" class="udata" <%= $config->{'emulate'} ? ' checked' : '' %> />
+					<label for="emulate">Использовать эмулятор сервера 1С (localhost:10001)</label>
+			</div>
 		</div>
 		<div class="optrow">
 			<div class="quant">
@@ -94,7 +106,7 @@
 			<div class="quant">
 				<textarea id="ping_msg" class="udata"><%= $config->{'ping_msg'} %></textarea>
 			</div>
-			<div>
+			<div class="quant">
 				<label for="response">Ответ хоста</label>
 			</div>
 			<div id="response" class="quant"></div>
@@ -143,7 +155,13 @@
 <script type="text/javascript">
 	let getSnap = function() {
 			let snap = '';
-			document.querySelectorAll('.udata').forEach( i => { snap += i.value });
+			document.querySelectorAll('.udata').forEach( i => {
+													if ( i.type === 'checkbox' ) {
+														snap += (i.checked ? '1' : '0');
+													} else {
+														snap += i.value;
+													}
+												});
 			snap += document.getElementById('access').innerHTML;
 			return snap;
 		};
@@ -166,7 +184,11 @@
 					}
 					let formData = {};
 					document.querySelectorAll('.udata').forEach( i => {
-															formData[i.id] = i.value;
+															if ( i.type === 'checkbox' ) {
+																formData[i.id] = i.checked ? 1 : 0;
+															} else {
+																formData[i.id] = i.value;
+															}
 														});
 					formData.users = accessData();		// Get access login list
 					flush( {'code':'connect','data':formData }, document.location.href, function(resp) {
@@ -191,15 +213,16 @@
 				};
 
 			document.getElementById('ping').onclick = function(e) {
-					let [ host, port, ping_msg, htlogin, htpasswd ] = [
-								document.getElementById('host').value,
-								document.getElementById('port').value,
-								document.getElementById('ping_msg').value,
-								document.getElementById('htlogin').value,
-								document.getElementById('htpasswd').value
-							];
-					if ( host && ping_msg ) {
-						let formData = {'host':host, 'port':port, 'ping_msg':ping_msg, 'htlogin':htlogin, 'htpasswd':htpasswd};
+					let formData = {};
+					document.querySelectorAll('#to_office input').forEach( i => {
+															if ( i.type === 'checkbox' ) {
+																formData[i.id] = i.checked ? 1 : 0;
+															} else {
+																formData[i.id] = i.value;
+															}
+														});
+					formData.ping_msg = document.getElementById('ping_msg').value;
+					if ( (formData.host || formData.emulate) && formData.ping_msg ) {
 						document.getElementById('response').innerText = '';
 						flush( {'code':'ping','data':formData }, document.location.href
 									, function(resp) {
@@ -227,6 +250,11 @@
 							}
 				};
 
+			document.getElementById('emulate').onchange = function(evt) {
+					let inpts = document.querySelectorAll('#to_office input[type="text"]');
+					let dsbl = ( this.checked );
+					inpts.forEach( i =>{ i.disabled = dsbl});
+				};
 			if ( document.execCommand ) {
 				document.getElementById('jscopy').onclick = function(e) {
 						document.getElementById('js_wsocket').select();
@@ -235,6 +263,7 @@
 			} else {
 				document.getElementById('jscopy').disabled = true;
 			}
+			document.getElementById('emulate').onchange();
 			accessInit();
 		});
 </script>
