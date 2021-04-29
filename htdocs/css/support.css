@@ -538,7 +538,14 @@ div.options {
 	font-weight:bold;
 	margin:0px;
 }
-#keyHolder ul {
+#keyHolder .optgroup.query .box {
+	max-height:20em;
+	overflow-y:auto;
+	margin-top: 0.5em;
+	border: 1px solid var(--body-text-lt, '#999999');
+	background-color: var(--body-back-dk, '#eaeaea');
+}
+#keyHolder .optgroup.list .box {
 	list-style-type:none;
 	font-family:SansMono, monospace;
 	background-color:var(--body-back,'#ffffff');
@@ -549,25 +556,28 @@ div.options {
 	margin:0px;
 }
 @media screen and (min-device-height:1000px) {
-	#keyHolder ul {
+	#keyHolder .optgroup.list .box {
 		max-height:30em;
+	}
+	#keyHolder .optgroup.query .box {
+		max-height:40em;
 	}
 }
 
-#keyHolder li {
+#keyHolder li.inbox {
 	padding:0.2em 0.5em;
 	cursor:default;
 }
-#keyHolder li:hover {
+#keyHolder li.inbox:hover {
 	background-color:var(--balloon-sel-back,'#6699aa');
 	color:var(--balloon-sel-text,'#ffffff');
 	font-weight:bold;
 	opacity:0.8;
 }
-#keyHolder li.active {
+#keyHolder .optgroup .inbox.active {
+	font-weight:bold;
 	background-color:var(--balloon-sel-back,'#6699aa');
 	color:var(--pop-sel-text,'#ffff00');
-	font-weight:bold;
 	opacity:1 !important;
 }
 

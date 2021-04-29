@@ -407,7 +407,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									bodyOut.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonEdit.jsonSelect});
 									bodyOut.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
 									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
-									bodyIn.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
+									bodyIn.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = dispatch.ext.valAssign});
 									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
 								} else {
@@ -416,60 +416,119 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							});
 						return true;
 					},
+				valAssign:function(evt) {
+						let qcode = bodyIn.querySelector('.qw_code .code').value;
+						if ( ('qdata' in keyTool.preset) && keyTool.preset.qdata.code === qcode ) {
+							let keyVal = evt.target;
+							let div = keyVal.closest('.value');
+							keyTool.set( { info:div, value:keyVal.innerText, items:['query'], valuesOnly: true,
+											head:'Выберите значение переменной '+div.dataset.name})
+									.fire( function(key, val) {
+												let fldName = val.dataset.name;
+												if ( dict[val.dataset.dict] ) {			// See `const dict`
+													recoder.assign( {dict:val.dataset.dict, host:keyVal} );
+												} else if ( fldName.length > 0 ) {
+													keyVal.innerText = fldName;
+												}
+												let upper = div.parentNode.closest('.domItem[data-name]');
+												val.stack.forEach( un =>{
+																	if ( !upper ) return;
+																	let key = upper.querySelector('span.keyName');
+																	key.innerText = upper.dataset.name +' <= '+un;
+																	upper = upper.parentNode.closest('.domItem[data-name]');
+																});
+												commitEnable();
+											} );
+						} else {
+							alert('Чтобы присвоить значения переменным,\n'
+									+'нужно получить данные от сервера.\n'
+									+'Выполните настроечный запрос');
+						}
+					}
 			},
 	};
 
 let keyTool = {			// Add key-value floating window operations
+		panel: document.getElementById('keySelect'),
+		keyList: document.querySelectorAll('#keySelect li'),
 		preset:{},
 		init: function( tgtType, tgtMethod ) {
-				document.querySelectorAll('#keySelect li.choosd').forEach( li =>{ li.className = li.className.replace(/\s*choosd/g,'')});
-				document.querySelectorAll('#keySelect li').forEach( li =>{ li.onclick = keyTool.liChoose;
-																		li.ondblclick = keyTool.result });
-				document.querySelector('#keySelect button.esc').onclick = this.keyHide;
-				document.querySelector('#keySelect button.ok').onclick = this.result;
-				document.querySelector('#keySelect input[type="text"]').oninput = this.inpCheck;
-				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
+				this.panel.querySelectorAll('li').forEach( li =>{ li.onclick = keyTool.liChoose;
+																	li.ondblclick = keyTool.result });
+				this.panel.querySelector('button.esc').onclick = this.keyHide;
+				this.panel.querySelector('button.ok').onclick = this.result;
+				this.panel.querySelector('input[type="text"]').oninput = this.inpCheck;
+				this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				Object.keys(this.preset).forEach( k =>{ delete( this.preset[k] ) });
 				return this;
 			},
 		set: function(param) {
 				Object.keys(param).forEach( k =>{ this.preset[k] = param[k] });
+
+				this.panel.querySelector('input[type="text"]').value = '';
+				this.panel.querySelector('h').innerText = this.preset.head;
+				this.panel.querySelectorAll('.optgroup').forEach( i =>{ i.style.display = 'none'});
+				if ( !('items' in this.preset) ) return this;
+				this.preset.items.forEach( it =>{ it = it.replace(/^\./g,'');
+						if ( it in this.preset ) this.panel.querySelector('.optgroup.'+it+' label').innerText = this.preset[it];
+						this.panel.querySelector('.optgroup.'+it).removeAttribute('style');
+					} );
+				let liShow = this.preset.valuesOnly ? 'none' : 'list-item';
+				this.panel.querySelectorAll('li[data-list="1"]').forEach( i =>{ i.style.display = liShow });
+				this.panel.querySelectorAll('li.active').forEach( li =>{ li.className = li.className.replace(/\s*active/g,'')});
+
+				let divQuery = this.panel.querySelector('.optgroup.query>div');
+				let divList = this.panel.querySelector('.optgroup.list');
+				// Selector type specific code
+				if ( this.preset.items.includes('query') ) {		// It's visible (active)?
+					let qdom = toDOM( this.preset.qdata.data);
+					divQuery.innerHTML = '';
+					qdom.querySelectorAll('.domItem .same').forEach( di =>{ di.parentNode.removeChild(di)} );
+					qdom.querySelectorAll('.domItem .value').forEach( di =>{ di.className += ' qItem inbox'
+																if ( di.lastElementChild.matches('span.keyVal') ) {
+																	di.onclick = keyTool.liChoose;
+																	di.ondblclick = keyTool.result;
+																}
+															} );
+					qdom.querySelectorAll('.domItem .value[data-name="'+this.preset.value+'"]')
+											.forEach( di =>{ di.className += ' active'});
+					divQuery.appendChild( qdom);
+				}
+				if( this.preset.items.includes('list') ) {		// It's visible (active)?
+					if ( this.preset.info ) {
+						divList.querySelectorAll('li[data-name="'+this.preset.info.dataset.name+'"]')
+										.forEach( li =>{ li.className += ' active'});
+						this.panel.querySelector('input[type="text"]').value = this.preset.info.dataset.name;
+					}
+				}
 				return this;
 			},
-		keyList: document.querySelectorAll('#keySelect li'),
-		panel: document.getElementById('keySelect'),
-		keyHide:function() { document.getElementById('keySelect').style.display = 'none'; 
+		keyHide:function() { keyTool.panel.style.display = 'none'; 
 				document.documentElement.onclick = null;
 				btnActivate();
-// 				bodyOut.querySelector('button[data-action="key"]').removeAttribute('disabled');
 			},
 		keyTrap: function(evt) {			// Click outside of keySelect window
 				if ( evt.path.findIndex( i =>{ return ( i.nodeType === 1 && i.matches('.over-panel')) }) < 0 ) keyTool.keyHide();
 			},
-		fire: function( callbk, valuesOnly ) {
+		fire: function( callbk ) {
 				this.callbk = callbk;
-				document.querySelectorAll('#keySelect li.active').forEach( li =>{ li.className = li.className.replace(/\s*active/g,'')});
-				document.querySelector('#keySelect input[type="text"]').value = '';
 
 				document.documentElement.onclick = this.keyTrap;
-				document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
-// 				bodyOut.querySelector('button[data-action="key"]').setAttribute('disabled',1);
+				this.panel.querySelector('button.ok').setAttribute('disabled', 1);
 
-				if ( !this.panel.style.top ) {
+				if ( !this.panel.style.top ) {			// First call, find position
 					this.panel.style.top = bodyOut.offsetTop+'px';
 					this.panel.style.left = bodyOut.offsetLeft+'px';
 				}
+
 				this.panel.style.display = 'block';
-				if ( this.preset.info ) {			// Preset choiced values
-					let sel = document.querySelector('#keySelect li[data-name="'+this.preset.info.dataset.name+'"]');
-					if ( sel ) {
-						sel.className += ' active';
-						document.querySelector('#keySelect input[type="text"]').value = this.preset.info.dataset.name;
-						let vport = document.querySelector('#keySelect ul');
-						vport.scrollTo(0,0);									// Bring selected LI into viewport
-						if ( sel.offsetTop > vport.clientHeight ) vport.scrollTo(0, sel.offsetTop - vport.clientHeight);
-					}
-				}
+				this.panel.querySelectorAll('.active')
+						.forEach( li =>{ let vport = li.closest('.box');
+										vport.scrollTo(0,0);					// Bring selected LI into viewport
+										if ( li.offsetTop > vport.clientHeight ) 
+												vport.scrollTo(0, li.offsetTop - vport.clientHeight);
+								});			// Process It, if exists
+
 				let [X, Y, W, H] = [this.panel.offsetLeft, this.panel.offsetTop,
 									this.panel.offsetWidth, this.panel.offsetHeight];		// Bring PANEL into viewport
 				if (X < 0) { X = 20 } 
@@ -479,47 +538,42 @@ let keyTool = {			// Add key-value floating window operations
 				this.panel.style.left = X+'px';
 				this.panel.style.top = Y+'px';
 
-				document.querySelector('#keySelect h').innerText = 'Выберите ключ-значение';
-				document.querySelector('#keySelect .optgroup.text').style.display = 'flex';
-				document.querySelectorAll('#keySelect li[data-list="1"]').forEach( i =>{ i.style.display = 'list-item'});
-				document.querySelector('#keySelect .optgroup.list label').style.display = 'block';
-				if ( valuesOnly ) {
-					document.querySelector('#keySelect h').innerText = 'Выберите поле для записи';
-					document.querySelectorAll('#keySelect li[data-list="1"]').forEach( i =>{ i.style.display = 'none'});
-					document.querySelector('#keySelect .optgroup.text').style.display = 'none';
-					document.querySelector('#keySelect .optgroup.list label').style.display = 'none';
-				}
 				return this;
 			},
 		result: function() {
-				let key = document.querySelector('#keySelect input[type="text"]');
-				let val = document.querySelector('#keySelect li.active') 
+				let key = keyTool.panel.querySelector('input[type="text"]');
+				let val = keyTool.panel.querySelector('.active') 
 										|| {'innerText':'','className':''};		// NOW Allow empty value!
-				val.className = val.className.replace(/\s*choosd/g,'');		// Prevent
-				val.className += ' choosd';								// Obsoleted markup?
 				if ( typeof(keyTool.callbk) === 'function' ) {
-					keyTool.callbk(key.value, val.cloneNode(true) );		// Pass into callback just a LI copy
+					let clone = val.cloneNode(true);
+					clone.stack = [];
+					let upper = val;
+					while ( upper = upper.parentNode.closest('.domItem[data-name]') ) {
+						clone.stack.push(upper.dataset.name);
+					}
+					keyTool.callbk(key.value, clone );		// Pass into callback just a LI copy
 				}
 				keyTool.keyHide();
 			},
 		liChoose: function(evt) {
-				document.querySelectorAll('#keySelect li.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
-				let li = evt.target;
-				let txt = document.querySelector('#keySelect input[type="text"]');
+				keyTool.panel.querySelectorAll('.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
+				let li = evt.target.closest('.inbox');
+				let txt = keyTool.panel.querySelector('input[type="text"]');
 				li.className += ' active';
 				if ( txt.value.replace(/\s/g,'').length === 0 
-						|| document.querySelector('#keySelect li[data-name="'+txt.value+'"]') ) {
-					txt.value = li.innerText;		// Not manual keyName typed
+						|| keyTool.panel.querySelector('.box *[data-name="'+txt.value+'"]') ) {
+					txt.value = li.innerText;							// Not manual keyName typed
+					if (li.firstElementChild) txt.value = li.firstElementChild.innerText;
 				}
 				keyTool.inpCheck();
 			},
 		inpCheck: function(evt) {		// Check for some of list selected
-				let txt = document.querySelector('#keySelect input[type="text"]');
-				let li = document.querySelector('#keySelect li.active') || true;		// Ignore this check - allow empty keyName
+				let txt = this.panel.querySelector('input[type="text"]');
+				let li = this.panel.querySelector('li.active') || true;		// Ignore this check - allow empty keyName
 				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {					// Stub for ignore list checking is being used!
-					document.querySelector('#keySelect button.ok').removeAttribute('disabled');
+					this.panel.querySelector('button.ok').removeAttribute('disabled');
 				} else {
-					document.querySelector('#keySelect button.ok').setAttribute('disabled',1);
+					this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				}
 			},
 	};
@@ -542,7 +596,8 @@ let keyEdit = {
 		keyvalue: function(evt) {
 				let keyVal = evt.target;
 				let div = keyVal.closest('.value');
-				keyTool.set( {info:div, value:keyVal.innerText})
+				keyTool.set( { info:div, value:keyVal.innerText, valuesOnly:true, items:['list'],
+							head:'Выберите поле для записи', list:''})
 						.fire( function(key, val) {
 									let fldName = val.dataset.name;
 									div.dataset.name = fldName;
@@ -553,7 +608,7 @@ let keyEdit = {
 										keyVal.innerText = '$'+ fldName;
 									}
 									commitEnable();
-								}, 'valuesOnly');
+								} );
 			},
 		killInpt: function(evt) {
 				let host = evt.target.closest('.keyName');
@@ -621,7 +676,9 @@ let jsonEdit = {			// Json elements buttons operations
 				this.place(body, el);
 			},
 		key: function(body) {				// Append values from users, media tables. 
-				keyTool.fire( function(key, val) {
+				keyTool.set( { items: ['text', 'list'],
+							head: 'Выберите ключ-значение', list:'Доступные значения' } )
+						.fire( function(key, val) {
 								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
 								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
 															'data-name':text,'onclick':jsonEdit.jsonSelect,'title':val.title});
@@ -923,5 +980,6 @@ document.getElementById('checkload').onclick = function(e) {		// Debugging query
 		flush(form, document.location.href, function(resp) {
 				resp = JSON.parse(resp);
 				bodyIn.querySelector('.qw_code .code').value = resp.data.code;
+				keyTool.set( { qdata: resp.data });
 			});
 	};

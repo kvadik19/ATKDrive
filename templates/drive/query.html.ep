@@ -31,18 +31,23 @@
 		</div>
 		<div id="keyHolder">
 			<div class="optgroup text">
-			<label>Ключ</label>
+				<label>Ключ</label>
 				<input type="text" id="keyName" class="form__input"/>
 			</div>
 			<div class="optgroup list">
 				<label>Доступные значения</label>
-				<ul>
+				<ul class="box">
 % foreach my $fld ( @$struct ) {
-					<li data-name="<%= $fld->{'name'} %>" data-list="<%= $fld->{'list'} %>" data-dict="<%= $fld->{'dict'} %>" title="<%= $fld->{'title'} %>">
+					<li class="inbox" data-name="<%= $fld->{'name'} %>" data-list="<%= $fld->{'list'} %>" data-dict="<%= $fld->{'dict'} %>" title="<%= $fld->{'title'} %>">
 						<%= $fld->{'name'} %>
 					</li>
 %}
 				</ul>
+			</div>
+			<div class="optgroup query">
+				<label>Полученные значения</label>
+				<div class="box">
+				</div>
 			</div>
 		</div>
 		<div class="buttonbar">
