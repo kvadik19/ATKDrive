@@ -32,7 +32,12 @@
 		<div id="keyHolder">
 			<div class="optgroup text">
 				<label>Ключ</label>
-				<input type="text" id="keyName" class="form__input"/>
+				<input type="text" id="keyName" class="keyText" />
+				<div class="optgroup bool" id="bool">
+					<div><input type="text" id="bool_name" class="keyText" disabled /></div>
+					<div><input type="text" id="bool_cond"/></div>
+					<div><input type="text" id="bool_val"/><span id="bool_dict">&#9662;</span></div>
+				</div>
 			</div>
 			<div class="optgroup list">
 				<label>Доступные значения</label>

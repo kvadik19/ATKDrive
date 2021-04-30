@@ -397,7 +397,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 												d.querySelectorAll('span.keyVal').forEach( s =>{
 																	let key = s.innerText.replace(/^\$/,'');
 																	if ( translate[key] ) {
-																		s.innerText = translate[key];
+																		s.innerText = '$'+translate[key];
 																	}
 																});
 											});
@@ -422,19 +422,19 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							let keyVal = evt.target;
 							let div = keyVal.closest('.value');
 							keyTool.set( { info:div, value:keyVal.innerText, items:['query'], valuesOnly: true,
-											head:'Выберите значение переменной '+div.dataset.name})
+											head:'Выберите значение переменной <code>'+div.dataset.name+'</code>'})
 									.fire( function(key, val) {
 												let fldName = val.dataset.name;
 												if ( dict[val.dataset.dict] ) {			// See `const dict`
 													recoder.assign( {dict:val.dataset.dict, host:keyVal} );
 												} else if ( fldName.length > 0 ) {
-													keyVal.innerText = fldName;
+													keyVal.innerText = '$'+fldName;
 												}
 												let upper = div.parentNode.closest('.domItem[data-name]');
 												val.stack.forEach( un =>{
 																	if ( !upper ) return;
 																	let key = upper.querySelector('span.keyName');
-																	key.innerText = upper.dataset.name +' <= '+un;
+																	key.innerText = upper.dataset.name +' <= $'+un;
 																	upper = upper.parentNode.closest('.domItem[data-name]');
 																});
 												commitEnable();
@@ -457,18 +457,85 @@ let keyTool = {			// Add key-value floating window operations
 																	li.ondblclick = keyTool.result });
 				this.panel.querySelector('button.esc').onclick = this.keyHide;
 				this.panel.querySelector('button.ok').onclick = this.result;
-				this.panel.querySelector('input[type="text"]').oninput = this.inpCheck;
+				this.panel.querySelector('input#keyName').oninput = this.inpCheck;
 				this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				Object.keys(this.preset).forEach( k =>{ delete( this.preset[k] ) });
+				this.panel.querySelector('#bool_cond').onfocus = this.condSelector;
+				this.panel.querySelector('#bool_dict').onclick = this.valSelector;
 				return this;
+			},
+		valSelector:function(evt) {
+				let host = evt.target;
+				let vbox = host.popup;
+				if ( !vbox ) {
+					vbox = createObj('select',{'className':'popBox','size':6,'style.display':'none',
+									'onblur':function() {this.style.display = 'none'},
+									'onchange':function() {host.previousElementSibling.value=this.value; 
+											this.blur() 
+										},
+									'onfocus':function() {
+											this.style.width = host.previousElementSibling.offsetWidth+'px';
+											this.style.left = host.previousElementSibling.offsetLeft+'px';
+											this.style.top = (host.offsetTop+host.offsetHeight+2)+'px';
+											this.value = host.previousElementSibling.value;
+										}
+								});
+					host.parentNode.appendChild(vbox);
+					host.popup = vbox;
+				}
+				vbox.innerHTML = '';
+				if ( keyTool.panel.querySelector('.qItem.value.active') ) {
+					let chcd = keyTool.panel.querySelector('.qItem.value.active');
+					let others = chcd.parentNode.children;
+					for ( let nO=0; nO < others.length; nO++ ) {
+						if ( others[nO].matches('.qItem.value[data-name]') ) {
+							if ( !others[nO].lastElementChild.matches('span.keyVal') ) continue;
+							vbox.add(createObj('option',{'value':'$'+others[nO].dataset.name,'innerText':others[nO].dataset.name}));
+						}
+					}
+					vbox.size = vbox.options.length;
+				}
+				vbox.style.display = 'block';
+				vbox.focus();
+				return false;
+			},
+		condSelector:function(evt) {
+				let host = evt.target;
+				let cbox = host.popup;
+				if ( !cbox ) {
+					cbox = createObj('select',{'className':'popBox','size':6,'style.display':'none',
+									'onblur':function() {this.style.display = 'none'},
+									'onchange':function() {host.value=this.value; 
+											host.title=this.options[this.selectedIndex].innerText;
+											this.blur() 
+										},
+									'onfocus':function() {
+											this.style.left = host.offsetLeft+'px';
+											this.style.top = (host.offsetTop+host.offsetHeight+2)+'px';
+											this.value = host.value;
+										}
+								});
+					[ {'name':'Меньше или Равно','value':'<='},
+						{'name':'Меньше','value':'<'},
+						{'name':'Равно','value':'=='},
+						{'name':'Больше','value':'>'},
+						{'name':'Больше или Равно','value':'>='},
+						{'name':'Не равно','value':'!='}
+						].forEach( opt =>{ cbox.add(createObj('option',{'value':opt.value,'innerText':opt.name}))});
+					host.parentNode.appendChild(cbox);
+					host.popup = cbox;
+				}		// Create selector box
+				cbox.style.display = 'block';
+				cbox.focus();
+				return false;
 			},
 		set: function(param) {
 				Object.keys(param).forEach( k =>{ this.preset[k] = param[k] });
 
-				this.panel.querySelector('input[type="text"]').value = '';
-				this.panel.querySelector('h').innerText = this.preset.head;
+				this.panel.querySelector('h').innerHTML = this.preset.head;
 				this.panel.querySelectorAll('.optgroup').forEach( i =>{ i.style.display = 'none'});
 				if ( !('items' in this.preset) ) return this;
+
 				this.preset.items.forEach( it =>{ it = it.replace(/^\./g,'');
 						if ( it in this.preset ) this.panel.querySelector('.optgroup.'+it+' label').innerText = this.preset[it];
 						this.panel.querySelector('.optgroup.'+it).removeAttribute('style');
@@ -477,8 +544,11 @@ let keyTool = {			// Add key-value floating window operations
 				this.panel.querySelectorAll('li[data-list="1"]').forEach( i =>{ i.style.display = liShow });
 				this.panel.querySelectorAll('li.active').forEach( li =>{ li.className = li.className.replace(/\s*active/g,'')});
 
+				let value = '';
+				if ( this.preset.value) value = this.preset.value.replace(/^\$/,'');		// Remove variable mark
 				let divQuery = this.panel.querySelector('.optgroup.query>div');
 				let divList = this.panel.querySelector('.optgroup.list');
+				let divText = this.panel.querySelector('.optgroup.text');
 				// Selector type specific code
 				if ( this.preset.items.includes('query') ) {		// It's visible (active)?
 					let qdom = toDOM( this.preset.qdata.data);
@@ -490,21 +560,35 @@ let keyTool = {			// Add key-value floating window operations
 																	di.ondblclick = keyTool.result;
 																}
 															} );
-					qdom.querySelectorAll('.domItem .value[data-name="'+this.preset.value+'"]')
+					qdom.querySelectorAll('.domItem .value[data-name="'+value+'"]')
 											.forEach( di =>{ di.className += ' active'});
 					divQuery.appendChild( qdom);
+
+					if ( this.preset.info.matches('.bool') ) {
+						divText.removeAttribute('style');
+						divText.querySelector('#bool').removeAttribute('style');
+						divText.querySelector('input#keyName').style.display = 'none';
+						divText.querySelector('label').innerHTML = 'Переменная <code>' + this.preset.info.dataset.name
+									+'</code> содержит логическое значение.<br>Опишите условие истинности:';
+						divText.querySelector('#bool_name').value = '';
+						if ( value.length>0 ) divText.querySelector('#bool_name').value = '$'+value;
+					}
 				}
 				if( this.preset.items.includes('list') ) {		// It's visible (active)?
 					if ( this.preset.info ) {
 						divList.querySelectorAll('li[data-name="'+this.preset.info.dataset.name+'"]')
 										.forEach( li =>{ li.className += ' active'});
-						this.panel.querySelector('input[type="text"]').value = this.preset.info.dataset.name;
+						divText.querySelector('input#keyName').value = this.preset.info.dataset.name;
+						divText.querySelector('input#keyName').removeAttribute('style');
 					}
 				}
+				if( this.preset.items.includes('text') ) divText.removeAttribute('style')		// It's visible (active)?
 				return this;
 			},
 		keyHide:function() { keyTool.panel.style.display = 'none'; 
 				document.documentElement.onclick = null;
+				keyTool.panel.querySelector('input#keyName').value = '';
+				if ( keyTool.preset.info ) keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');
 				btnActivate();
 			},
 		keyTrap: function(evt) {			// Click outside of keySelect window
@@ -513,6 +597,7 @@ let keyTool = {			// Add key-value floating window operations
 		fire: function( callbk ) {
 				this.callbk = callbk;
 
+				if ( keyTool.preset.info ) keyTool.preset.info.className += ' active';
 				document.documentElement.onclick = this.keyTrap;
 				this.panel.querySelector('button.ok').setAttribute('disabled', 1);
 
@@ -541,15 +626,28 @@ let keyTool = {			// Add key-value floating window operations
 				return this;
 			},
 		result: function() {
-				let key = keyTool.panel.querySelector('input[type="text"]');
+				let key = keyTool.panel.querySelector('input#keyName');
 				let val = keyTool.panel.querySelector('.active') 
 										|| {'innerText':'','className':''};		// NOW Allow empty value!
 				if ( typeof(keyTool.callbk) === 'function' ) {
 					let clone = val.cloneNode(true);
 					clone.stack = [];
-					let upper = val;
-					while ( upper = upper.parentNode.closest('.domItem[data-name]') ) {
-						clone.stack.push(upper.dataset.name);
+					if ( keyTool.preset.info && keyTool.preset.info.matches('.bool') ) {
+						let name = document.getElementById('bool_name').value;
+						let cond = document.getElementById('bool_cond').value;
+						let val = document.getElementById('bool_val').value;
+						if ( val.replace(/\s+/g,'').match(/^\d+$/ ) ) {		// IsDigit?
+							val = val.replace(/\s+/g,'');
+						} else if ( val.match(/^\$/ ) ) {			// Key name?
+						} else {							// Character data
+							val = "'"+val+"'";
+						}
+						clone.dataset.name = '('+name+cond+val+')';
+					} else {
+						let upper = val;
+						while ( upper = upper.parentNode.closest('.domItem[data-name]') ) {
+							clone.stack.push(upper.dataset.name);
+						}
 					}
 					keyTool.callbk(key.value, clone );		// Pass into callback just a LI copy
 				}
@@ -558,17 +656,24 @@ let keyTool = {			// Add key-value floating window operations
 		liChoose: function(evt) {
 				keyTool.panel.querySelectorAll('.active').forEach( i =>{ i.className = i.className.replace(/\s*active/g,'')});
 				let li = evt.target.closest('.inbox');
-				let txt = keyTool.panel.querySelector('input[type="text"]');
+				let txt = keyTool.panel.querySelector('input#keyName');
 				li.className += ' active';
 				if ( txt.value.replace(/\s/g,'').length === 0 
-						|| keyTool.panel.querySelector('.box *[data-name="'+txt.value+'"]') ) {
-					txt.value = li.innerText;							// Not manual keyName typed
+						|| keyTool.panel.querySelector('.box *[data-name="'+txt.value+'"]') ) {		// Not manual keyName typed
+					txt.value = li.innerText;
 					if (li.firstElementChild) txt.value = li.firstElementChild.innerText;
+				}
+				let booln = keyTool.panel.querySelector('input#bool_name');
+				let boolv = keyTool.panel.querySelector('input#bool_val');
+				booln.value = '$'+li.innerText;
+				if ( li.children.length > 0 ) {
+					booln.value = '$'+li.firstElementChild.innerText;
+					if ( li.lastElementChild.matches('span.keyVal')) boolv.value = li.lastElementChild.innerText;
 				}
 				keyTool.inpCheck();
 			},
 		inpCheck: function(evt) {		// Check for some of list selected
-				let txt = this.panel.querySelector('input[type="text"]');
+				let txt = this.panel.querySelector('input#keyName');
 				let li = this.panel.querySelector('li.active') || true;		// Ignore this check - allow empty keyName
 				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {					// Stub for ignore list checking is being used!
 					this.panel.querySelector('button.ok').removeAttribute('disabled');
@@ -676,8 +781,8 @@ let jsonEdit = {			// Json elements buttons operations
 				this.place(body, el);
 			},
 		key: function(body) {				// Append values from users, media tables. 
-				keyTool.set( { items: ['text', 'list'],
-							head: 'Выберите ключ-значение', list:'Доступные значения' } )
+				keyTool.set( { info:null, value:null, items: ['text', 'list'],
+							head: 'Выберите ключ-значение', list:'Доступные значения', text:'Ключ' } )
 						.fire( function(key, val) {
 								let text = val.innerText.replace(/^[\s\n]+|[\s\n]+$/g,'');
 								let el = createObj('div',{'id':Date.now(),'className':'domItem jsonItem value',
