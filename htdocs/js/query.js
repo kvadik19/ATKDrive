@@ -62,6 +62,7 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 			if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 			if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
 			if ( item.matches('.preset') ) value.key += ';%preset';
+			if ( item.matches('.bool') ) value.key += ';%bool';
 			value.val= item.lastElementChild.innerText;
 		} else if( item.lastElementChild ) {
 			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
@@ -69,6 +70,7 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 				if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 				if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
 				if ( item.matches('.preset') ) value.key += ';%preset';
+				if ( item.matches('.bool') ) value.key += ';%bool';
 			}
 			value.val = fromDOM(item.lastElementChild);
 		}
@@ -249,11 +251,11 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 				box.querySelectorAll('input').forEach( i =>{ snap += i.value.replace(/\s/g,'') });
 				return snap;
 			},
-		layout: function() {
+		layout: function(type, method) {
 				let bbar = document.getElementById('eCommit');
 				bbar.querySelectorAll('*:not(.static)').forEach( b =>{bbar.removeChild(b)});
 				let bsav = createObj('button',{'type':'button','className':'button ok','innerText':'Сохранить',
-									'onclick':dispatch.int.committer, 'disabled':1});
+									'onclick':dispatch[type].committer, 'disabled':1});
 				bbar.appendChild( bsav);
 			},
 		snapshot: '',
@@ -290,7 +292,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 														}
 									});
 				}
-				dispatch.layout();
+				dispatch.layout(type, method);
 				btnActivate();
 				keyTool.init(type, method);
 				this[type][method]();
@@ -391,9 +393,16 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 
 									let domrecv = toDOM( define.qw_init.qw_recv.data);
 									domrecv.querySelectorAll('div.value').forEach( d =>{		// External query type specific settings
-												if ( d.dataset.name ) {		// Reset key names to original
-													d.querySelectorAll('span.keyName').forEach( s =>{s.innerText = d.dataset.name});
+												if ( d.querySelector('span.keyName') ) {
+													let match = d.querySelector('span.keyName').innerText.match(/ <= ([^<^=]+)$/);
+													if ( match ) {
+														d.title = match[1];
+													}
 												}
+// 												if ( d.dataset.name ) {		// Reset key names to originals
+// 													d.querySelectorAll('span.keyName').forEach( s =>{
+// 																s.innerText = d.dataset.name});
+// 												}
 												d.querySelectorAll('span.keyVal').forEach( s =>{
 																	let key = s.innerText.replace(/^\$/,'');
 																	if ( translate[key] ) {
@@ -444,6 +453,41 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									+'нужно получить данные от сервера.\n'
 									+'Выполните настроечный запрос');
 						}
+					},
+				committer: function(evt) {
+						let name = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
+						let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
+						let formData = {'name': name,
+										'type': type,
+										'init': { 'qw_recv':{'code':bodyIn.querySelector('.qw_code .code').value,
+															'data':fromDOM( bodyIn.querySelector('.qw_data'))},
+												'qw_send':{'code':bodyOut.querySelector('.qw_code .code').value,
+															'data':fromDOM( bodyOut.querySelector('.qw_data'))}
+												},
+										'ajax': [],
+										};
+						let ajax = document.querySelectorAll('.tabContent.shown .qw_talks.ajax');
+						for ( let aN=0; aN<ajax.length; aN++) {
+							let send = ajax[aN].querySelector('.message.qw_send');
+							let recv = ajax[aN].querySelector('.message.qw_recv');
+							if ( recv.querySelector('.qw_code .code') && send.querySelector('.qw_code .code') ) {
+								formData.ajax.push({ 'qw_recv':{'code':recv.querySelector('.qw_code .code').value,
+																'data':fromDOM( recv.querySelector('.qw_data'))},
+													'qw_send':{'code':send.querySelector('.qw_code .code').value,
+																'data':fromDOM( send.querySelector('.qw_data'))}
+													});
+							}
+						}
+
+						flush({'code':'commit','data':formData}, document.location.href, function(resp) {
+								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+								if ( resp.fail ) {
+									alert(resp.fail);
+								} else if( resp.data.success == 1) {
+									dispatch.snapshot = dispatch.getSnap();
+									commitEnable();
+								}
+							});
 					}
 			},
 	};
@@ -469,8 +513,9 @@ let keyTool = {			// Add key-value floating window operations
 				let vbox = host.popup;
 				if ( !vbox ) {
 					vbox = createObj('select',{'className':'popBox','size':6,'style.display':'none',
-									'onblur':function() {this.style.display = 'none'},
-									'onchange':function() {host.previousElementSibling.value=this.value; 
+									'onblur':function() {this.style.display = 'none';keyTool.inpCheck();},
+									'onchange':function() {host.previousElementSibling.value=this.value;
+											keyTool.panel.querySelector('input#keyName').value=this.value;
 											this.blur() 
 										},
 									'onfocus':function() {
@@ -504,9 +549,10 @@ let keyTool = {			// Add key-value floating window operations
 				let cbox = host.popup;
 				if ( !cbox ) {
 					cbox = createObj('select',{'className':'popBox','size':6,'style.display':'none',
-									'onblur':function() {this.style.display = 'none'},
+									'onblur':function() {this.style.display = 'none';keyTool.inpCheck();},
 									'onchange':function() {host.value=this.value; 
 											host.title=this.options[this.selectedIndex].innerText;
+											keyTool.panel.querySelector('input#keyName').value=this.value;
 											this.blur() 
 										},
 									'onfocus':function() {
@@ -560,10 +606,6 @@ let keyTool = {			// Add key-value floating window operations
 																	di.ondblclick = keyTool.result;
 																}
 															} );
-					qdom.querySelectorAll('.domItem .value[data-name="'+value+'"]')
-											.forEach( di =>{ di.className += ' active'});
-					divQuery.appendChild( qdom);
-
 					if ( this.preset.info.matches('.bool') ) {
 						divText.removeAttribute('style');
 						divText.querySelector('#bool').removeAttribute('style');
@@ -571,8 +613,18 @@ let keyTool = {			// Add key-value floating window operations
 						divText.querySelector('label').innerHTML = 'Переменная <code>' + this.preset.info.dataset.name
 									+'</code> содержит логическое значение.<br>Опишите условие истинности:';
 						divText.querySelector('#bool_name').value = '';
-						if ( value.length>0 ) divText.querySelector('#bool_name').value = '$'+value;
+						let parts = value.match(/^\$?\((\$[^<^>^=^!]+)([<>=!]+)([^<^>^=^!]+)\)$/);
+						if ( parts ) {
+							divText.querySelector('#bool_name').value = parts[1];
+							divText.querySelector('#bool_cond').value = parts[2];
+							divText.querySelector('#bool_val').value = parts[3].replace(/^'|'$/g, '');
+							value = parts[1].replace(/^\$/,'');
+						}
 					}
+					qdom.querySelectorAll('.domItem .value[data-name="'+value+'"]')
+											.forEach( di =>{ di.className += ' active'});
+					divQuery.appendChild( qdom);
+
 				}
 				if( this.preset.items.includes('list') ) {		// It's visible (active)?
 					if ( this.preset.info ) {
@@ -1082,9 +1134,15 @@ document.getElementById('checkload').onclick = function(e) {		// Debugging query
 		let code = bodyOut.querySelector('.qw_code .code').innerText || bodyOut.querySelector('.qw_code .code').value;
 		let data = fromJSON( fromDOM( bodyOut.querySelector('.qw_data')) );
 		let form = {'code':'checkload', 'data':{'owner':name, 'code':code, 'data':data}};
+		document.getElementById('checkload_bar').style.visibility = 'visible';
 		flush(form, document.location.href, function(resp) {
+				document.getElementById('checkload_bar').style.visibility = 'hidden';
 				resp = JSON.parse(resp);
-				bodyIn.querySelector('.qw_code .code').value = resp.data.code;
-				keyTool.set( { qdata: resp.data });
+				if ( resp.fail ) {
+					alert('Ошибка запроса к серверу\n'+resp.fail);
+				} else {
+					bodyIn.querySelector('.qw_code .code').value = resp.data.code;
+					keyTool.set( { qdata: resp.data });
+				}
 			});
 	};

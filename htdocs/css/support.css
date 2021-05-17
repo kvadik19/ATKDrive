@@ -302,6 +302,16 @@ ol.subTabs li.subTab.active {
 .buttonbar .comment {
 	margin:1em 0px;
 }
+.buttonbar button.anima {
+	width:9em;
+	text-align:left;
+}
+.buttonbar button.anima img {
+	width:1.3em;
+	height:1.3em;
+	vertical-align:middle;
+	visibility:hidden;
+}
 
 .error {
 	margin:30px;
@@ -441,6 +451,7 @@ div.options {
 	border:1px solid var(--balloon-border,'#999999');
 	background-color: var(--balloon-back,'#ffffcc');
 	color:var(--balloon-text,'#663333');
+	max-width:90%;
 }
 .over-panel .panelrow {
 	margin:0.2em 1em;
@@ -569,14 +580,15 @@ div.options {
 	border: 1px solid var(--body-gray-dk,'#eaeaea');
 	background-color:var(--body-back, '#ffffff');
 	color:var(--balloon-sel-back, '#6699aa');
-	vertical-align: baseline;
 	cursor:pointer;
 	font-family: SansMono, monospace;
-	font-size: 110%;
+/* 	vertical-align: baseline; */
+/* 	font-size: 110%; */
 }
 #keyHolder .optgroup.bool input[type="text"],
 #keyHolder .optgroup.bool input[type="text"]:disabled {
 	width:100%;
+	padding:0px;
 	margin:0px auto;
 	background-color:var(--body-back, '#ffffff');
 	color:var(--body-text, '#333333');
@@ -659,6 +671,7 @@ div.options {
 	background-color:var(--body-back-alt,'#ebf5ef');
 	padding: 1em 0px;
 	border-radius:0.3em;
+	overflow-x:auto;
 }
 .keyName::before,
 .keyName::after {
@@ -710,7 +723,7 @@ div.options {
 	font-family:SansMono, monospace;
 	margin-left:1.5em;
 	cursor:default;
-	overflow-x:hidden;
+	overflow-x:visible;
 }
 .array {
 	border-left:1px dashed var(--balloon-sel-back,'#6699aa');

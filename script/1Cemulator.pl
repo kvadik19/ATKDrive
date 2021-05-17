@@ -14,7 +14,7 @@ use FindBin;
 
 my $EOL = "\015\012";
 my $port = 10001;
-my $buffsize = 1024;
+my $buffsize = 4096;
 my $sys_root = "$FindBin::Bin/..";
 
 my $sock = IO::Socket::INET->new(
@@ -71,7 +71,7 @@ while ( my $client = $sock->accept() ) {
 					."$EOL$msg_send";
 	}
 	$msg_recv = '';
-	$client->send( "$msg_send", 0 );
+	$client->send( $msg_send, 0 );
 }
 ##########
 sub renew {

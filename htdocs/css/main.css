@@ -150,6 +150,12 @@ ul li { list-style-type:none; }
 	-o-transition: all .3s ease 0s;
 	transition: all .3s ease 0s;
 }
+.fail {
+	margin:2em;
+	padding:2em;
+	color:var(--balloon-text,'#663333');
+	background-color:var(--balloon-back,'#ffffcc');
+}
 
 .panel {
 	font-family:var(--panel-font);

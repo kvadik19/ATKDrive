@@ -1,0 +1,25 @@
+<div class="container">
+		<h1 class="form__title">Запрос</h1>
+	<div id="finance-body" class="panel light wide">
+		<p>Страница гипотетического запроса
+		</p>
+		<h2>Грузовики</h2>
+		<div class="row">Дата начала: <input type="text" value="<TMPL_VAR NAME='begin'>" /></div>
+		<div class="row">Дата окончания: <input type="text" value="<TMPL_VAR NAME='end'>" /></div>
+		<div class="row">Количество документов: <input type="text" value="<TMPL_VAR NAME="koldoc">" /></div>
+		<div class="fintable">
+<TMPL_LOOP NAME="list">
+		<div class="finrow">
+		<div class="fin-date">
+	<TMPL_VAR NAME="date">
+		</div>
+		<div class="fin-sum">
+	<TMPL_VAR NAME="qty">
+		</div>
+	<TMPL_VAR NAME="sum">
+		</div>
+</TMPL_LOOP>
+	<TMPL_VAR NAME="total">
+		</div>
+	</div>
+</div>

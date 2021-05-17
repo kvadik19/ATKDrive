@@ -15,7 +15,7 @@
 	</ol>
 	<div class="subHolder">
 		<h4>Данные для загрузки страницы <code class="pageurl"></code></h4>
-		<div class="qw_talks">
+		<div class="qw_talks init">
 			<div class="message qw_send init">
 				<h4>Запрос, отправляемый при загрузке</h4>
 				<div class="qw_body">
@@ -46,7 +46,10 @@
 						<p class="comment">Настроечный &laquo;запрос при загрузке&raquo; к серверу 1С
 						от имени любого клиента с правами выполнения запросов
 						</p>
-						<button type="button" id="checkload">Отправить</button>
+						<button type="button" class="anima" id="checkload">
+							<img id="checkload_bar" src="/img/pb-1_32x32.gif" />
+							Отправить
+						</button>
 					</div>
 				</div>
 			</div>

@@ -16,8 +16,10 @@ use HTML::Template;
 use MIME::Lite;
 use Utils::Tools;
 use Drive::Media;
+use Drive::Support;
 
 our $templates;
+our $pages;
 our $my_name = 'client';
 our $sys = \%Drive::sys;
 my $uncheck = 'logout';
@@ -182,7 +184,6 @@ my $self = shift;
 	my $out = "404 : Page $action not found yet";
 	eval { $out = $self->$action };
 	if ( $@) {			# Special sub is not defined (yet?)
-		$self->logger->dump($@, 3);
 		$out = $self->process($action);		# Process queries based on template
 	}
 
@@ -208,8 +209,19 @@ sub prepare_tmpl {	# Prepare template
 #################
 my $self = shift;
 my $tmpname = shift;
-	my $tmpl_load = sub  { my $tfile = shift;
-							open( my $th, "< $tfile");
+	my $tmplfile = "$Drive::sys_root$sys->{'html_dir'}/$tmpname.tmpl";
+	my $qryfile = "$Drive::sys_root$sys->{'conf_dir'}/query/$tmpname.json";
+
+	my $query_load = sub { my $ttxt = shift;
+								my $dom = Mojo::DOM->new( $ttxt );
+								my $define = Drive::Support->template_map( $tmpname);
+								my $tmpl_json = Drive::Support->dom_json( $dom);
+								my $json_sync = Drive::Support->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
+								$define->{'init'}->{'qw_recv'}->{'data'} = $json_sync;
+								return $define;
+						};
+	
+	my $tmpl_load = sub  { open( my $th, "< $tmplfile");
 							my $ttxt = decode_utf8(join('', <$th>));
 							close( $th);
 							my $templ;
@@ -222,27 +234,36 @@ my $tmpname = shift;
 								};
 							if ( $@ ) {
 								$self->logger->dump("Template $tmpname: $@");
+								$templ = "<h1>Error loading $tmpname:</h1><p class=\"fail\">$@</p>";
 							} else {
-								$templates->{$tmpname} = {'tmpl' => $templ, 'upd' => (stat($tfile))[9]};
+								my $query = $query_load->( $ttxt );
+								$templates->{$tmpname} = {
+													'tmpl' => $templ, 
+													'query' => $query,
+													'upd' => {'tmpl' => (stat($tmplfile))[9],
+																'query' => (stat($qryfile))[9],
+															},
+												};
 							}
+							return $ttxt;
 						};
 
-	my $tmplfile = "$Drive::sys_root$sys->{'html_dir'}/$tmpname.tmpl";
 	if ( $templates->{$tmpname} ) {
-		if ( $templates->{$tmpname}->{'upd'} < (stat($tmplfile))[9] ) {			# Is too old template?
-			$tmpl_load->($tmplfile);
+		if ( $templates->{$tmpname}->{'upd'}->{'tmpl'} < (stat($tmplfile))[9] ) {			# Is too old template definition?
+			$tmpl_load->();
 		}
-	} elsif( -e( $tmplfile ) ) {
-		$tmpl_load->($tmplfile);
+		if ( $templates->{$tmpname}->{'upd'}->{'query'} < (stat($qryfile))[9] ) {
+			open( my $th, "< $tmplfile");
+			my $ttxt = decode_utf8(join('', <$th>));
+			close( $th);
+			$templates->{$tmpname}->{'query'} = $query_load->( $ttxt);		# Load translaton map for template
+			$templates->{$tmpname}->{'upd'}->{'query'} = (stat($qryfile))[9];
+		}
+	} elsif( -f( $tmplfile ) ) {
+		$tmpl_load->();
+	} else {
+		$self->logger->dump("Template for $action not found", 3);
 	}
-}
-#################
-sub logout {	# Close user connection
-#################
-my $self = shift;
-	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'} = 0;
-	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'fp'} = '';
-	return {'redirect' => 'cabinet'};
 }
 #################
 sub process {	# Main user operations form
@@ -254,6 +275,14 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 	my $udata = $self->{'qdata'}->{'user_state'};
 
 	if ( $templates->{$action} && $templates->{$action}->{'tmpl'} ) {
+		if ( $self->req->content->headers->content_type eq 'application/x-www-form-urlencoded' 
+				&& $param->{'code'} ) {
+$self->logger->dump("Process ajax $action/$param->{'code'}");
+		} else {
+$self->logger->dump("Process init $action");
+# $self->logger->dump(Dumper($templates->{$action}->{'query'}->{'init'}->{'qw_recv'}));
+		}
+
 		$templates->{$action}->{'tmpl'}->param($param);
 		$templates->{$action}->{'tmpl'}->param($udata);
 		$templates->{$action}->{'tmpl'}->param($sys);
@@ -624,5 +653,13 @@ my ($self, $login, $pwd) = @_;
 	$sql .= " UNION SELECT 4 AS state,$flist FROM users WHERE LOWER(_email)='".lc($login)."'";
 	my $urec = $self->dbh->selectall_arrayref($sql, {Slice=>{}});
 	return shift( @$urec );
+}
+#################
+sub logout {	# Close user connection
+#################
+my $self = shift;
+	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'uid'} = 0;
+	$self->{'qdata'}->{'user_state'}->{'cookie'}->{'fp'} = '';
+	return {'redirect' => 'cabinet'};
 }
 1

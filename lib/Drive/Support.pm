@@ -195,11 +195,16 @@ my $self = shift;
 			my $resp = Utils::Tools->ask_inet(
 								host => $config->{'connect'}->{'host'},
 								port => $config->{'connect'}->{'port'},
-								msg => $qdata,
-								login => $config->{'connect'}->{'htlogin'},
-								pwd => $config->{'connect'}->{'htpasswd'},
+								msg => encode_utf8($qdata),
+								login => encode_utf8($config->{'connect'}->{'htlogin'}),
+								pwd => encode_utf8($config->{'connect'}->{'htpasswd'}),
 							);
-			$ret->{'json'}->{'data'} = decode_json($resp);
+			if ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
+				eval{ $ret->{'json'}->{'data'} = decode_json($resp) };
+				$ret->{'json'}->{'fail'} = $@ if $@;
+			} else {
+				$ret->{'json'}->{'fail'} = $resp;
+			}
 
 		} elsif ( $param->{'data'}->{'type'} eq 'ext' ) {		# Queries from templates
 			my $oper = $self->template_query( $param );
@@ -268,7 +273,7 @@ my ($self, $dataref, $udata) = @_;
 		foreach my $ai ( @$dataref) {
 			$ai = $self->apply_user( $ai, $udata);
 		}
-	} else {
+	} elsif( $dataref =~ /^\$/ ) {
 		$dataref =~ s/^\$//;
 		$dataref = $udata->{$dataref};
 	}
@@ -292,20 +297,71 @@ my $param = shift;
 		my $defdata = {'_uid'=>'$_uid', 'code'=>'$code'};		# Default data always must present
 		my $define = $self->template_map( $tmpl_name);			# Load translaton map defines for template
 
-		unless ( exists($define->{'init'}->{'send'}->{'data'} ) ) {		# Assign required query data
-			$define->{'init'}->{'send'} = {'code' => $tmpl_name, 'data' => $defdata};
+		unless ( exists($define->{'init'}->{'qw_send'}->{'data'} ) ) {		# Assign required query data
+			$define->{'init'}->{'qw_send'} = {'code' => $tmpl_name, 'data' => $defdata};
 		}
 		my $dom = Mojo::DOM->new( $tmpl_data );
-		$ret->{'qw_init'}->{'qw_send'} = $define->{'init'}->{'send'};
-		$ret->{'qw_init'}->{'qw_recv'} = {'code' => $define->{'init'}->{'recv'}->{'code'}, 'data' => $self->dom_json( $dom) };
-		while ( my ($code, $query) = each( %{$define->{'ajax'}}) ) {
-			$ret->{'qw_ajax'}->{$code} = $query;
-		}
+		$ret->{'qw_init'} = $define->{'init'};
+		my $tmpl_json = $self->dom_json( $dom);
+		my $json_sync = $self->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
+		#### Sync between stored defines and template structure!
+		
+		$ret->{'qw_init'}->{'qw_recv'} = {'code' => $define->{'init'}->{'qw_recv'}->{'code'}, 'data' => $json_sync};
+		$ret->{'qw_ajax'} = $define->{'ajax'};
+
 		$ret->{'success'} = 1;
 		delete( $ret->{'fail'} );
+
+	} elsif ( $action eq 'commit') {
+		my $config_path = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/query");
+		my $filename = "$config_path/$tmpl_name.json";
+		my $def = {'define_init' => $param->{'data'}->{'init'},
+					'define_ajax' => $param->{'data'}->{'ajax'}
+					};
+		my $res = Drive::write_json( $def, $filename);
+		if ( $res ) {
+			$ret->{'fail'} = $res;
+		} else {
+			$ret->{'success'} = 1;
+			delete( $ret->{'fail'} );
+		}
 	}
 
 	return $ret;
+}
+#####################
+sub json_sync {			# Sync two jsons
+#####################
+my ($self, $target, $source) = @_;
+	if ( ref( $target) eq 'HASH' && ref($source) eq 'HASH' ) {
+		while ( my ($k, $v) = each( %$target)) {
+			next if $k =~ /^==manifest/;
+			my $key = (split(/;/, $k))[-1];
+			if ( exists( $source->{$key}) ) {
+				my $syncd = $self->json_sync( $target->{$k}, $source->{$key});
+				$target->{$k} = $syncd;
+			} else {
+				delete( $target->{$k});
+			}
+		}
+		my $keys = [ keys(%$target) ];
+		while ( my ($k, $v) = each(%$source) ) {
+			my $qr = qr/$k$/;
+			my $at = Drive::find_first( $keys, sub{ my ($key, $reg) = @_;
+												return undef if $key =~ /^==manifest/;
+												return 1 if $key =~ /$reg/ || encode_utf8($key) =~ /$reg/;
+												}, $qr );
+			$target->{$k} = $v if $at < 0;
+		}
+	} elsif ( ref( $target) eq 'ARRAY' && ref($source) eq 'ARRAY' ) {
+		my $an = 0;
+		foreach my $ai ( @$target) {
+			next if $ai =~ /^==manifest/;
+			my $syncd = $self->json_sync( $ai, $source->[$an++]);
+			$ai = $syncd;
+		}
+	}
+	return $target;
 }
 #####################
 sub template_map {			# Read template translation map
@@ -342,7 +398,14 @@ my $item = shift;
 		my $tagname = $item->children->[$_]->tag;
 		my ($varname, $keyname);
 
-		if ( $tagname =~ /^tmpl_/i ) {				# HTML::Template's tag
+		if ( $tagname eq 'input') {
+			if ( $item->children->[$_]->val =~ /tmpl_var/i ) {
+				my $valdom = Mojo::DOM->new->parse( $item->children->[$_]->val );
+				$varname = $valdom->at('tmpl_var')->attr('name') if $valdom->at('tmpl_var');
+				$map->{$varname} = "\$$varname" if $varname;
+			}
+
+		} elsif ( $tagname =~ /^tmpl_/i ) {				# HTML::Template's tag
 			$varname = $item->children->[$_]->attr('name');
 			$keyname = $varname;
 
@@ -644,8 +707,8 @@ my $self = shift;
 							host => $param->{'data'}->{'host'},
 							port => $param->{'data'}->{'port'},
 							msg => encode_utf8( $param->{'data'}->{'ping_msg'}),
-							login => $param->{'data'}->{'htlogin'},
-							pwd => $param->{'data'}->{'htpasswd'},
+							login => encode_utf8($param->{'data'}->{'htlogin'}),
+							pwd => encode_utf8($param->{'data'}->{'htpasswd'}),
 						);
 		$ret->{'json'} = { 'code' => $param->{'code'}, 'response' => decode_utf8($resp) };
 
@@ -967,8 +1030,6 @@ my $self = shift;
 	} else {
 		$msg_send = {'ECHO' => $msg_recv};
 	}
-# 	$msg_send = encode_json( $msg_send );
-# 	$self->render( data => $msg_send, format => 'json' );
 	$self->render( json => $msg_send );
 	return;
 }
