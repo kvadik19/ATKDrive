@@ -262,7 +262,7 @@ my $tmpname = shift;
 	} elsif( -f( $tmplfile ) ) {
 		$tmpl_load->();
 	} else {
-		$self->logger->dump("Template for $action not found", 3);
+		$self->logger->dump("Template for $tmpname not found", 3);
 	}
 }
 #################
@@ -279,8 +279,10 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 				&& $param->{'code'} ) {
 $self->logger->dump("Process ajax $action/$param->{'code'}");
 		} else {
-$self->logger->dump("Process init $action");
-# $self->logger->dump(Dumper($templates->{$action}->{'query'}->{'init'}->{'qw_recv'}));
+$self->logger->dump("Process init for $action");
+			my $qw_send = $templates->{$action}->{'query'}->{'init'}->{'qw_send'};
+			Drive::Support->apply_user( $qw_send, $udata->{'record'} );
+$self->logger->dump(Dumper($qw_send));
 		}
 
 		$templates->{$action}->{'tmpl'}->param($param);

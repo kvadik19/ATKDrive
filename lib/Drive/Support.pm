@@ -303,7 +303,9 @@ my $param = shift;
 		my $dom = Mojo::DOM->new( $tmpl_data );
 		$ret->{'qw_init'} = $define->{'init'};
 		my $tmpl_json = $self->dom_json( $dom);
-		my $json_sync = $self->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
+		my $json_sync = $tmpl_json;
+
+		$json_sync = $self->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json) if exists( $define->{'init'}->{'qw_recv'}->{'data'} );
 		#### Sync between stored defines and template structure!
 		
 		$ret->{'qw_init'}->{'qw_recv'} = {'code' => $define->{'init'}->{'qw_recv'}->{'code'}, 'data' => $json_sync};
