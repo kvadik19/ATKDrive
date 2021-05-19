@@ -9,7 +9,7 @@ use warnings;
 use Cwd 'abs_path';
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(j decode_json encode_json);
-use Mojo::Util qw(url_escape url_unescape b64_encode  trim md5_sum);
+use Mojo::Util qw(xml_escape url_escape url_unescape b64_encode trim md5_sum);
 use File::Path qw(make_path mkpath remove_tree rmtree);
 use Time::HiRes;
 use HTML::Template;
@@ -182,12 +182,11 @@ my $self = shift;
 	$self->prepare_tmpl($action);
 
 	my $out = "404 : Page $action not found yet";
-	eval { $out = $self->$action };
-	if ( $@) {			# Special sub is not defined (yet?)
-		$out = $self->process($action);		# Process queries based on template
-	}
+	eval { $out = $self->$action };		# Special sub is not defined (yet?)
+	$out = $self->process($action) if $@;		# Process queries based on template
 
 	if ( ref($out) eq 'HASH' ) {
+		$self->logger->dump("Failure in '$action': $out->{'fail'}", 3) if $out->{'fail'};
 		if ( exists( $out->{'json'}) ) {
 			$self->render( type => 'application/json', json => $out->{'json'} );
 			return;
@@ -212,16 +211,17 @@ my $tmpname = shift;
 	my $tmplfile = "$Drive::sys_root$sys->{'html_dir'}/$tmpname.tmpl";
 	my $qryfile = "$Drive::sys_root$sys->{'conf_dir'}/query/$tmpname.json";
 
-	my $query_load = sub { my $ttxt = shift;
-								my $dom = Mojo::DOM->new( $ttxt );
-								my $define = Drive::Support->template_map( $tmpname);
-								my $tmpl_json = Drive::Support->dom_json( $dom);
-								my $json_sync = Drive::Support->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
-								$define->{'init'}->{'qw_recv'}->{'data'} = $json_sync;
-								return $define;
+	my $query_load = sub {	my $ttxt = shift;
+							my $dom = Mojo::DOM->new( $ttxt );
+							my $define = Drive::Support->template_map( $tmpname);
+							$self->logger->dump("prepare_tmpl $tmpname $define->{'fail'}", 2) if $define->{'fail'};
+							my $tmpl_json = Drive::Support->dom_json( $dom);
+							my $json_sync = Drive::Support->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
+							$define->{'init'}->{'qw_recv'}->{'data'} = $json_sync;
+							return $define;
 						};
 	
-	my $tmpl_load = sub  { open( my $th, "< $tmplfile");
+	my $tmpl_load = sub  {	open( my $th, "< $tmplfile");
 							my $ttxt = decode_utf8(join('', <$th>));
 							close( $th);
 							my $templ;
@@ -234,17 +234,21 @@ my $tmpname = shift;
 								};
 							if ( $@ ) {
 								$self->logger->dump("Template $tmpname: $@");
-								$templ = "<h1>Error loading $tmpname:</h1><p class=\"fail\">$@</p>";
-							} else {
-								my $query = $query_load->( $ttxt );
-								$templates->{$tmpname} = {
-													'tmpl' => $templ, 
-													'query' => $query,
-													'upd' => {'tmpl' => (stat($tmplfile))[9],
-																'query' => (stat($qryfile))[9],
-															},
-												};
+								$ttxt = "<h1>Error loading $tmpname:</h1><p class=\"fail\">".xml_escape($@)."</p>";
+								$templ = HTML::Template->new(
+										scalarref => \$ttxt,
+										die_on_bad_params => 0,
+										die_on_missing_include => 0,
+									);
 							}
+							my $query = $query_load->( $ttxt );
+							$templates->{$tmpname} = {
+												'tmpl' => $templ, 
+												'query' => $query,
+												'upd' => {'tmpl' => (stat($tmplfile))[9],
+															'query' => (stat($qryfile))[9],
+														},
+											};
 							return $ttxt;
 						};
 
@@ -273,28 +277,64 @@ my $action = shift;
 my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implemented yet</h1></div>", 'http_state' => 404 };
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
+	my $conf = $self->hostConfig;
+	my ( $host, $port ) = ( $conf->{'connect'}->{'host'}, $conf->{'connect'}->{'port'});
+	if ( $conf->{'connect'}->{'emulate'} ) {			# See at script/1Cemulate.pl
+		$host = 'localhost';
+		$port = '10001';
+	}
 
 	if ( $templates->{$action} && $templates->{$action}->{'tmpl'} ) {
+		my ($qw_send, $qw_recv);
 		if ( $self->req->content->headers->content_type eq 'application/x-www-form-urlencoded' 
 				&& $param->{'code'} ) {
-$self->logger->dump("Process ajax $action/$param->{'code'}");
+			if ( ref( $templates->{$action}->{'query'}->{'ajax'}) eq 'ARRAY' ) {	# Have ordered list of postprocessors?
+				my $ajax = {};
+				foreach my $qw ($templates->{$action}->{'query'}->{'ajax'}) {		# Translate ajax's array into hash
+					$ajax->{$qw->{'qw_send'}->{'code'}} = $qw;
+				}
+				$templates->{$action}->{'query'}->{'ajax'} = $ajax;
+			}
+			$qw_send = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_send'};
+			$qw_recv = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_recv'};
 		} else {
-$self->logger->dump("Process init for $action");
-			my $qw_send = $templates->{$action}->{'query'}->{'init'}->{'qw_send'};
-			Drive::Support->apply_user( $qw_send, $udata->{'record'} );
-$self->logger->dump(Dumper($qw_send));
+			$qw_send = $templates->{$action}->{'query'}->{'init'}->{'qw_send'};
+			$qw_recv = $templates->{$action}->{'query'}->{'init'}->{'qw_recv'};
 		}
+
+		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});
+		$qw_recv->{'data'} = Drive::Support->from_json( $qw_recv->{'data'});
+		Drive::Support->apply_user( $qw_send->{'data'}, $udata->{'record'} );
+		$qw_send = encode_json( $qw_send);
+
+		my $resp = Utils::Tools->ask_inet(
+							host => $host,
+							port => $port,
+							msg => encode_utf8($qw_send),
+							login => encode_utf8($conf->{'connect'}->{'htlogin'}),
+							pwd => encode_utf8($conf->{'connect'}->{'htpasswd'}),
+						);
+		return {'fail' => $resp} unless $resp =~ /^[\{\[].*[\}\]]$/;
+
+		eval{ $resp = decode_json($resp) };
+		return {'fail' => $@} if $@;
+
+		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
+		$out = Drive::Support->apply_data( $qw_recv->{'data'}, $resp->{'data'});
+# $self->logger->dump(Dumper($qw_recv));
+# $self->logger->dump(Dumper($out));
 
 		$templates->{$action}->{'tmpl'}->param($param);
 		$templates->{$action}->{'tmpl'}->param($udata);
 		$templates->{$action}->{'tmpl'}->param($sys);
 		$templates->{$action}->{'tmpl'}->param($udata->{'record'});
+		$templates->{$action}->{'tmpl'}->param($out) if ref( $out) eq 'HASH';
 		$out = $templates->{$action}->{'tmpl'}->output();
 		my $dom = Mojo::DOM->new( $out );
 		my $title = $dom->find('h1')->[0];
 		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
 	} else {
-		$self->logger->dump("Undefined processor for '$action'", 3);
+		$out->{'fail'} = "Undefined processor";
 	}
 
 	return $out;
@@ -308,11 +348,12 @@ my $out;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
-	my $conf_file = "$conf_dir/config.xml";
 
 	my $struct = [];
-	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
+	$struct = $self->hostConfig->{'utable'};
+# 	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+# 	my $conf_file = "$conf_dir/config.xml";
+# 	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
 
 	if ( $param->{'code'} ) {
 		$out = { 'json' => {'code' => $param->{'code'}} };
@@ -379,11 +420,11 @@ my $uid = shift;
 	my $param = $self->{'qdata'}->{'http_params'};
 	my $udata = $self->{'qdata'}->{'user_state'};
 
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
-	my $conf_file = "$conf_dir/config.xml";
-
 	my $struct = [];
-	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
+	$struct = $self->hostConfig->{'utable'};
+# 	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+# 	my $conf_file = "$conf_dir/config.xml";
+# 	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
 
 	my $db_update = {'_ustate' => $udata->{'record'}->{'_ustate'} || $sys->{'user_state'}->{'register'}->{'value'},
 					'_fp' => $udata->{'fp'},
@@ -468,13 +509,12 @@ my $out;
 		$self->prepare_tmpl('account');			# If Not loaded yet
 		return $self->account();
 	}
-
-	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
-	my $conf_file = "$conf_dir/config.xml";
 	my $now = time();
-
 	my $struct = [];
-	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
+	$struct = $self->hostConfig->{'utable'};
+# 	my $conf_file = "$conf_dir/config.xml";
+# 	my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+# 	$struct = Drive::read_xml( $conf_file, 'config' )->{'utable'};
 
 	if ( $param->{'code'} ) {			# AJAX request received?
 		$out = {'json' => {'code' => 0}};			# JSON will be returned

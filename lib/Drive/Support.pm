@@ -176,7 +176,8 @@ my $self = shift;
 		} elsif ( $action eq 'checkload' ) {				# Debug query from templates during page load
 
 			my $keyfld = '_uid';	# Pickup any random accepted user
-			my $config = Drive::read_xml( "$Drive::sys_root$sys->{'conf_dir'}/config.xml" );
+# 			my $config = Drive::read_xml( "$Drive::sys_root$sys->{'conf_dir'}/config.xml" );
+			my $config = $self->hostConfig;
 
 			my $idx = Drive::find_first( $config->{'utable'}, sub { my $fld = shift; return $fld->{'link'} == 1 } );
 			$keyfld = $config->{'utable'}->[$idx]->{'name'} if $idx > -1;					# Detect control field
@@ -234,9 +235,10 @@ my $self = shift;
 		}
 
 	} else {			# Prepare static page
-		my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
-		my $conf_file = "$conf_dir/config.xml";
-		my $config = Drive::read_xml( $conf_file );
+# 		my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
+# 		my $conf_file = "$conf_dir/config.xml";
+# 		my $config = Drive::read_xml( $conf_file );
+		my $config = $self->hostConfig;
 
 		my $media_keys = [];
 		while ( my ($k, $v) = each( %{$sys->{'media_keys'}}) ) {
@@ -280,6 +282,32 @@ my ($self, $dataref, $udata) = @_;
 	return $dataref;
 }
 #####################
+sub apply_data {	# Apply data on data template
+#####################
+my ($self, $model, $data) = @_;
+	my $ret;
+	if ( ref($model) eq 'HASH' && ref($data) eq 'HASH' ) {
+		$ret = {};
+		while ( my ($k, $v) = each( %$model)) {
+			my $dk = $v;
+			if ( $k =~ /^(.+) <= (.+)$/ ) {			# Special formatted keyName?
+				$k = $1;
+				$dk = $2;
+			}
+			$dk =~ s/^\$//;
+			$ret->{$k} = $self->apply_data( $v, $data->{$dk});
+		}
+	} elsif ( ref( $model) eq 'ARRAY' && ref($data) eq 'ARRAY' ) {
+		$ret = [];
+		foreach my $mi ( @$model) {
+			push( @$ret, $self->apply_data( $mi, shift( @$data)));
+		}
+	} elsif( $model =~ /^\$/ ) {
+		$ret = $data;
+	}
+	return $ret;
+}
+#####################
 sub template_query {			# Operations for query templates
 #####################
 my $self = shift;
@@ -303,9 +331,7 @@ my $param = shift;
 		my $dom = Mojo::DOM->new( $tmpl_data );
 		$ret->{'qw_init'} = $define->{'init'};
 		my $tmpl_json = $self->dom_json( $dom);
-		my $json_sync = $tmpl_json;
-
-		$json_sync = $self->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json) if exists( $define->{'init'}->{'qw_recv'}->{'data'} );
+		my $json_sync = $self->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
 		#### Sync between stored defines and template structure!
 		
 		$ret->{'qw_init'}->{'qw_recv'} = {'code' => $define->{'init'}->{'qw_recv'}->{'code'}, 'data' => $json_sync};
@@ -385,6 +411,48 @@ my $owner = shift;
 		}
 	} else {
 		$ret->{'fail'} = "File $filename not found";
+	}
+	return $ret;
+}
+#####################
+sub from_json {			# Make JSON query from JSON query definition, ignore overload infos (like query.js->fromJSON)
+#####################
+my $self = shift;
+my $obj = shift;
+	my $res;
+	if ( ref( $obj) eq 'ARRAY' ) {
+		$res = [];
+		foreach my $ai ( @$obj) {
+			next if $ai =~ /^==manifest/;
+			my $val = $self->from_json( $ai);
+			push( @$res, $val);
+		}
+	} elsif( ref( $obj) eq 'HASH' ) {
+		$res = {};
+		while( my ($key, $val) = each( %$obj) ) {
+			next if $key =~ /^==manifest/;
+			my $okey = $self->key_split( $key);
+			$res->{$okey->{'uname'}} = $self->from_json($val);
+		}
+	} else {
+		$res = $obj;
+	}
+	return $res;
+}
+#####################
+sub key_split {			# Obtain extra information from keyName for from_json (like query.js->keySplit)
+#####################
+my $self = shift;
+my $key = shift;
+	my @parts = split(/;/, $key);
+	my $ret = {'uname'=>shift( @parts), 'name'=>'', 'classname'=>''};
+	while( my $part = shift( @parts) ) {
+		if ( $part =~ /^%/ ) {
+			$part =~ s/^%//;
+			$ret->{'classname'} .= " $part";
+		} elsif( $part) {
+			$ret->{'name'} = $part;
+		}
 	}
 	return $ret;
 }
@@ -680,7 +748,8 @@ my $self = shift;
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
-	$config = Drive::read_xml( $conf_file );
+# 	$config = Drive::read_xml( $conf_file );
+	$config = $self->hostConfig;
 
 	my $ret = {'config_file' => $conf_file, 'auth_file' => $auth_file, 'magic_mask' => 8,
 				'config' => $config->{'connect'}};
@@ -751,7 +820,8 @@ sub utable {		# User registration tuneup
 	my $conf_file = "$conf_dir/config.xml";
 
 	my $config = {};
-	$config = Drive::read_xml( $conf_file );
+# 	$config = Drive::read_xml( $conf_file );
+	$config = $self->hostConfig;
 
 	my $struct = [];
 	my $ustr = $self->dbh->selectall_arrayref("DESCRIBE users", {Slice=>{}});

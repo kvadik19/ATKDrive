@@ -151,10 +151,13 @@ ul li { list-style-type:none; }
 	transition: all .3s ease 0s;
 }
 .fail {
-	margin:2em;
-	padding:2em;
+	margin:1em;
+	padding:1em;
 	color:var(--balloon-text,'#663333');
 	background-color:var(--balloon-back,'#ffffcc');
+	font-family: SansMono, monospace;
+	font-size: 115%;
+	line-height:1.5;
 }
 
 .panel {

@@ -22,6 +22,7 @@ our %sys;
 our $sys_root;
 our $logger;
 our $dbh;
+our $gate_config;
 
 #################
 sub startup {
@@ -78,6 +79,15 @@ sub startup {
 
 	$self->helper(logger => sub { return $logger } );
 
+	$self->helper( hostConfig => sub  {		#		Load/renew configuration
+										my $filename = "$sys_root$sys{'conf_dir'}/config.xml";
+										if ( !$gate_config->{'_upd'} || $gate_config->{'_upd'} < (stat($filename))[9] ) {
+											$gate_config = Drive::read_xml( $filename );
+											$gate_config->{'_upd'} = (stat($filename))[9];
+										}
+										return $gate_config;
+									}
+				);
 	my @db_str = ( $sys{'db_base'},
 					$sys{'db_host'} || 'localhost:3306',
 				);

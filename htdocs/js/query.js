@@ -148,7 +148,7 @@ let fromJSON = function(obj) {			// Make JSON query from JSON query definition, 
 		return res;
 	};
 
-let keySplit = function( keyName ) {
+let keySplit = function( keyName ) {		// Obtain extra information from keyName
 		let parts = keyName.split(';');
 		let ret = { 'uname':parts.shift(), 'name':'', 'classname':'' };
 		let part;
