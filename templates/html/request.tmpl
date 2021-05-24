@@ -3,6 +3,19 @@
 	<div id="finance-body" class="panel light wide">
 		<p>Страница гипотетического запроса
 		</p>
+		<div class="usermode">
+	<TMPL_IF name="is_client">
+			Заказчик:
+	<TMPL_ELSE>
+		<TMPL_IF name="is_carrier">
+			Перевозчик:
+		<TMPL_ELSE>
+			Заказчик/Перевозчик:
+		</TMPL_IF>
+	</TMPL_IF>
+		<TMPL_VAR NAME="fullname">
+		</div>
+
 		<h2>Грузовики</h2>
 		<div class="row">Дата начала: <input type="text" value="<TMPL_VAR NAME='begin'>" /></div>
 		<div class="row">Дата окончания: <input type="text" value="<TMPL_VAR NAME='end'>" /></div>

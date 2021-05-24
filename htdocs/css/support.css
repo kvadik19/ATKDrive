@@ -567,7 +567,7 @@ div.options {
 .optgroup.bool .popBox {
 	position:absolute;
 	z-index:11;
-	overflow:hidden;
+	overflow:auto;
 	padding:0.3em;
 }
 .optgroup.bool #bool_val {
@@ -642,6 +642,14 @@ div.options {
 .qw_body .buttonbar {
 	margin:1em 0px 0px 0px;
 	padding:0px;
+}
+.qw_body .buttonbar input[type="text"]{
+	margin-right: 0.5em;
+	padding: 0.1em 0.2em;
+	width: 3em;
+	text-align: center;
+	height: 1.2em;
+	vertical-align: middle;
 }
 
 .qwHdr {

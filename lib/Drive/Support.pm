@@ -15,12 +15,12 @@ use Fcntl ':mode';
 use IO::Socket;
 use IO::Select;
 use POSIX;
+use Date::Handler;
 
 use Utils::Tools;
 use Time::HiRes qw( usleep );
 use HTML::Template;
 
-my $templates;
 my $sys = \%Drive::sys;
 my $use_fail = '';
 eval( 'use Class::Unload;use Class::Inspector' );
@@ -176,16 +176,19 @@ my $self = shift;
 		} elsif ( $action eq 'checkload' ) {				# Debug query from templates during page load
 
 			my $keyfld = '_uid';	# Pickup any random accepted user
-# 			my $config = Drive::read_xml( "$Drive::sys_root$sys->{'conf_dir'}/config.xml" );
 			my $config = $self->hostConfig;
 
 			my $idx = Drive::find_first( $config->{'utable'}, sub { my $fld = shift; return $fld->{'link'} == 1 } );
 			$keyfld = $config->{'utable'}->[$idx]->{'name'} if $idx > -1;					# Detect control field
-			my $urand = $self->dbh->selectall_arrayref("SELECT * FROM users WHERE LENGTH($keyfld)>0 ".
+			
+			my $usql = "SELECT * FROM users WHERE LENGTH($keyfld)>0 ".
 									"AND _ustate=$sys->{'user_state'}->{'accepted'}->{'value'} ".
-									"ORDER BY _uid DESC LIMIT 0,1", { Slice=>{}})->[0];
+									"ORDER BY _uid DESC LIMIT 0,1";
+			$usql = "SELECT * FROM users WHERE _uid=$param->{'data'}->{'uid'}" if $param->{'data'}->{'uid'} =~ /^\d+$/;
+			my $udata = $self->dbh->selectall_arrayref( $usql, { Slice=>{}})->[0];
+
 			my $qdata = $param->{'data'}->{'data'};
-			$self->apply_user( $qdata, $urand );
+			$self->apply_user( $qdata, $udata );
 			$qdata = {'code' => $param->{'data'}->{'code'}, 'data' => $qdata};
 			$qdata = encode_json( $qdata);
 
@@ -196,15 +199,17 @@ my $self = shift;
 			my $resp = Utils::Tools->ask_inet(
 								host => $config->{'connect'}->{'host'},
 								port => $config->{'connect'}->{'port'},
-								msg => encode_utf8($qdata),
-								login => encode_utf8($config->{'connect'}->{'htlogin'}),
-								pwd => encode_utf8($config->{'connect'}->{'htpasswd'}),
+								msg => $qdata,
+								login => $config->{'connect'}->{'htlogin'},
+								pwd => $config->{'connect'}->{'htpasswd'},
 							);
 			if ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
 				eval{ $ret->{'json'}->{'data'} = decode_json($resp) };
-				$ret->{'json'}->{'fail'} = $@ if $@;
+				$self->logger->dump("$qdata : $@", 3);
+				$ret->{'json'}->{'fail'} = "Test query result : $@" if $@;
 			} else {
-				$ret->{'json'}->{'fail'} = $resp;
+				$self->logger->dump("$qdata : $resp", 3);
+				$ret->{'json'}->{'fail'} = "Test query result : $resp";
 			}
 
 		} elsif ( $param->{'data'}->{'type'} eq 'ext' ) {		# Queries from templates
@@ -235,9 +240,6 @@ my $self = shift;
 		}
 
 	} else {			# Prepare static page
-# 		my $conf_dir = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}");
-# 		my $conf_file = "$conf_dir/config.xml";
-# 		my $config = Drive::read_xml( $conf_file );
 		my $config = $self->hostConfig;
 
 		my $media_keys = [];
@@ -247,13 +249,14 @@ my $self = shift;
 		$ret->{'media_keys'} = [ sort { $a->{'ord'}<=>$b->{'ord'} } @$media_keys ];
 		$ret->{'dict'} = {'_ustate'=>$sys->{'user_state'}, '_umode'=>$sys->{'user_mode'}, '_usubj'=>$sys->{'user_type'}};
 
-		my $struct = [];
+		my $struct = [];			# users table definition for fields list
 		foreach my $def ( @{$config->{'utable'}} ) {
 			push( @$struct, {'name'=>$def->{'name'}, 'title'=>$def->{'title'}, 
 							'list'=>($def->{'type'} eq 'file'), 
 							'dict'=>($def->{'name'} =~ /^_u(state|mode|subj)/ ? $def->{'name'} : '') });
 		}
-		$ret->{'struct'} = $struct;
+		$ret->{'struct'} = $struct;			# users table definition for fields list
+		$ret->{'checkload'} = {};		# Test data for queries. Not implemented yet
 
 		my $modules = $self->get_modules();
 		while ( my ($name, $data) = each(%$modules) ) {
@@ -289,17 +292,59 @@ my ($self, $model, $data) = @_;
 	if ( ref($model) eq 'HASH' && ref($data) eq 'HASH' ) {
 		$ret = {};
 		while ( my ($k, $v) = each( %$model)) {
+			next if $k =~ /^==manifest/;
+			my $okey = $self->key_split( $k);
+			$k = $okey->{'uname'};
 			my $dk = $v;
-			if ( $k =~ /^(.+) <= (.+)$/ ) {			# Special formatted keyName?
-				$k = $1;
-				$dk = $2;
+			if ( $okey->{'uname'} =~ / <= (.+)$/ ) {			# Special formatted keyName?
+				$k = $okey->{'name'};
+				$dk = $1;
 			}
 			$dk =~ s/^\$//;
-			$ret->{$k} = $self->apply_data( $v, $data->{$dk});
+			if ( $okey->{'classname'} =~ /bool/ ) {			# Conditional assignment
+				$ret->{$k} = 0;
+				if ( $dk =~ /^\(\$([^<^>^=^!]+)([<>=!]+)([^<^>^=^!]+)\)$/ ) {		# Condition description
+					my ($lt, $cmp, $rt) = ($1, $2, $3);
+					if ( exists($data->{$lt}) ) {
+						$lt = $data->{$lt};
+						if ( $rt =~ /^\$/ ) {
+							$rt =~ s/^\$//;
+							$rt = $data->{$rt};
+						}
+						my $tchk = $rt;			# TypeCheck support variable
+						$tchk =~ s/\s+//g;
+						if ( $tchk =~ /^[0-9]+$/ ) {		# Numeric data? Compare as is
+						} elsif( $cmp eq '==') {		# Equals for strings
+							$lt =~ s/^'|'$//g;
+							$lt =~ s/(['"])/\\$1/g;
+							$rt =~ s/^'|'$//g;
+							$rt =~ s/(['"])/\\$1/g;
+							$lt = "'$lt'";
+							$rt = "'$rt'";
+							$cmp = 'eq';
+						} else {					# All other - is'nt equals strings
+							$lt =~ s/^'|'$//g;
+							$lt =~ s/(['"])/\\$1/g;
+							$rt =~ s/^'|'$//g;
+							$rt =~ s/(['"])/\\$1/g;
+							$lt = "'$lt'";
+							$rt = "'$rt'";
+							$cmp = 'ne';
+						}
+						my $bool = 0;
+						eval "\$bool = ($lt $cmp $rt)";
+						$ret->{$k} = $bool unless $@;
+# $Drive::logger->dump( "($lt $cmp $rt) = $bool" );
+					}
+				}
+			} else {
+				$ret->{$k} = $self->apply_data( $v, $data->{$dk});
+			}
 		}
 	} elsif ( ref( $model) eq 'ARRAY' && ref($data) eq 'ARRAY' ) {
 		$ret = [];
 		foreach my $mi ( @$model) {
+			next if $mi =~ /^==manifest/;
 			push( @$ret, $self->apply_data( $mi, shift( @$data)));
 		}
 	} elsif( $model =~ /^\$/ ) {
@@ -322,12 +367,13 @@ my $param = shift;
 		my $tmpl_data = decode_utf8(join('', <$fh>));
 		close( $fh);
 
-		my $defdata = {'_uid'=>'$_uid', 'code'=>'$code'};		# Default data always must present
 		my $define = $self->template_map( $tmpl_name);			# Load translaton map defines for template
 
-		unless ( exists($define->{'init'}->{'qw_send'}->{'data'} ) ) {		# Assign required query data
-			$define->{'init'}->{'qw_send'} = {'code' => $tmpl_name, 'data' => $defdata};
-		}
+		my $defdata = $define->{'init'}->{'qw_send'}->{'data'} ;
+# 		my $defdata = $self->required_query( $define->{'init'}->{'qw_send'}->{'data'} );
+		my $defcode = $define->{'init'}->{'qw_send'}->{'code'} || $tmpl_name;
+		$define->{'init'}->{'qw_send'} = {'code' => $defcode, 'data' => $defdata};
+
 		my $dom = Mojo::DOM->new( $tmpl_data );
 		$ret->{'qw_init'} = $define->{'init'};
 		my $tmpl_json = $self->dom_json( $dom);
@@ -357,6 +403,43 @@ my $param = shift;
 
 	return $ret;
 }
+######################
+sub required_query {	# Apply required keys to query
+######################
+my ($self, $query) = @_;
+
+	my $def_end = Date::Handler->new( date => time, time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
+	my $def_begin = Date::Handler->new( date => [$def_end->Year(), $def_end->Month(), 1], 
+										time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
+	my $defdata = { '_uid'=>'$_uid',
+					'_umode'=>'$_umode',
+					'begin'=>$def_begin->TimeFormat( $sys->{'datefmt_send'}),
+					'end'=>$def_end->TimeFormat( $sys->{'datefmt_send'}),
+					'koldoc'=>1
+				};		# Default data always must present
+
+	my $keyfld;
+	my $utdef = $self->hostConfig->{'utable'};
+
+	my $idx = Drive::find_first( $utdef, sub { my $fld = shift; return $fld->{'link'} == 1 } );
+	$keyfld = $utdef->[$idx]->{'name'} if $idx > -1;					# Detect control field
+	$defdata->{$keyfld} = "\$$keyfld" if $keyfld;
+
+	$query = $defdata unless $query;
+	
+	while ( my($par, $val) = each(%$defdata) ) {		# Insert required data if need
+		my $at_ut = Drive::find_first( $utdef, 
+									sub { my $fld = shift; return $fld->{'name'} eq $par } );	# Look at users stucture
+		my $at_qt = Drive::find_hash( $query, 
+									sub { my ($key, $mask) = @_;
+											my @name = split(/;/, $key);
+											return ($name[1] eq $mask );
+										}, $par);		# Look at passed query
+		$query->{$par} = $val unless $at_qt;		# Key is'nt defined
+		$query->{$at_qt} = $val if $at_ut < 0 && $at_qt;		# Defined key is not from utable fields?
+	}
+	return $query;
+}
 #####################
 sub json_sync {			# Sync two jsons
 #####################
@@ -364,9 +447,11 @@ my ($self, $target, $source) = @_;
 	if ( ref( $target) eq 'HASH' && ref($source) eq 'HASH' ) {
 		while ( my ($k, $v) = each( %$target)) {
 			next if $k =~ /^==manifest/;
-			my $key = (split(/;/, $k))[-1];
-			if ( exists( $source->{$key}) ) {
-				my $syncd = $self->json_sync( $target->{$k}, $source->{$key});
+			my @key = split(/;/, $k);
+			shift( @key);
+			my $opkey = join(';', @key);
+			if ( exists( $source->{"$opkey"}) ) {
+				my $syncd = $self->json_sync( $target->{$k}, $source->{$opkey});
 				$target->{$k} = $syncd;
 			} else {
 				delete( $target->{$k});
@@ -374,7 +459,7 @@ my ($self, $target, $source) = @_;
 		}
 		my $keys = [ keys(%$target) ];
 		while ( my ($k, $v) = each(%$source) ) {
-			my $qr = qr/$k$/;
+			my $qr = qr/\b$k\b/;
 			my $at = Drive::find_first( $keys, sub{ my ($key, $reg) = @_;
 												return undef if $key =~ /^==manifest/;
 												return 1 if $key =~ /$reg/ || encode_utf8($key) =~ /$reg/;
@@ -415,7 +500,7 @@ my $owner = shift;
 	return $ret;
 }
 #####################
-sub from_json {			# Make JSON query from JSON query definition, ignore overload infos (like query.js->fromJSON)
+sub from_json {			# Make JSON query from JSON query definition, ignore overload infos (See also: query.js->fromJSON )
 #####################
 my $self = shift;
 my $obj = shift;
@@ -440,7 +525,7 @@ my $obj = shift;
 	return $res;
 }
 #####################
-sub key_split {			# Obtain extra information from keyName for from_json (like query.js->keySplit)
+sub key_split {			# Obtain extra information from keyName for from_json (See also: query.js->keySplit )
 #####################
 my $self = shift;
 my $key = shift;
@@ -457,7 +542,7 @@ my $key = shift;
 	return $ret;
 }
 #####################
-sub dom_json {			# Translate template code into JSON model
+sub dom_json {			# Translate template's html code into JSON model
 #####################
 my $self = shift;
 my $item = shift;
@@ -748,7 +833,6 @@ my $self = shift;
 	my $conf_file = "$conf_dir/config.xml";
 	my $auth_file = "$conf_dir/.wsclient";
 	my $config = {};
-# 	$config = Drive::read_xml( $conf_file );
 	$config = $self->hostConfig;
 
 	my $ret = {'config_file' => $conf_file, 'auth_file' => $auth_file, 'magic_mask' => 8,
@@ -777,9 +861,9 @@ my $self = shift;
 		my $resp = Utils::Tools->ask_inet(
 							host => $param->{'data'}->{'host'},
 							port => $param->{'data'}->{'port'},
-							msg => encode_utf8( $param->{'data'}->{'ping_msg'}),
-							login => encode_utf8($param->{'data'}->{'htlogin'}),
-							pwd => encode_utf8($param->{'data'}->{'htpasswd'}),
+							msg => $param->{'data'}->{'ping_msg'},
+							login => $param->{'data'}->{'htlogin'},
+							pwd => $param->{'data'}->{'htpasswd'},
 						);
 		$ret->{'json'} = { 'code' => $param->{'code'}, 'response' => decode_utf8($resp) };
 
@@ -820,7 +904,6 @@ sub utable {		# User registration tuneup
 	my $conf_file = "$conf_dir/config.xml";
 
 	my $config = {};
-# 	$config = Drive::read_xml( $conf_file );
 	$config = $self->hostConfig;
 
 	my $struct = [];

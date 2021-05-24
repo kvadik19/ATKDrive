@@ -54,6 +54,13 @@
 				<div class="box">
 				</div>
 			</div>
+			<div class="optgroup check">
+				<label>Данные для ключа <span></span></label>
+				<div class="box">
+					<label for="keyValue"></label>&nbsp;&#10145;&nbsp;
+					<input type="text" id="keyValue" class="keyText" />
+				</div>
+			</div>
 		</div>
 		<div class="buttonbar">
 			<button type="button" class="ok" >Ok</button>
@@ -68,8 +75,14 @@
 	const media_keys = <%== decode_utf8( encode_json($media_keys)) %>;
 	const dict = <%== decode_utf8( encode_json($dict)) %>;
 	var translate = <%== decode_utf8( encode_json($translate)) %>;
+	var checkload = <%== decode_utf8( encode_json($checkload)) %>;
 	let url = document.location.origin+document.location.pathname;
 	document.addEventListener('DOMContentLoaded', function() {
+		let cook = getCookie('__checkload');			// Test data to provide test queries
+		if ( cook ) {
+			let localdata = JSON.parse( decodeURIComponent(cook) );
+			Object.keys(localdata).forEach(k =>{ checkload[k] = localdata[k] });
+		}
 		tabSwitch();
 		document.getElementById('tout').innerText = timeout;
 		let tabs = document.querySelectorAll('.subTab:not(.fail)');
@@ -79,6 +92,5 @@
 								subSwitch( tab );
 						};
 			});
-
 	});
 </script>

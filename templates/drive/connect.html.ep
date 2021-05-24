@@ -95,7 +95,7 @@
 			</div>
 			<div class="optrow narrow">
 					<input type="checkbox" id="emulate" class="udata" <%= $config->{'emulate'} ? ' checked' : '' %> />
-					<label for="emulate">Использовать эмулятор сервера 1С (localhost:10001)</label>
+					<label for="emulate">Использовать эмулятор сервера 1С (<code>localhost:10001</code>)</label>
 			</div>
 		</div>
 		<div class="optrow">

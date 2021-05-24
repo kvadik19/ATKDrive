@@ -44,7 +44,7 @@
 					</div>
 					<div class="buttonbar">
 						<p class="comment">Настроечный &laquo;запрос при загрузке&raquo; к серверу 1С
-						от имени любого клиента с правами выполнения запросов
+						от имени любого клиента с правами выполнения запросов:
 						</p>
 						<button type="button" class="anima" id="checkload">
 							<img id="checkload_bar" src="/img/pb-1_32x32.gif" />

@@ -10,6 +10,7 @@ use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape);
 use IO::Socket;
 use IO::Select;
+use DBI qw(:utils);
 
 use Time::HiRes qw( usleep );
 use Fcntl qw(:flock SEEK_END);
@@ -26,6 +27,9 @@ sub ask_inet {		# Process inet transactions
 
 	return "Not enough data to connect" unless $init->{'host'};
 
+	foreach my $ikey ( qw(msg login pwd) ) {			# Prevent UTF8 errors
+		$init->{$ikey} = encode_utf8($init->{$ikey}) if data_string_desc($init->{$ikey}) =~ /UTF8 on/;
+	}
 	my $timeout = $Drive::sys{'inet_timeout'}	|| 5;
 	my $buffsize = $Drive::sys{'inet_buffer'};
 	my $proto = $Drive::sys{'inet_proto'} || 'tcp';
@@ -65,8 +69,6 @@ sub ask_inet {		# Process inet transactions
 		return "$@ $IO::Socket::errstr" if $@;
 		$sock->autoflush(1);
 		my $msg = $init->{'msg'};
-		if ( ref( $init->{'msg'} ) ) {
-		}
 
 		my $ready = IO::Select->new( $sock );
 		my ($canw, ) = $ready->can_write( $timeout );

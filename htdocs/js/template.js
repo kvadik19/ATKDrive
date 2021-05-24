@@ -1,12 +1,12 @@
 let subSwitch = function(tab) {			// Click on subTabs
-		let cook = getCookie('acTab');
+		let cook = getCookie('__acTab');
 		let def = {};
-		if ( cook ) def = JSON.parse( decodeURIComponent(cook) );
+		if ( cook ) def = JSON.parse( cook);
 
 		if ( tab && tab.matches('.subTab') ) {			// Store selected subtab state
 			let list = tab.parentNode;
 			def[list.dataset.type] = tab.dataset.name;
-			setCookie('acTab', encodeURIComponent(JSON.stringify(def)), 
+			setCookie('__acTab', JSON.stringify(def), 
 						{ 'path':'/', 'domain':document.location.host,'max-age':60*60*24*365 } );
 			list.querySelectorAll('.subTab').forEach( t =>{t.className = t.className.replace(/\s*active/,'')});
 			tab.className += ' active';

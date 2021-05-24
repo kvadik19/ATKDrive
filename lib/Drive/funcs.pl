@@ -130,25 +130,25 @@ my ($value, $unmask) = @_;
 
 ###############
 sub dateformat {
-###############  Formatting date from serial number like MySQL
+###############  Formatting date from serial number like MySQL, pure Perl
 my ($time, $string, $gmt) = @_;
 	my @date = localtime( $time );
 	@date = gmtime( $time ) if $gmt;
 	$date[5]+=1900;
 	$date[4]++;
 	my %mask = ('%e'=> $date[3],											# day, no leadibg
-				'%d'=> ("0" x ( 2 - length( $date[3] ) ) . $date[3]),		# day, leading 0
+				'%d'=> sprintf('%02d', $date[3]),		# day, leading 0
 				'%c'=> $date[4],											# month number
-				'%m'=> ("0" x ( 2 - length( $date[4] ) ) . $date[4]),		# month number, leading 0
+				'%m'=> sprintf('%02d', $date[4]),		# month number, leading 0
 				'%y'=> ( substr($date[5], 2)),								# year, no century
 				'%Y'=> $date[5],											# year 4-digit
 				'%h'=> $date[2],											# hour, leading 0, 12-hrs
-				'%H'=> ("0" x ( 2 - length( $date[2] ) ) . $date[2]),		# hour, leading 0, 24-hrs
-				'%i'=> ("0" x ( 2 - length( $date[1] ) ) . $date[1]),		# minutes, leading 0
+				'%H'=> sprintf('%02d', $date[2]),		# hour, leading 0, 24-hrs
+				'%i'=> sprintf('%02d', $date[3]),		# minutes, leading 0
 				'%s'=> $date[0],											# seconds
-				'%S'=> ("0" x ( 2 - length( $date[0] ) ) . $date[0]),		# seconds too
-				'%t'=> ("0"x(2-length($date[2])).$date[2]).':'.("0"x(2-length($date[1])).$date[1]),	# time HH:MM:ss
-				'%T'=> ("0"x(2-length($date[2])).$date[2]).':'.("0"x(2-length($date[1])).$date[1]).':'.("0"x(2-length($date[0])).$date[0]),
+				'%S'=> sprintf('%02d', $date[0]),		# seconds too
+				'%t'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]),	# time HH:MM:ss
+				'%T'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]).':'.sprintf('%02d', $date[0]),
 			);
 	while ( my ($key, $mask) = each( %mask ) ) {
 		$string =~ s/$key/$mask/g;
@@ -402,7 +402,7 @@ my ( $array, $test, @args ) = @_;
 sub find_hash {				#	Find hash element by condition
 #########################
 my ( $hash, $test, @args ) = @_;
-	while ( my($k, $val) = each( %$hash ) ) {
+	foreach my $k ( keys( %$hash) ) {
 		return $k if $test->( $k, @args );
 	}
 	return undef;

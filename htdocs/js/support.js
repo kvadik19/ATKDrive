@@ -369,9 +369,9 @@ function tabSwitch(tab) {		// Tab switcher
 	if ( switcher.length == 0 ) return false;
 	let page = document.location.pathname.split('/')[2] || document.location.pathname.split('/')[1];
 
-	let cooks = getCookie('acTab');
+	let cooks = getCookie('__acTab');
 	let def = {};
-	if ( cooks ) def = JSON.parse(decodeURIComponent( cooks));
+	if ( cooks ) def = JSON.parse( decodeURIComponent(cooks));
 
 	if ( !def[page] ) def[page] = 0;
 	let check = function(num) { return def[page] == num };
@@ -392,7 +392,7 @@ function tabSwitch(tab) {		// Tab switcher
 	}
 
 	if (switcher.children[def[page]].onclick && doClick ) switcher.children[def[page]].onclick();
-	setCookie('acTab', encodeURIComponent(JSON.stringify(def)), 
+	setCookie('__acTab', JSON.stringify(def), 
 						{ 'path':'/', 'domain':document.location.host,'max-age':60*60*24*365 } );
 	if ( subSwitch ) subSwitch(tab);
 	return false;

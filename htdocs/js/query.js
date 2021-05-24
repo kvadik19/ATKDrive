@@ -4,14 +4,14 @@ let bodyOut = document.querySelector('.tabContent.shown .qw_send');
 let keyItems = document.querySelectorAll('#keySelect li');
 
 let subSwitch = function(tab) {			// Click on subTabs
-		let cook = getCookie('acTab');
+		let cook = getCookie('__acTab');
 		let def = {};
-		if ( cook ) def = JSON.parse( decodeURIComponent(cook) );
+		if ( cook ) def = JSON.parse( decodeURIComponent(cook));
 
 		if ( tab && tab.matches('.subTab') ) {			// Store selected subtab state
 			let list = tab.parentNode;
 			def[list.dataset.type] = tab.dataset.name;
-			setCookie('acTab', encodeURIComponent(JSON.stringify(def)), 
+			setCookie('__acTab', JSON.stringify(def), 
 						{ 'path':'/', 'domain':document.location.host,'max-age':60*60*24*365 } );
 			list.querySelectorAll('.subTab').forEach( t =>{t.className = t.className.replace(/\s*active/,'')});
 			tab.className += ' active';
@@ -73,6 +73,11 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 				if ( item.matches('.bool') ) value.key += ';%bool';
 			}
 			value.val = fromDOM(item.lastElementChild);
+		}
+
+		if ( typeof(value.val) === 'string' ) {
+			let parts = value.val.match(/^(\S+)(\s+\[(\S+)\])?$/);		// Defined test data?
+			if ( parts ) value.val = parts[1];						// Omit test data
 		}
 		return value;
 	};
@@ -140,7 +145,9 @@ let fromJSON = function(obj) {			// Make JSON query from JSON query definition, 
 			Object.keys(obj).forEach( key =>{ 
 								if ( key.match(/^==manifest/) ) return;
 								let okey = keySplit(key);
-								res[okey.uname] = fromJSON( obj[key] );
+								let val = fromJSON( obj[key] );
+								if ( checkload[okey.name] ) val = checkload[okey.name];		// Assign test data
+								res[okey.uname] = val;
 							});
 		} else {
 			res = obj;
@@ -161,7 +168,16 @@ let keySplit = function( keyName ) {		// Obtain extra information from keyName
 		}
 		return ret;
 	};
-	
+
+let setTranslate = function(div) {		// Apply translations to keyNames
+				if ( div.dataset.name ) {
+					div.querySelectorAll('span.keyName').forEach( s =>{
+								if ( translate[div.dataset.name]) {
+									s.innerText = translate[div.dataset.name]
+								}
+							});
+				}
+			};
 let toDOM = function(val, key) {			// Draw JSON query definition as DOM structure
 		let div = createObj('div',{'className':'domItem'});
 		if ( !(val || key) ) return div;
@@ -180,12 +196,11 @@ let toDOM = function(val, key) {			// Draw JSON query definition as DOM structur
 				let ukey = keySplit(key);
 				if ( !ukey.name ) ukey.name = ukey.uname
 				let disp = ukey.uname;
-				if ( translate[ukey.name] ) disp = translate[ukey.name];
+				div.innerHTML = '<span class="keyName">'+disp+'</span>:';
 				div.dataset.name = ukey.name;
 				div.title = ukey.name;
 				div.className += ukey.classname;
 
-				div.innerHTML = '<span class="keyName">'+disp+'</span>:';
 				content.className += mark.classname;
 				content.appendChild( inner);
 				if ( val.length > 1 ) {
@@ -214,12 +229,11 @@ let toDOM = function(val, key) {			// Draw JSON query definition as DOM structur
 				let ukey = keySplit(key);
 				if ( !ukey.name ) ukey.name = ukey.uname
 				let disp = ukey.uname;
-				if ( translate[ukey.name] ) disp = translate[ukey.name];
+				div.innerHTML = '<span class="keyName">'+disp+'</span>:';
 				div.dataset.name = ukey.name;
 				div.title = ukey.name;
 				div.className += ukey.classname;
 
-				div.innerHTML = '<span class="keyName">'+disp+'</span>:';
 				content.className += ' domItem';
 				div.className += ' value';
 			}
@@ -234,11 +248,10 @@ let toDOM = function(val, key) {			// Draw JSON query definition as DOM structur
 				let ukey = keySplit(key);
 				if ( !ukey.name ) ukey.name = ukey.uname
 				let disp = ukey.uname;
-				if ( translate[ukey.name] ) disp = translate[ukey.name];
+				div.innerHTML = '<span class="keyName">'+disp+'</span>:<span class="keyVal">'+val+'</span>';
 				div.dataset.name = ukey.name;
 				div.title = ukey.name;
 				div.className += ukey.classname;
-				div.innerHTML = '<span class="keyName">'+disp+'</span>:<span class="keyVal">'+val+'</span>';
 			}
 		}
 		return div;
@@ -286,10 +299,10 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							}
 						};
 						bodyOut.querySelectorAll('.codeSync').forEach( cs => { 
-											cs.onclick = function(e) {	// Just transfer income `CODE` to outgoing composer
-															let inCode = bodyIn.querySelector('.qw_code .code').innerText;
-															if ( inCode ) bodyOut.querySelector('.qw_code input.code').value = inCode;
-														}
+										cs.onclick = function(e) {	// Just transfer income `CODE` to outgoing composer
+														let inCode = bodyIn.querySelector('.qw_code .code').innerText;
+														if ( inCode ) bodyOut.querySelector('.qw_code input.code').value = inCode;
+													}
 									});
 				}
 				dispatch.layout(type, method);
@@ -299,15 +312,18 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 			},
 		int: {
 				read: function() {
-// 						dispatch.getSnap = function() { return bodyIn.innerText.replace(/\s/g,'') + bodyOut.innerText.replace(/\s/g,'') };
 						let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
 						let name = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
 						flush({'code':'load','data':{'name':name, 'type':type}}, document.location.href, function(resp) {
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
 								if( resp.data && resp.data.success == 1) {
 									let define = resp.data;
-									bodyIn.querySelector('.qw_data').appendChild( toDOM( define.qw_recv.data) );
-									bodyOut.querySelector('.qw_data').appendChild( toDOM( define.qw_send.data) );
+									let domrecv = toDOM( define.qw_recv.data);
+									let domsend = toDOM( define.qw_send.data);
+									domrecv.querySelectorAll('div').forEach( setTranslate);
+									domsend.querySelectorAll('div').forEach( setTranslate);
+									bodyIn.querySelector('.qw_data').appendChild( domrecv );
+									bodyOut.querySelector('.qw_data').appendChild( domsend );
 
 									bodyIn.querySelector('.qw_code .code').innerText = define.qw_recv.code;
 									bodyOut.querySelector('.qw_code .code').value = define.qw_send.code
@@ -320,21 +336,23 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									console.log( resp.fail);
 								}
 							});
-// 						dispatch.int.layout();
 						return true;
 					},
 				write: function() {
 						document.querySelector('.tabContent.shown p.comment.addition').innerHTML 
 							= 'Используйте двойной шелчок на значении в получаемом запросе чтобы назначить поле в таблице шлюза';
-// 						dispatch.getSnap = function() { return bodyIn.innerText.replace(/\s/g,'') + bodyOut.innerText.replace(/\s/g,'') };
 						let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
 						let name = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
 						flush({'code':'load','data':{'name':name, 'type':type}}, document.location.href, function(resp) {
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
 								if( resp.data && resp.data.success == 1) {
 									let define = resp.data;
-									bodyIn.querySelector('.qw_data').appendChild( toDOM( define.qw_recv.data) );
-									bodyOut.querySelector('.qw_data').appendChild( toDOM( define.qw_send.data) );
+									let domrecv = toDOM( define.qw_recv.data);
+									let domsend = toDOM( define.qw_send.data);
+									domsend.querySelectorAll('div').forEach( setTranslate);
+									domrecv.querySelectorAll('div').forEach( setTranslate);
+									bodyIn.querySelector('.qw_data').appendChild( domrecv );
+									bodyOut.querySelector('.qw_data').appendChild( domsend );
 
 									bodyIn.querySelector('.qw_code .code').innerText = define.qw_recv.code;
 									bodyOut.querySelector('.qw_code .code').value = define.qw_send.code
@@ -348,7 +366,6 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									console.log( resp.fail);
 								}
 							});
-// 						dispatch.int.layout();
 						return true;
 					},
 				committer: function(evt) {
@@ -388,6 +405,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									domsend.querySelectorAll('div').forEach( d =>{		// External query type specific settings
 												d.className = d.className.replace(/\s*jsonItem/g,'');		// Prevent
 												d.className += ' jsonItem';
+												setTranslate(d);
 											});
 									bodyOut.querySelector('.qw_data').appendChild( domsend );
 
@@ -399,10 +417,6 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 														d.title = match[1];
 													}
 												}
-// 												if ( d.dataset.name ) {		// Reset key names to originals
-// 													d.querySelectorAll('span.keyName').forEach( s =>{
-// 																s.innerText = d.dataset.name});
-// 												}
 												d.querySelectorAll('span.keyVal').forEach( s =>{
 																	let key = s.innerText.replace(/^\$/,'');
 																	if ( translate[key] ) {
@@ -416,6 +430,12 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									bodyOut.querySelectorAll('.jsonItem').forEach( ji =>{ ji.onclick = jsonEdit.jsonSelect});
 									bodyOut.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
 									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
+									bodyOut.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = dispatch.ext.valSetup;
+										let div = vi.closest('div.value[data-name]');
+										if ( div && checkload[div.dataset.name] ) vi.innerText 
+																			+= ' ['+checkload[div.dataset.name]+']';
+
+									});
 									bodyIn.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = dispatch.ext.valAssign});
 									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
@@ -424,6 +444,17 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 								}
 							});
 						return true;
+					},
+				valSetup:function(evt) {
+						let keyVal = evt.target;
+						let div = keyVal.closest('.value');
+						keyTool.set( { info:div, value:keyVal.innerText, items:['check'], valuesOnly: true,
+										head:'Настроечный запрос к серверу'})
+								.fire( function(key, val) {
+											keyVal.innerText = key;
+											checkload[val.dataset.name] = val.dataset.value;
+											commitEnable();
+										} );
 					},
 				valAssign:function(evt) {
 						let qcode = bodyIn.querySelector('.qw_code .code').value;
@@ -464,6 +495,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 												'qw_send':{'code':bodyOut.querySelector('.qw_code .code').value,
 															'data':fromDOM( bodyOut.querySelector('.qw_data'))}
 												},
+										'checkload': checkload,		// Global variable for test queries data
 										'ajax': [],
 										};
 						let ajax = document.querySelectorAll('.tabContent.shown .qw_talks.ajax');
@@ -484,6 +516,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 								if ( resp.fail ) {
 									alert(resp.fail);
 								} else if( resp.data.success == 1) {
+									setCookie('__checkload', JSON.stringify(checkload), 
+												{ 'path':'/', 'domain':document.location.host,'max-age':60*60*24*365 } );
 									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
 								}
@@ -537,6 +571,15 @@ let keyTool = {			// Add key-value floating window operations
 							if ( !others[nO].lastElementChild.matches('span.keyVal') ) continue;
 							vbox.add(createObj('option',{'value':'$'+others[nO].dataset.name,'innerText':others[nO].dataset.name}));
 						}
+					}
+					for ( let dk in dict ) {		// Add our dictionaries
+						let grName = dk;
+						if ( translate[dk] ) grName = translate[dk];
+						let grp = createObj('optgroup',{'label':grName});
+						for ( let ok in dict[dk] ) {
+							grp.appendChild(createObj('option',{'value':dict[dk][ok].value,'innerText':dict[dk][ok].title}))
+						}
+						vbox.appendChild(grp);
 					}
 					vbox.size = vbox.options.length;
 				}
@@ -592,9 +635,14 @@ let keyTool = {			// Add key-value floating window operations
 
 				let value = '';
 				if ( this.preset.value) value = this.preset.value.replace(/^\$/,'');		// Remove variable mark
-				let divQuery = this.panel.querySelector('.optgroup.query>div');
+				let divQuery = this.panel.querySelector('.optgroup.query>.box');
 				let divList = this.panel.querySelector('.optgroup.list');
 				let divText = this.panel.querySelector('.optgroup.text');
+				let divCheck = this.panel.querySelector('.optgroup.check');
+				if ( this.preset ) {
+					divText.querySelector('input#keyName').dataset.value = this.preset.value;
+					divText.querySelector('input#keyName').value = this.preset.value;
+				}
 				// Selector type specific code
 				if ( this.preset.items.includes('query') ) {		// It's visible (active)?
 					let qdom = toDOM( this.preset.qdata.data);
@@ -631,8 +679,27 @@ let keyTool = {			// Add key-value floating window operations
 						divList.querySelectorAll('li[data-name="'+this.preset.info.dataset.name+'"]')
 										.forEach( li =>{ li.className += ' active'});
 						divText.querySelector('input#keyName').value = this.preset.info.dataset.name;
+						divText.querySelector('input#keyName').dataset.value = this.preset.info.dataset.name;
 						divText.querySelector('input#keyName').removeAttribute('style');
 					}
+				}
+				if( this.preset.items.includes('check') ) {		// It's visible (active)?
+					divCheck.querySelector('label span').innerText = this.preset.info.querySelector('.keyName').innerText;
+					let parts = this.preset.value.match(/^(\S+)(\s+\[(\S+)\])?$/);
+					let inpt = divCheck.querySelector('.box input.keyText');
+					if ( parts ) {
+						divCheck.querySelector('.box label').innerText = parts[1];
+						inpt.value = parts[3] || '';
+						inpt.onkeydown = keyEdit.keyOut;
+						inpt.onblur = function(evt) {
+								let addon = '';
+								if ( this.value.length > 0) addon = ' ['+this.value+']';
+								divText.querySelector('input#keyName').value 
+										= divCheck.querySelector('.box label').innerText + addon;
+								keyTool.inpCheck();
+							};
+					}
+					divCheck.removeAttribute('style');
 				}
 				if( this.preset.items.includes('text') ) divText.removeAttribute('style')		// It's visible (active)?
 				return this;
@@ -640,6 +707,7 @@ let keyTool = {			// Add key-value floating window operations
 		keyHide:function() { keyTool.panel.style.display = 'none'; 
 				document.documentElement.onclick = null;
 				keyTool.panel.querySelector('input#keyName').value = '';
+				keyTool.panel.querySelector('input#keyName').dataset.value = '';
 				if ( keyTool.preset.info ) keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');
 				btnActivate();
 			},
@@ -649,7 +717,10 @@ let keyTool = {			// Add key-value floating window operations
 		fire: function( callbk ) {
 				this.callbk = callbk;
 
-				if ( keyTool.preset.info ) keyTool.preset.info.className += ' active';
+				if ( keyTool.preset.info ) {
+					keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');
+					keyTool.preset.info.className += ' active';
+				}
 				document.documentElement.onclick = this.keyTrap;
 				this.panel.querySelector('button.ok').setAttribute('disabled', 1);
 
@@ -674,13 +745,18 @@ let keyTool = {			// Add key-value floating window operations
 				else if (Y + H > window.scrollY+window.innerHeight) { Y=window.scrollY+window.innerHeight-H-20 }
 				this.panel.style.left = X+'px';
 				this.panel.style.top = Y+'px';
+				let inpt = this.panel.querySelector('.optgroup:not([style="display: none;"]) input[type="text"]');
+				if (inpt) inpt.focus();
 
 				return this;
 			},
 		result: function() {
 				let key = keyTool.panel.querySelector('input#keyName');
-				let val = keyTool.panel.querySelector('.active') 
-										|| {'innerText':'','className':''};		// NOW Allow empty value!
+				let val = keyTool.panel.querySelector('.active'); 
+				if ( !val) {
+					val = createObj('li', {'data-name':keyTool.preset.info.dataset.name,
+											'innerText':keyTool.preset.value,'className':''});		// NOW Allow empty value!
+				}
 				if ( typeof(keyTool.callbk) === 'function' ) {
 					let clone = val.cloneNode(true);
 					clone.stack = [];
@@ -695,7 +771,9 @@ let keyTool = {			// Add key-value floating window operations
 							val = "'"+val+"'";
 						}
 						clone.dataset.name = '('+name+cond+val+')';
-					} else {
+					} else if ( keyTool.preset.items && keyTool.preset.items[0] === 'check' ) {
+						clone.dataset.value = keyTool.panel.querySelector('.optgroup.check .box input.keyText').value;
+					} else if (val.parentNode) {
 						let upper = val;
 						while ( upper = upper.parentNode.closest('.domItem[data-name]') ) {
 							clone.stack.push(upper.dataset.name);
@@ -726,9 +804,11 @@ let keyTool = {			// Add key-value floating window operations
 			},
 		inpCheck: function(evt) {		// Check for some of list selected
 				let txt = this.panel.querySelector('input#keyName');
-				let li = this.panel.querySelector('li.active') || true;		// Ignore this check - allow empty keyName
-				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {					// Stub for ignore list checking is being used!
+				let li = this.panel.querySelector('li.active') 
+											|| (txt.dataset.value !== txt.value);	// Ignore this check - allow empty keyName
+				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {			// Stub for ignore list checking is being used!
 					this.panel.querySelector('button.ok').removeAttribute('disabled');
+					this.panel.querySelector('button.ok').focus();
 				} else {
 					this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				}
@@ -1133,7 +1213,8 @@ document.getElementById('checkload').onclick = function(e) {		// Debugging query
 		let name = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
 		let code = bodyOut.querySelector('.qw_code .code').innerText || bodyOut.querySelector('.qw_code .code').value;
 		let data = fromJSON( fromDOM( bodyOut.querySelector('.qw_data')) );
-		let form = {'code':'checkload', 'data':{'owner':name, 'code':code, 'data':data}};
+		let form = {'code':'checkload', 
+					'data':{'owner':name, 'code':code, 'data':data}};
 		document.getElementById('checkload_bar').style.visibility = 'visible';
 		flush(form, document.location.href, function(resp) {
 				document.getElementById('checkload_bar').style.visibility = 'hidden';

@@ -23,12 +23,16 @@ our $sys_root;
 our $logger;
 our $dbh;
 our $gate_config;
+our $our_timezone = `cat /etc/timezone` || 'Europe/Moscow';
+our $our_locale = `locale | head -n1` || 'ru_RU';
 
 #################
 sub startup {
 #################
 	my $self = shift;
 # kill( 'SIGUSR2', $mypid)
+# 	$ENV{'MOJO_MAX_LINES'} = 150;
+# 	$ENV{'MOJO_MAX_LINE_SIZE'} = 16384;
 	$self->config( hypnotoad => { listen => [ "http://127.0.0.1:9210",
 											"https://127.0.0.1:9209" ],	# Need to be set in nginx map directive
 								workers => 2,		# two worker processes per CPU core
@@ -39,6 +43,10 @@ sub startup {
 	$self->secrets( ['sug4hyg327ah243Hhjck'] );
 	$self->plugin('PODRenderer');
 	$sys_root = "$FindBin::Bin/..";
+
+	$our_locale = substr($our_locale, index($our_locale,'=')+1);
+	chomp($our_timezone);
+	chomp($our_locale);
 	
 	my $ws = Mojo::Transaction::WebSocket->new();
 	my $r = $self->routes;
@@ -164,6 +172,7 @@ sub startup {
 						my $domain = $self->req->url->base;
 						$domain = substr( $domain, rindex($domain, '/')+1 );
 						while ( my($cook, $val) = each( %{$self->{'qdata'}->{'user_state'}->{'cookie'}}) ) {
+							next if $cook =~ /^__/;			# Cookie for browser only!
 							my $opts = {'expires' => time + 176*24*60*60, 'domain' => $domain, 'path' => '/', };
 							if( $val =~ /^$/ ) {
 								$opts->{'expires'} = time - 365*24*60*60;
