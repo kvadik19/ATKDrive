@@ -88,12 +88,13 @@ sub startup {
 	$self->helper(logger => sub { return $logger } );
 
 	$self->helper( hostConfig => sub  {		#		Load/renew configuration
-										my $filename = "$sys_root$sys{'conf_dir'}/config.xml";
-										if ( !$gate_config->{'_upd'} || $gate_config->{'_upd'} < (stat($filename))[9] ) {
-											$gate_config = Drive::read_xml( $filename );
-											$gate_config->{'_upd'} = (stat($filename))[9];
-										}
-										return $gate_config;
+		return $self->hostConfig;
+# 										my $filename = "$sys_root$sys{'conf_dir'}/config.xml";
+# 										if ( !$gate_config->{'_upd'} || $gate_config->{'_upd'} < (stat($filename))[9] ) {
+# 											$gate_config = Drive::read_xml( $filename );
+# 											$gate_config->{'_upd'} = (stat($filename))[9];
+# 										}
+# 										return $gate_config;
 									}
 				);
 	my @db_str = ( $sys{'db_base'},
@@ -184,6 +185,17 @@ sub startup {
 	$logger->debug("Starting server pid $$ on defined ports.");
 }
 
+#####################
+sub hostConfig {	#		Read/Renew
+#####################
+	my ($self, ) = @_;
+	my $filename = "$sys_root$sys{'conf_dir'}/config.xml";
+	if ( !$gate_config->{'_upd'} || $gate_config->{'_upd'} < (stat($filename))[9] ) {
+		$gate_config = Drive::read_xml( $filename );
+		$gate_config->{'_upd'} = (stat($filename))[9];
+	}
+	return $gate_config;
+}
 #####################
 sub query_data {	#		Collect query data as hash
 #####################

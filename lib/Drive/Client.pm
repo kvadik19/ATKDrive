@@ -286,7 +286,9 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 
 	if ( $templates->{$action} && $templates->{$action}->{'tmpl'} ) {
 		my $is_ajax = ( $self->req->content->headers->content_type eq 'application/x-www-form-urlencoded' && $param->{'code'} );
-		my ($qw_send, $qw_recv);
+		my ($qw_send, $qw_recv, $qw_load);
+		$qw_load = $templates->{$action}->{'query'}->{'load'};
+
 		if ( $is_ajax ) {
 			if ( ref( $templates->{$action}->{'query'}->{'ajax'}) eq 'ARRAY' ) {	# Have ordered list of postprocessors?
 				my $ajax = {};
@@ -302,7 +304,11 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 			$qw_recv = $templates->{$action}->{'query'}->{'init'}->{'qw_recv'};
 		}
 
-		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});
+		 $qw_load = {} unless $udata->{'record'}->{'_uid'} == $qw_load->{'_uid'};
+														# Apply test data for same user ID (means tester unit)
+		$qw_send->{'data'} = Drive::Support->required_query( $qw_send->{'data'}, $qw_load );
+														# Assign required data & possible defaults
+		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});		# Remove overload info from keys
 		Drive::Support->apply_user( $qw_send->{'data'}, $udata->{'record'} );
 		$qw_send = encode_json( $qw_send);
 
@@ -314,16 +320,13 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 							pwd => $conf->{'connect'}->{'htpasswd'},
 						);
 		return {'fail' => $resp} unless $resp =~ /^[\{\[].*[\}\]]$/;
-
+# $self->logger->dump($qw_send);
+# $self->logger->dump($resp);
 		eval{ $resp = decode_json($resp) };
 		return {'fail' => $@} if $@;
 
-$self->logger->dump($Drive::our_timezone);
-
-# $self->logger->dump(Dumper($qw_recv->{'data'}));
 		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
 		$out = Drive::Support->apply_data( $qw_recv->{'data'}, $resp->{'data'});
-# $self->logger->dump(Dumper($out));
 		if ( $is_ajax ) {
 			$out->{'json'} = $out;
 		} else {

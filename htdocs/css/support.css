@@ -549,7 +549,12 @@ div.options {
 	font-weight:bold;
 	margin:0px 0px 0.3em 0px;
 }
-#keyHolder .optgroup.text #keyName {
+#keyHolder sub {
+	display:block;
+	white-space:normal;
+	width:90%;
+}
+#keyHolder .optgroup input[type="text"] {
 	padding:0.1em 0.5em;
 }
 
@@ -557,6 +562,9 @@ div.options {
 	display: grid;
 	grid-template-columns: 40% 17% 40%;
 	grid-column-gap: 1%;
+}
+.optgroup.bool input[type="text"] {
+	padding:0px;
 }
 .optgroup.bool #bool_name {
 	text-align:right;

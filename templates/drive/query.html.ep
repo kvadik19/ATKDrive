@@ -55,11 +55,12 @@
 				</div>
 			</div>
 			<div class="optgroup check">
-				<label>Данные для ключа <span></span></label>
+				<label>Данные для ключа <span></span>:</label>
 				<div class="box">
 					<label for="keyValue"></label>&nbsp;&#10145;&nbsp;
 					<input type="text" id="keyValue" class="keyText" />
 				</div>
+				<sub>* Число в кавычках интерпретируется как строка</sub>
 			</div>
 		</div>
 		<div class="buttonbar">

@@ -76,7 +76,7 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 		}
 
 		if ( typeof(value.val) === 'string' ) {
-			let parts = value.val.match(/^(\S+)(\s+\[(\S+)\])?$/);		// Defined test data?
+			let parts = value.val.match(/^([^\[]+)(\s\[([^\]]+)\])?$/);		// Defined test data?
 			if ( parts ) value.val = parts[1];						// Omit test data
 		}
 		return value;
@@ -146,7 +146,9 @@ let fromJSON = function(obj) {			// Make JSON query from JSON query definition, 
 								if ( key.match(/^==manifest/) ) return;
 								let okey = keySplit(key);
 								let val = fromJSON( obj[key] );
-								if ( checkload[okey.name] ) val = checkload[okey.name];		// Assign test data
+								if ( checkload[okey.name] ) {
+									val = checkload[okey.name];		// Assign test data
+								}
 								res[okey.uname] = val;
 							});
 		} else {
@@ -399,8 +401,11 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									document.querySelectorAll('code.pageurl').forEach( c =>{ 
 															c.innerText = document.location.origin+'/'+name });
 									let define = resp.data;
-									bodyOut.querySelector('.qw_code .code').value = define.qw_init.qw_send.code
 
+									if ( define.qw_load && typeof(define.qw_load) === 'object' ) {
+										Object.keys( define.qw_load).forEach( k =>{ checkload[k] = define.qw_load[k] });
+									}
+									bodyOut.querySelector('.qw_code .code').value = define.qw_init.qw_send.code
 									let domsend = toDOM( define.qw_init.qw_send.data);
 									domsend.querySelectorAll('div').forEach( d =>{		// External query type specific settings
 												d.className = d.className.replace(/\s*jsonItem/g,'');		// Prevent
@@ -431,11 +436,16 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									bodyOut.querySelectorAll('.preset').forEach( pi =>{ pi.onclick = jsonEdit.rollUp});
 									bodyOut.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
 									bodyOut.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = dispatch.ext.valSetup;
-										let div = vi.closest('div.value[data-name]');
-										if ( div && checkload[div.dataset.name] ) vi.innerText 
-																			+= ' ['+checkload[div.dataset.name]+']';
+																	let div = vi.closest('div.value[data-name]');
+																	if ( div && checkload[div.dataset.name] ) {
+																		let dat = checkload[div.dataset.name];
+																		if ( typeof(dat) === 'string') {
+																			dat = "'"+ dat +"'";
+																		}
+																		vi.innerText += ' ['+ dat +']';
+																	}
 
-									});
+																});
 									bodyIn.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = dispatch.ext.valAssign});
 									dispatch.snapshot = dispatch.getSnap();
 									commitEnable();
@@ -452,7 +462,17 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 										head:'Настроечный запрос к серверу'})
 								.fire( function(key, val) {
 											keyVal.innerText = key;
-											checkload[val.dataset.name] = val.dataset.value;
+											let value = val.dataset.value;
+											if ( value.replace(/\s+/g,'').length > 0) {
+												if ( value.match(/^['"](.+)['"]$/) ) {
+													value = value.replace(/^['"]|['"]$/g,'');
+												} else if ( value.match(/^\d+$/) ) {
+													value *= 1;			// Bring to a number
+												}
+												checkload[val.dataset.name] = value;
+											} else if ( val.dataset.name in checkload ) {
+												delete checkload[val.dataset.name];
+											}
 											commitEnable();
 										} );
 					},
@@ -631,7 +651,7 @@ let keyTool = {			// Add key-value floating window operations
 					} );
 				let liShow = this.preset.valuesOnly ? 'none' : 'list-item';
 				this.panel.querySelectorAll('li[data-list="1"]').forEach( i =>{ i.style.display = liShow });
-				this.panel.querySelectorAll('li.active').forEach( li =>{ li.className = li.className.replace(/\s*active/g,'')});
+				this.panel.querySelectorAll('.active').forEach( d =>{ d.className = d.className.replace(/\s*active/g,'')});
 
 				let value = '';
 				if ( this.preset.value) value = this.preset.value.replace(/^\$/,'');		// Remove variable mark
@@ -685,7 +705,7 @@ let keyTool = {			// Add key-value floating window operations
 				}
 				if( this.preset.items.includes('check') ) {		// It's visible (active)?
 					divCheck.querySelector('label span').innerText = this.preset.info.querySelector('.keyName').innerText;
-					let parts = this.preset.value.match(/^(\S+)(\s+\[(\S+)\])?$/);
+					let parts = this.preset.value.match(/^([^\[]+)(\s\[([^\]]+)\])?$/);
 					let inpt = divCheck.querySelector('.box input.keyText');
 					if ( parts ) {
 						divCheck.querySelector('.box label').innerText = parts[1];
@@ -709,6 +729,7 @@ let keyTool = {			// Add key-value floating window operations
 				keyTool.panel.querySelector('input#keyName').value = '';
 				keyTool.panel.querySelector('input#keyName').dataset.value = '';
 				if ( keyTool.preset.info ) keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');
+				keyTool.preset = {};
 				btnActivate();
 			},
 		keyTrap: function(evt) {			// Click outside of keySelect window
@@ -791,7 +812,9 @@ let keyTool = {			// Add key-value floating window operations
 				if ( txt.value.replace(/\s/g,'').length === 0 
 						|| keyTool.panel.querySelector('.box *[data-name="'+txt.value+'"]') ) {		// Not manual keyName typed
 					txt.value = li.innerText;
-					if (li.firstElementChild) txt.value = li.firstElementChild.innerText;
+				}
+				if ( li.firstElementChild && li.firstElementChild.matches('.keyName') ) {
+					 txt.value = li.firstElementChild.innerText;
 				}
 				let booln = keyTool.panel.querySelector('input#bool_name');
 				let boolv = keyTool.panel.querySelector('input#bool_val');
@@ -866,11 +889,15 @@ let keyEdit = {
 				commitEnable();
 			},
 		keyOut: function(evt) {
-				if ( evt.code.match(/Enter|Tab/) ) {
-					evt.preventDefault();
-					evt.target.blur();
-				} else if ( evt.code.match(/Escape/) ) {
-					evt.target.value = keyEdit.preval;
+				if ( evt.code ) {
+					if ( evt.code.match(/Enter|Tab/) ) {
+						evt.preventDefault();
+						evt.target.blur();
+					} else if ( evt.code.match(/Escape/) ) {
+						evt.target.value = keyEdit.preval;
+						evt.target.blur();
+					}
+				} else {
 					evt.target.blur();
 				}
 			}

@@ -370,7 +370,7 @@ my $param = shift;
 		my $define = $self->template_map( $tmpl_name);			# Load translaton map defines for template
 
 		my $defdata = $define->{'init'}->{'qw_send'}->{'data'} ;
-# 		my $defdata = $self->required_query( $define->{'init'}->{'qw_send'}->{'data'} );
+		my $defdata = $self->required_query( $define->{'init'}->{'qw_send'}->{'data'} );
 		my $defcode = $define->{'init'}->{'qw_send'}->{'code'} || $tmpl_name;
 		$define->{'init'}->{'qw_send'} = {'code' => $defcode, 'data' => $defdata};
 
@@ -382,6 +382,7 @@ my $param = shift;
 		
 		$ret->{'qw_init'}->{'qw_recv'} = {'code' => $define->{'init'}->{'qw_recv'}->{'code'}, 'data' => $json_sync};
 		$ret->{'qw_ajax'} = $define->{'ajax'};
+		$ret->{'qw_load'} = $define->{'load'};
 
 		$ret->{'success'} = 1;
 		delete( $ret->{'fail'} );
@@ -390,7 +391,8 @@ my $param = shift;
 		my $config_path = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/query");
 		my $filename = "$config_path/$tmpl_name.json";
 		my $def = {'define_init' => $param->{'data'}->{'init'},
-					'define_ajax' => $param->{'data'}->{'ajax'}
+					'define_load' => $param->{'data'}->{'checkload'},
+					'define_ajax' => $param->{'data'}->{'ajax'},
 					};
 		my $res = Drive::write_json( $def, $filename);
 		if ( $res ) {
@@ -406,7 +408,7 @@ my $param = shift;
 ######################
 sub required_query {	# Apply required keys to query
 ######################
-my ($self, $query) = @_;
+my ($self, $query, $init) = @_;
 
 	my $def_end = Date::Handler->new( date => time, time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
 	my $def_begin = Date::Handler->new( date => [$def_end->Year(), $def_end->Month(), 1], 
@@ -419,7 +421,7 @@ my ($self, $query) = @_;
 				};		# Default data always must present
 
 	my $keyfld;
-	my $utdef = $self->hostConfig->{'utable'};
+	my $utdef = Drive::hostConfig->{'utable'};
 
 	my $idx = Drive::find_first( $utdef, sub { my $fld = shift; return $fld->{'link'} == 1 } );
 	$keyfld = $utdef->[$idx]->{'name'} if $idx > -1;					# Detect control field
@@ -437,6 +439,18 @@ my ($self, $query) = @_;
 										}, $par);		# Look at passed query
 		$query->{$par} = $val unless $at_qt;		# Key is'nt defined
 		$query->{$at_qt} = $val if $at_ut < 0 && $at_qt;		# Defined key is not from utable fields?
+	}
+	while ( my($pn, $pv) = each(%$init) ) {			# Apply init data if passed
+		my $at_qt = Drive::find_hash( $query, 
+									sub { my ($key, $mask) = @_;
+											my @name = split(/;/, $key);
+											return ($name[1] eq $mask );
+										}, $pn);		# Look at passed query
+		if ( $at_qt ) {
+			$query->{$at_qt} = $pv;
+		} else {
+			$query->{$pn} = $pv;
+		}
 	}
 	return $query;
 }
@@ -491,6 +505,7 @@ my $owner = shift;
 			$ret->{'translate'} = $def->{'translate'};
 			$ret->{'init'} = $def->{'define_init'};
 			$ret->{'ajax'} = $def->{'define_ajax'};
+			$ret->{'load'} = $def->{'define_load'};
 		} else {
 			$ret->{'fail'} = "$filename : $def";
 		}
