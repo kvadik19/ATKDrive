@@ -287,11 +287,12 @@ my ($self, $dataref, $udata) = @_;
 #####################
 sub apply_data {	# Apply data on data template
 #####################
-my ($self, $model, $data) = @_;
+	my $self = shift;
+	my $init = { @_};
 	my $ret;
-	if ( ref($model) eq 'HASH' && ref($data) eq 'HASH' ) {
+	if ( ref($init->{'model'}) eq 'HASH' && ref($init->{'data'}) eq 'HASH' ) {
 		$ret = {};
-		while ( my ($k, $v) = each( %$model)) {
+		while ( my ($k, $v) = each( %{$init->{'model'}}) ) {
 			next if $k =~ /^==manifest/;
 			my $okey = $self->key_split( $k);
 			$k = $okey->{'uname'};
@@ -302,14 +303,14 @@ my ($self, $model, $data) = @_;
 			}
 			$dk =~ s/^\$//;
 			if ( $okey->{'classname'} =~ /bool/ ) {			# Conditional assignment
-				$ret->{$k} = 0;
+# 				$ret->{$k} = 0;		# Leave unassigned, if no condition description
 				if ( $dk =~ /^\(\$([^<^>^=^!]+)([<>=!]+)([^<^>^=^!]+)\)$/ ) {		# Condition description
 					my ($lt, $cmp, $rt) = ($1, $2, $3);
-					if ( exists($data->{$lt}) ) {
-						$lt = $data->{$lt};
+					if ( exists($init->{'data'}->{$lt}) ) {
+						$lt = $init->{'data'}->{$lt};
 						if ( $rt =~ /^\$/ ) {
 							$rt =~ s/^\$//;
-							$rt = $data->{$rt};
+							$rt = $init->{'data'}->{$rt};
 						}
 						my $tchk = $rt;			# TypeCheck support variable
 						$tchk =~ s/\s+//g;
@@ -334,20 +335,36 @@ my ($self, $model, $data) = @_;
 						my $bool = 0;
 						eval "\$bool = ($lt $cmp $rt)";
 						$ret->{$k} = $bool unless $@;
-# $Drive::logger->dump( "($lt $cmp $rt) = $bool" );
 					}
 				}
 			} else {
-				$ret->{$k} = $self->apply_data( $v, $data->{$dk});
+				my $data = $self->apply_data( model =>$v, data =>$init->{'data'}->{$dk}, reg_date =>$init->{'reg_date'});
+				if ( ref($data) eq 'HASH' ) {		# Special processed Date type value
+					$ret->{$k} = $data->{'datetime'};
+					$ret->{"$k-dd"} = $data->{'date'};		# Special keynames
+					$ret->{"$k-dt"} = $data->{'time'};		# nnnn = datetime, nnnn-dd = date, nnnn-dt = time
+				} else {
+					$ret->{$k} = $data
+				}
 			}
 		}
-	} elsif ( ref( $model) eq 'ARRAY' && ref($data) eq 'ARRAY' ) {
+	} elsif ( ref( $init->{'model'}) eq 'ARRAY' && ref($init->{'data'}) eq 'ARRAY' ) {
 		$ret = [];
-		foreach my $mi ( @$model) {
+		foreach my $mi ( @{$init->{'model'}} ) {
 			next if $mi =~ /^==manifest/;
-			push( @$ret, $self->apply_data( $mi, shift( @$data)));
+			push( @$ret, $self->apply_data( model =>$mi, data =>shift( @{$init->{'data'}}), reg_date =>$init->{'reg_date'}));
 		}
-	} elsif( $model =~ /^\$/ ) {
+	} elsif( $init->{'model'} =~ /^\$/ ) {
+		my $data = $init->{'data'};
+		if ( $data =~ /$init->{'reg_date'}/ ) {		# Special processing for Date type value, detected on data formatting
+			my $datetime = Date::Handler->new( date => Mojo::Date->new($data)->epoch, 
+												time_zone => $Drive::our_timezone, 
+												locale => $Drive::our_locale );
+			$data = {'datetime' => $datetime->TimeFormat( "$sys->{'datefmt'} %R"),
+					'date' => $datetime->TimeFormat( $sys->{'datefmt'}),
+					'time' => $datetime->TimeFormat('%R')
+					};
+		}
 		$ret = $data;
 	}
 	return $ret;
@@ -376,7 +393,7 @@ my $param = shift;
 
 		my $dom = Mojo::DOM->new( $tmpl_data );
 		$ret->{'qw_init'} = $define->{'init'};
-		my $tmpl_json = $self->dom_json( $dom);
+		my $tmpl_json = $self->dom_json( $dom);			# Obtain JSON data structure from template
 		my $json_sync = $self->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
 		#### Sync between stored defines and template structure!
 		
@@ -517,8 +534,7 @@ my $owner = shift;
 #####################
 sub from_json {			# Make JSON query from JSON query definition, ignore overload infos (See also: query.js->fromJSON )
 #####################
-my $self = shift;
-my $obj = shift;
+my ($self, $obj, $nouname) = @_;
 	my $res;
 	if ( ref( $obj) eq 'ARRAY' ) {
 		$res = [];
@@ -532,7 +548,9 @@ my $obj = shift;
 		while( my ($key, $val) = each( %$obj) ) {
 			next if $key =~ /^==manifest/;
 			my $okey = $self->key_split( $key);
-			$res->{$okey->{'uname'}} = $self->from_json($val);
+			my $out = 'uname';
+			$out = 'name' if $nouname;			# User defined or original keynames can be returned
+			$res->{$okey->{$out}} = $self->from_json($val);
 		}
 	} else {
 		$res = $obj;
@@ -572,7 +590,10 @@ my $item = shift;
 			if ( $item->children->[$_]->val =~ /tmpl_var/i ) {
 				my $valdom = Mojo::DOM->new->parse( $item->children->[$_]->val );
 				$varname = $valdom->at('tmpl_var')->attr('name') if $valdom->at('tmpl_var');
-				$map->{$varname} = "\$$varname" if $varname;
+				if ( $varname ) {
+					$varname =~ s/\-d[dt]$// if $varname =~ /\-d[dt]$/;			# Special names for date or time variables
+					$map->{$varname} = "\$$varname";
+				}
 			}
 
 		} elsif ( $tagname =~ /^tmpl_/i ) {				# HTML::Template's tag
@@ -588,7 +609,8 @@ my $item = shift;
 			} elsif ( $tagname =~ /^tmpl_loop/i ) {			# Array process
 				$map->{$keyname} = [];
 			} else {								# Show that variable
-				$map->{$keyname} = "\$$varname";
+				$keyname =~ s/\-d[dt]$// if $keyname =~ /\-d[dt]$/;			# Special names for date or time variables
+				$map->{$keyname} = "\$$keyname";
 			}
 		}
 		if ( $item->children->[$_]->children ) {

@@ -53,6 +53,9 @@
 				<label>Полученные значения</label>
 				<div class="box">
 				</div>
+				<div class="buttonbar">
+					<button type="button" class="default" >По умолчанию</button>
+				</div>
 			</div>
 			<div class="optgroup check">
 				<label>Данные для ключа <span></span>:</label>

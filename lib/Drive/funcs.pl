@@ -129,6 +129,32 @@ my ($value, $unmask) = @_;
 }
 
 ###############
+sub datemask {	# Return RegExp for date format string;
+############### 
+my $fmt = shift;
+
+	my $mask = {'%e'=> '\d{1,2}',	# day, no leadibg
+				'%d'=> '\d{2}',		# day, leading 0
+				'%c'=> '\d{1,2}',	# month number
+				'%m'=> '\d{2}',		# month number, leading 0
+				'%y'=> '\d{2}',		# year, no century
+				'%Y'=> '\d{4}',		# year 4-digit
+				'%h'=> '\d{2}',		# hour, leading 0, 12-hrs
+				'%H'=> '\d{2}',		# hour, leading 0, 24-hrs
+				'%i'=> '\d{2}',		# minutes, leading 0
+				'%M'=> '\d{2}',		# minutes, leading 0
+				'%s'=> '\d{1,2}',	# seconds
+				'%S'=> '\d{2}',		# seconds too
+				'%R'=> '\d{2}:\d{2}',	# time HH:MM
+				'%t'=> '\d{2}:\d{2}',	# time HH:MM
+				'%T'=> '\d{2}:\d{2}:\d{2}',	# time HH:MM:ss
+			};
+	while ( $fmt =~ /%[c-yH-Y]/ ) {
+		$fmt = "$`$mask->{$&}$'" if exists($mask->{$&});
+	}
+	return $fmt;
+}
+###############
 sub dateformat {
 ###############  Formatting date from serial number like MySQL, pure Perl
 my ($time, $string, $gmt) = @_;
@@ -136,19 +162,19 @@ my ($time, $string, $gmt) = @_;
 	@date = gmtime( $time ) if $gmt;
 	$date[5]+=1900;
 	$date[4]++;
-	my %mask = ('%e'=> $date[3],											# day, no leadibg
+	my %mask = ('%e'=> $date[3],						# day, no leadibg
 				'%d'=> sprintf('%02d', $date[3]),		# day, leading 0
-				'%c'=> $date[4],											# month number
+				'%c'=> $date[4],						# month number
 				'%m'=> sprintf('%02d', $date[4]),		# month number, leading 0
-				'%y'=> ( substr($date[5], 2)),								# year, no century
-				'%Y'=> $date[5],											# year 4-digit
-				'%h'=> $date[2],											# hour, leading 0, 12-hrs
+				'%y'=> ( substr($date[5], 2)),			# year, no century
+				'%Y'=> $date[5],						# year 4-digit
+				'%h'=> $date[2],						# hour, leading 0, 12-hrs
 				'%H'=> sprintf('%02d', $date[2]),		# hour, leading 0, 24-hrs
 				'%i'=> sprintf('%02d', $date[3]),		# minutes, leading 0
-				'%s'=> $date[0],											# seconds
+				'%s'=> $date[0],						# seconds
 				'%S'=> sprintf('%02d', $date[0]),		# seconds too
-				'%t'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]),	# time HH:MM:ss
-				'%T'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]).':'.sprintf('%02d', $date[0]),
+				'%t'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]),	# time HH:MM
+				'%T'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]).':'.sprintf('%02d', $date[0]),	# time HH:MM:SS
 			);
 	while ( my ($key, $mask) = each( %mask ) ) {
 		$string =~ s/$key/$mask/g;

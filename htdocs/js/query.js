@@ -484,6 +484,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							keyTool.set( { info:div, value:keyVal.innerText, items:['query'], valuesOnly: true,
 											head:'Выберите значение переменной <code>'+div.dataset.name+'</code>'})
 									.fire( function(key, val) {
+console.log([key, val]);
 												let fldName = val.dataset.name;
 												if ( dict[val.dataset.dict] ) {			// See `const dict`
 													recoder.assign( {dict:val.dataset.dict, host:keyVal} );
@@ -555,6 +556,15 @@ let keyTool = {			// Add key-value floating window operations
 																	li.ondblclick = keyTool.result });
 				this.panel.querySelector('button.esc').onclick = this.keyHide;
 				this.panel.querySelector('button.ok').onclick = this.result;
+				this.panel.querySelector('button.default').onclick = function() {
+													let key = keyTool.preset.info.querySelector('span.keyName').innerText;
+													keyTool.panel.querySelector('input#keyName').value = key;
+													keyTool.preset.info.dataset.name = key;
+													document.getElementById('bool_name').value = key;
+													keyTool.panel.querySelectorAll('.active').forEach( d =>{ 
+																	d.className = d.className.replace(/\s*active/g,'')});
+													keyTool.result();
+												};
 				this.panel.querySelector('input#keyName').oninput = this.inpCheck;
 				this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				Object.keys(this.preset).forEach( k =>{ delete( this.preset[k] ) });
@@ -729,7 +739,6 @@ let keyTool = {			// Add key-value floating window operations
 				keyTool.panel.querySelector('input#keyName').value = '';
 				keyTool.panel.querySelector('input#keyName').dataset.value = '';
 				if ( keyTool.preset.info ) keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');
-				keyTool.preset = {};
 				btnActivate();
 			},
 		keyTrap: function(evt) {			// Click outside of keySelect window
@@ -781,7 +790,8 @@ let keyTool = {			// Add key-value floating window operations
 				if ( typeof(keyTool.callbk) === 'function' ) {
 					let clone = val.cloneNode(true);
 					clone.stack = [];
-					if ( keyTool.preset.info && keyTool.preset.info.matches('.bool') ) {
+					if ( keyTool.preset.info && keyTool.preset.info.matches('.bool')
+								&& document.getElementById('bool_name').value !== key.value ) {
 						let name = document.getElementById('bool_name').value;
 						let cond = document.getElementById('bool_cond').value;
 						let val = document.getElementById('bool_val').value;

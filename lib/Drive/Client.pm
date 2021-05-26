@@ -23,6 +23,8 @@ our $pages;
 our $my_name = 'client';
 our $sys = \%Drive::sys;
 my $uncheck = 'logout';
+our $dict_fields = {'user_mode'=>'_umode', 'user_state'=>'_ustate', 'user_type'=>'_usubj',
+					'_umode'=>'user_mode', '_ustate'=>'user_state', '_usubj'=>'user_type'};
 
 use Data::Dumper;
 
@@ -304,10 +306,11 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 			$qw_recv = $templates->{$action}->{'query'}->{'init'}->{'qw_recv'};
 		}
 
-		 $qw_load = {} unless $udata->{'record'}->{'_uid'} == $qw_load->{'_uid'};
+		$qw_load = {} unless $udata->{'record'}->{'_uid'} == $qw_load->{'_uid'};
 														# Apply test data for same user ID (means tester unit)
 		$qw_send->{'data'} = Drive::Support->required_query( $qw_send->{'data'}, $qw_load );
 														# Assign required data & possible defaults
+		my $send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);			# Original named parameners for HTML::Template
 		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});		# Remove overload info from keys
 		Drive::Support->apply_user( $qw_send->{'data'}, $udata->{'record'} );
 		$qw_send = encode_json( $qw_send);
@@ -320,17 +323,33 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 							pwd => $conf->{'connect'}->{'htpasswd'},
 						);
 		return {'fail' => $resp} unless $resp =~ /^[\{\[].*[\}\]]$/;
+# $self->logger->dump(Dumper($send_data));
 # $self->logger->dump($qw_send);
-# $self->logger->dump($resp);
 		eval{ $resp = decode_json($resp) };
 		return {'fail' => $@} if $@;
 
+		my $testdate = Drive::datemask( $sys->{'datefmt_recv'});		# RegExp for date type detection
+		$testdate = qr/^$testdate$/;
 		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
-		$out = Drive::Support->apply_data( $qw_recv->{'data'}, $resp->{'data'});
+		$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
+											data => $resp->{'data'},
+											reg_date => $testdate,
+										);
 		if ( $is_ajax ) {
 			$out->{'json'} = $out;
 		} else {
-			$templates->{$action}->{'tmpl'}->param($param);
+			my $ifstate = {};
+			foreach my $dname ( qw(user_mode user_state user_type) ) {			# Create if-dictionaries
+				my $dict = $sys->{$dname};
+				while ( my($name, $value) = each( %$dict) ) {
+					my $cmp = $udata->{'record'}->{$dict_fields->{$dname}};
+					$cmp = $qw_load->{$dict_fields->{$dname}} if exists($qw_load->{$dict_fields->{$dname}});
+					$ifstate->{"is_$name"} = ($cmp == $value->{'value'});
+				}
+			}
+			#### Apply parameters. Order is matter!
+			$templates->{$action}->{'tmpl'}->param($ifstate);
+			$templates->{$action}->{'tmpl'}->param($send_data);
 			$templates->{$action}->{'tmpl'}->param($udata);
 			$templates->{$action}->{'tmpl'}->param($sys);
 			$templates->{$action}->{'tmpl'}->param($udata->{'record'});
