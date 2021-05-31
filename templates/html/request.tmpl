@@ -1,5 +1,5 @@
 <div class="container">
-		<h1 class="form__title">Запрос</h1>
+		<h1 class="form__title">Страница &laquo;запрос&raquo;</h1>
 	<div id="finance-body" class="panel light wide">
 		<p>Страница гипотетического запроса
 		</p>
@@ -13,30 +13,87 @@
 			Заказчик/Перевозчик:
 		</TMPL_IF>
 	</TMPL_IF>
-		<TMPL_VAR NAME="fullname">
+		<TMPL_VAR NAME="contragent">
 		</div>
 
 		<h2>Грузовики</h2>
-		<div class="row">Дата начала: <input type="text" value="<TMPL_VAR NAME='begin-dd'>" /></div>
-		<div class="row">Время начала: <input type="text" value="<TMPL_VAR NAME='begin-dt'>" /></div>
-		<div class="row">Дата окончания: <input type="text" value="<TMPL_VAR NAME='end'>" /></div>
-		<div class="row">Количество документов: <input type="text" value="<TMPL_VAR NAME="koldoc">" /></div>
-		<div class="fintable">
+		<table>
+			<tr>
+			<td>Дата заявки:</td><td><input type="text" value="<TMPL_VAR NAME='orddate-dd'>" /></td>
+			<tr>
+			</tr>
+			<td>Время заявки:</td><td><input type="text" value="<TMPL_VAR NAME='orddate-dt'>" /></td>
+			</tr>
+			<tr>
+		<td>Водитель:</td><td><input type="text" value="<TMPL_VAR NAME='driver'>" /></td>
+			</tr>
+			<tr>
+		<td>Масса:</td><td><input type="text" value="<TMPL_VAR NAME='weight'>" /></td>
+			</tr>
+			<tr>
+		<td>Общая стоимость</td><td><strong><TMPL_VAR NAME="total"></strong> руб</td>
+			</tr>
+		</table>
+		<h2>Детали перевозки</h2>
+		<table>
 <TMPL_LOOP NAME="list">
-		<div class="finrow">
-		<div class="fin-date">
-	<TMPL_VAR NAME="date">
-		</div>
-		<div class="fin-sum">
-	<TMPL_VAR NAME="qty">
-		</div>
-	<TMPL_VAR NAME="sum">
-		</div>
+		<tr>
+		<td>
+	<TMPL_VAR NAME="oper_type">
+		</td>
+		<td>
+	<TMPL_VAR NAME="oper_date-dd">
+		</td>
+		<td>
+	<TMPL_VAR NAME="load_type">
+		</td>
+		<td>
+	<TMPL_VAR NAME="load_city">
+		</td>
+		</tr>
 </TMPL_LOOP>
-	<TMPL_VAR NAME="total">
+		</table>
+		<hr>
+		<div class="block_header">Изменить параметры выборки</div>
+		<div class="form__data">
+			<input type="hidden" data-key="koldoc" class="udata" value="<TMPL_VAR NAME='koldoc'>" />
+			<input type="hidden" data-key="_umode" class="udata" value="<TMPL_VAR NAME='_umode'>" />
+			<input type="hidden" data-key="_uid" class="udata" value="<TMPL_VAR NAME='_uid'>" />
+			<div class="optrow">
+				<label for="d_start">Начало периода: </label><input data-key="begin" class="udata" id="d_start" type="date" value="<TMPL_VAR NAME='begin-dd'>" />
+			</div>
+			<div class="optrow">
+				<label for="d_end">Окончание периода: </label><input data-key="end" class="udata" id="d_end" type="date" value="<TMPL_VAR NAME='end-dd'>" />
+			</div>
+			<div class="buttonbar">
+				<button type="button" class="form__btn" data-code="request" id="sendquery">Запросить</button>
+			</div>
 		</div>
 	</div>
 </div>
 <script type="text/javascript">
-
+document.addEventListener('DOMContentLoaded', function() {
+		document.getElementById('sendquery').onclick = function() {
+				let btn = this;
+				let formdata = {};
+				document.querySelectorAll('input.udata').forEach( inp =>{
+															let val = inp.value;
+															if ( val.match(/^\d+$/) ) {
+																val *= 1;			// Bring to a number
+															} else if( inp.type === 'date') {
+																val = val.replace(/\-/g,'');
+															}
+															formdata[inp.dataset.key] = val;
+														});
+				let msg = {'code':btn.dataset.code,'data':formdata};
+				flush(msg, document.location.origin+document.location.pathname, function(resp) {
+							if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
+							if ( resp.fail ) {
+								alert( resp.fail);
+							} else {
+								console.log(resp);
+							}
+						});
+			};
+	});
 </script>

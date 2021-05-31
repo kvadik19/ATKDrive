@@ -14,6 +14,7 @@ use XML::XML2JSON;
 use File::Copy;
 use Mojo::JSON qw(j decode_json encode_json);
 use Mojo::Util qw(url_escape url_unescape b64_encode  trim md5_sum);
+use Date::Handler;
 
 ##################################
 sub fork_proc {		# Fork process
@@ -154,6 +155,67 @@ my $fmt = shift;
 	}
 	return $fmt;
 }
+#####################
+sub from_dateformat {		# Make time value from formatted string
+#####################
+	my ($str, $fmt, $to_fmt) = @_;
+	my $mask = {'%e'=> '\d{1,2}',	# day, no leadibg
+				'%d'=> '\d{2}',		# day, leading 0
+				'%c'=> '\d{1,2}',	# month number
+				'%m'=> '\d{2}',		# month number, leading 0
+				'%y'=> '\d{2}',		# year, no century
+				'%Y'=> '\d{4}',		# year 4-digit
+				'%h'=> '\d{2}',		# hour, leading 0, 12-hrs
+				'%H'=> '\d{2}',		# hour, leading 0, 24-hrs
+				'%i'=> '\d{2}',		# minutes, leading 0
+				'%M'=> '\d{2}',		# minutes, leading 0
+				'%s'=> '\d{1,2}',	# seconds
+				'%S'=> '\d{2}',		# seconds too
+				'%R'=> '\d{2}:\d{2}',	# time HH:MM
+				'%t'=> '\d{2}:\d{2}',	# time HH:MM
+				'%T'=> '\d{2}:\d{2}:\d{2}',	# time HH:MM:ss
+			};
+	my $target = {'%e'=> 'day',
+				'%d'=> 'day',
+				'%c'=> 'month',
+				'%m'=> 'month',
+				'%y'=> 'year',
+				'%Y'=> 'year',
+				'%h'=> 'hour',
+				'%H'=> 'hour',
+				'%i'=> 'min',
+				'%M'=> 'min',
+				'%s'=> 'sec',
+				'%S'=> 'sec',
+				'%R'=> 'hour:min',
+				'%t'=> 'hour:min',
+				'%T'=> 'hour:min:sec',
+			};
+	my $def;
+	while ( $fmt =~ /%[c-yH-Y]/gc ) {
+		my $qr = $&;
+		if ( $str =~ /$mask->{$qr}/g ) {
+			my $dat = $&;
+			if ( $target->{$qr} =~ /:/ ) {
+				my @dat = split(/:/, $dat);
+				foreach my $key ( split(/:/, $target->{$qr}) ) {
+					$def->{$key} = shift(@dat);
+				}
+			} else {
+				$def->{$target->{$qr}} = $dat;
+			}
+		}
+	}
+	if ( $def ) {
+		if ( $to_fmt ) {
+			return Date::Handler->new( date=>$def)->TimeFormat($to_fmt);	# , time_zone=>$Drive::our_timezone, locale=>$Drive::our_locale
+		} else {
+			return Date::Handler->new( date=>$def)->Epoch;
+		}
+	} else {
+		return undef;
+	}
+}
 ###############
 sub dateformat {
 ###############  Formatting date from serial number like MySQL, pure Perl
@@ -174,6 +236,7 @@ my ($time, $string, $gmt) = @_;
 				'%s'=> $date[0],						# seconds
 				'%S'=> sprintf('%02d', $date[0]),		# seconds too
 				'%t'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]),	# time HH:MM
+				'%R'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]),	# time HH:MM
 				'%T'=> sprintf('%02d', $date[2]).':'.sprintf('%02d', $date[1]).':'.sprintf('%02d', $date[0]),	# time HH:MM:SS
 			);
 	while ( my ($key, $mask) = each( %mask ) ) {

@@ -343,16 +343,19 @@ sub apply_data {	# Apply data on data template
 					$ret->{$k} = $data->{'datetime'};
 					$ret->{"$k-dd"} = $data->{'date'};		# Special keynames
 					$ret->{"$k-dt"} = $data->{'time'};		# nnnn = datetime, nnnn-dd = date, nnnn-dt = time
-				} else {
+
+				} elsif( $data ) {				# Only exists data
 					$ret->{$k} = $data
 				}
 			}
 		}
 	} elsif ( ref( $init->{'model'}) eq 'ARRAY' && ref($init->{'data'}) eq 'ARRAY' ) {
 		$ret = [];
-		foreach my $mi ( @{$init->{'model'}} ) {
-			next if $mi =~ /^==manifest/;
-			push( @$ret, $self->apply_data( model =>$mi, data =>shift( @{$init->{'data'}}), reg_date =>$init->{'reg_date'}));
+		foreach my $di ( @{$init->{'data'}}) {
+			foreach my $mi ( @{$init->{'model'}} ) {
+				next if $mi =~ /^==manifest/;
+				push( @$ret, $self->apply_data( model =>$mi, data =>$di, reg_date =>$init->{'reg_date'}));
+			}
 		}
 	} elsif( $init->{'model'} =~ /^\$/ ) {
 		my $data = $init->{'data'};

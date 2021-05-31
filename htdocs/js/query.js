@@ -378,7 +378,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 										'qw_recv':{'code':bodyIn.querySelector('.qw_code .code').innerText,
 												'data':fromDOM( bodyIn.querySelector('.qw_data'))},
 										'qw_send':{'code':bodyOut.querySelector('.qw_code .code').value,
-												'data':fromDOM( bodyOut.querySelector('.qw_data'))}
+												'data':fromDOM( bodyOut.querySelector('.qw_data'))},
+										'translate':translate
 										};
 						flush({'code':'commit','data':formData}, document.location.href, function(resp) {
 								if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
@@ -424,9 +425,9 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 												}
 												d.querySelectorAll('span.keyVal').forEach( s =>{
 																	let key = s.innerText.replace(/^\$/,'');
-																	if ( translate[key] ) {
-																		s.innerText = '$'+translate[key];
-																	}
+// 																	if ( translate[key] ) {
+// 																		s.innerText = '$'+translate[key];
+// 																	}
 																});
 											});
 									bodyIn.querySelector('.qw_code .code').value = define.qw_init.qw_recv.code
@@ -484,7 +485,6 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							keyTool.set( { info:div, value:keyVal.innerText, items:['query'], valuesOnly: true,
 											head:'Выберите значение переменной <code>'+div.dataset.name+'</code>'})
 									.fire( function(key, val) {
-console.log([key, val]);
 												let fldName = val.dataset.name;
 												if ( dict[val.dataset.dict] ) {			// See `const dict`
 													recoder.assign( {dict:val.dataset.dict, host:keyVal} );
@@ -514,10 +514,11 @@ console.log([key, val]);
 										'init': { 'qw_recv':{'code':bodyIn.querySelector('.qw_code .code').value,
 															'data':fromDOM( bodyIn.querySelector('.qw_data'))},
 												'qw_send':{'code':bodyOut.querySelector('.qw_code .code').value,
-															'data':fromDOM( bodyOut.querySelector('.qw_data'))}
+															'data':fromDOM( bodyOut.querySelector('.qw_data'))},
 												},
 										'checkload': checkload,		// Global variable for test queries data
 										'ajax': [],
+										'translate':translate
 										};
 						let ajax = document.querySelectorAll('.tabContent.shown .qw_talks.ajax');
 						for ( let aN=0; aN<ajax.length; aN++) {
@@ -893,6 +894,8 @@ let keyEdit = {
 						sel = '.'+sel+' .'+keyVal.className.replace(/ +/g,'.')+'[data-name="'+keyVal.dataset.name+'"] .keyName';
 						bodyOut.querySelectorAll(sel).forEach( el =>{ el.innerText = value});
 					}
+					let box = host.closest('.domItem.value');
+					if ( box ) translate[box.dataset.name] = value;			// Update translation table
 				} else {
 					host.innerText = keyEdit.preval;
 				}

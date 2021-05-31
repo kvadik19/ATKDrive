@@ -294,12 +294,12 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 		if ( $is_ajax ) {
 			if ( ref( $templates->{$action}->{'query'}->{'ajax'}) eq 'ARRAY' ) {	# Have ordered list of postprocessors?
 				my $ajax = {};
-				foreach my $qw ($templates->{$action}->{'query'}->{'ajax'}) {		# Translate ajax's array into hash
+				foreach my $qw ( @{$templates->{$action}->{'query'}->{'ajax'}} ) {		# Translate ajax's array into hash
 					$ajax->{$qw->{'qw_send'}->{'code'}} = $qw;
 				}
 				$templates->{$action}->{'query'}->{'ajax'} = $ajax;
 			}
-			$qw_send = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_send'};
+			$qw_send = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_send'} || $param;
 			$qw_recv = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_recv'};
 		} else {
 			$qw_send = $templates->{$action}->{'query'}->{'init'}->{'qw_send'};
@@ -308,12 +308,18 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 
 		$qw_load = {} unless $udata->{'record'}->{'_uid'} == $qw_load->{'_uid'};
 														# Apply test data for same user ID (means tester unit)
+while ( my($k, $v) = each( %{$templates->{$action}->{'query'}->{'translate'}}) ) {
+	$self->logger->dump( $k);
+}
 		$qw_send->{'data'} = Drive::Support->required_query( $qw_send->{'data'}, $qw_load );
 														# Assign required data & possible defaults
+
 		my $send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);			# Original named parameners for HTML::Template
 		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});		# Remove overload info from keys
+$self->logger->dump( 'Udata '.Dumper($udata->{'record'}));
 		Drive::Support->apply_user( $qw_send->{'data'}, $udata->{'record'} );
 		$qw_send = encode_json( $qw_send);
+$self->logger->dump($qw_send);
 
 		my $resp = Utils::Tools->ask_inet(
 							host => $host,
@@ -322,15 +328,26 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 							login => $conf->{'connect'}->{'htlogin'},
 							pwd => $conf->{'connect'}->{'htpasswd'},
 						);
-		return {'fail' => $resp} unless $resp =~ /^[\{\[].*[\}\]]$/;
-# $self->logger->dump(Dumper($send_data));
-# $self->logger->dump($qw_send);
+$self->logger->dump($resp);
+		unless ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
+			$out = {'html_code' => $resp};
+			$out = {'json' => {'fail' => $resp}} if $is_ajax;
+			goto RESULT;
+		}
+
 		eval{ $resp = decode_json($resp) };
-		return {'fail' => $@} if $@;
+		if ( $@ ) {
+			$out = {'html_code' => $@};
+			$out = {'json' => {'fail' => $@}} if $is_ajax;
+			goto RESULT;
+		}
 
 		my $testdate = Drive::datemask( $sys->{'datefmt_recv'});		# RegExp for date type detection
 		$testdate = qr/^$testdate$/;
+
+		$qw_recv->{'data'} = $resp->{'data'} unless $qw_recv->{'data'};			# Undefined AJAX model yet?
 		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
+
 		$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
 											data => $resp->{'data'},
 											reg_date => $testdate,
@@ -347,6 +364,14 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 					$ifstate->{"is_$name"} = ($cmp == $value->{'value'});
 				}
 			}
+			foreach my $dname ( qw(begin end) ) {			# Bring dates into JS format
+				$send_data->{$dname} = Drive::from_dateformat( $send_data->{$dname}, $sys->{'datefmt_send'}, '%Y-%m-%dT%T');
+				$send_data->{"$dname-dd"} = $send_data->{$dname};
+				$send_data->{"$dname-dt"} = $send_data->{$dname};
+				$send_data->{"$dname-dd"} =~ s/T[0-9:]{8}$//;
+				$send_data->{"$dname-dt"} =~ s/^[0-9\-]+T([0-9:]{5})[0-9:]{3}$/$1/;
+			}
+			
 			#### Apply parameters. Order is matter!
 			$templates->{$action}->{'tmpl'}->param($ifstate);
 			$templates->{$action}->{'tmpl'}->param($send_data);
@@ -363,6 +388,7 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 		$out->{'fail'} = "Undefined processor";
 	}
 
+	RESULT:
 	return $out;
 }
 #################
