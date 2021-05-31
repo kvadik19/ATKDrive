@@ -19,7 +19,7 @@ KEY login (_login),
 KEY pwd (_pwd),
 KEY ustate (_ustate),
 KEY umode (_umode),
-KEY usubj (_subj),
+KEY usubj (_usubj),
 KEY hash (_hash)
 ) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 

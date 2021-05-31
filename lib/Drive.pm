@@ -41,7 +41,7 @@ sub startup {
 								} );
 	$self->plugin('DefaultHelpers');
 	$self->secrets( ['sug4hyg327ah243Hhjck'] );
-	$self->plugin('PODRenderer');
+# 	$self->plugin('PODRenderer');
 	$sys_root = "$FindBin::Bin/..";
 
 	$our_locale = substr($our_locale, index($our_locale,'=')+1);
