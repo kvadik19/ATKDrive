@@ -33,8 +33,8 @@ sub startup {
 # kill( 'SIGUSR2', $mypid)
 # 	$ENV{'MOJO_MAX_LINES'} = 150;
 # 	$ENV{'MOJO_MAX_LINE_SIZE'} = 16384;
-	$self->config( hypnotoad => { listen => [ "http://127.0.0.1:9210",
-											"https://127.0.0.1:9209" ],	# Need to be set in nginx map directive
+	$self->config( hypnotoad => { listen => [ "http://127.0.0.1:9021",
+											"https://127.0.0.1:9020" ],	# Need to be set in nginx map directive
 								workers => 2,		# two worker processes per CPU core
 								spare => 8,
 								proxy => 0,
