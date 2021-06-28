@@ -1,0 +1,194 @@
+#menu_burger {
+	line-height: 1;
+	font-size: 150%;
+	color: var(--head-text);
+}
+#menu_holder {
+	display:flex;
+	overflow:hidden;
+	height:0px;
+	width:0px;
+	right:0px;
+	position:absolute;
+	margin-top:-1em;		/* Container overwrite */
+	flex-direction:row;
+	justify-content:flex-end;
+	z-index:4;
+	-webkit-transition: width 0.2s linear 0s;
+	-o-transition: width 0.2s linear 0s;
+	transition: width 0.2s linear 0s;
+}
+#menu_holder.active {
+	height:auto;
+	width:100%;
+/* 	background-color:rgba(255, 255, 255, 0.8); */
+}
+#menu_holder.active aside.main_menu {
+	margin:0px 0px 15px 0px;
+	border-radius: 0px 0px 0px 6px;
+	-moz-box-shadow: -4px 4px 15px #000000;
+	-webkit-box-shadow: -4px 4px 15px #000000;
+	box-shadow: -4px 4px 15px #000000;
+}
+aside.main_menu {
+	position:relative;
+	left:0px;
+	top:0px;
+	font-family: var(--panel-font);
+	border-radius: 6px;
+	background-color: var(--panel-back, "#016B45");
+	display: table-cell;
+	float: left;
+	max-width: 500px;
+	min-width: 322px;
+	margin: 0px 2em 1em 0px;
+	padding: 0px;
+	-moz-box-shadow: 0px 4px 15px #dfdfdf;
+	-webkit-box-shadow: 0px 4px 15px #dfdfdf;
+	box-shadow: 0px 4px 15px #dfdfdf;
+}
+
+.navbar_logobox {
+	background-color: var(--panel-text);
+	margin: 1em auto 15px auto;
+	width: 124px;
+	height: 124px;
+	border-radius: 50%;
+	display: -webkit-box;
+	display: -ms-flexbox;
+	display: flex;
+	-webkit-box-pack: center;
+	-ms-flex-pack: center;
+	justify-content: center;
+	-webkit-box-align: center;
+	-ms-flex-align: center;
+	align-items: center;
+}
+.navbar_logo {
+	width: 95px;
+	opacity: 0.4;
+}
+span.logo_title {
+	color: var(--body-back);
+	text-align: center;
+	text-transform:capitalize;
+	font-weight:500;
+	font-size:120%;
+	line-height:1.5;
+	margin: 0px 0px 10px 0px;
+}
+span.logo_name {
+	color: var(--panel-text-dk);
+	text-align: center;
+	margin: 0px 0px 10px 0px;
+}
+.navbar_list {
+	margin: 3em 0px 0px 0px;
+}
+.navbar_list li {
+	border-top: 1px solid var(--panel-back-md);
+	display: block;
+}
+.navbar_sublist {
+	display:none;
+}
+.show .navbar_sublist {
+	display:block;
+}
+.navbar_sublist li {
+	background-color:var(--panel-back-alt);
+}
+.navbar_sublist li span {
+	background-color:var(--panel-back-dk);
+}
+.navbar_sublist li span:before {
+	content: '\26AB';
+	margin-right:1em;
+	color: var(--body-back);
+}
+.navbar_sublist li a:before {
+	content: '\26AB';
+	color:transparent;
+	margin-right:1em;
+}
+.navbar_sublist a,
+.navbar_sublist span {
+	text-transform: normal !important;
+}
+.navbar_list a,
+.navbar_list span {
+	color: var(--panel-text);
+	display:list-item;
+	padding: 0.5em 1.5em;
+	font-weight: 400;
+	font-size: 14px;
+	line-height: 2.5;
+	text-transform: uppercase;
+	-webkit-transition: all 0.3s ease 0s;
+	-o-transition: all 0.3s ease 0s;
+	transition: all 0.3s ease 0s;
+}
+.navbar_item:not(.sublist) span {
+	background: var(--panel-back-md);
+}
+.navbar_item:last-of-type span,
+.navbar_item:last-of-type a:hover {
+	border-radius:0px 0px 6px 6px;
+}
+.navbar_item.sublist >span:after {
+	content:'\2304';
+	float:right;
+	font-size:200%;
+	line-height:0.7;
+}
+.navbar_item.sublist.show >span:after {
+	content:'\2303';
+	float:right;
+	font-size:200%;
+	line-height:1.7;
+}
+.navbar_item a:hover,
+.navbar_item.sublist:not(.show) >span:hover {
+	background-color: var(--panel-back-md);
+}
+.navbar_sublist a:hover {
+	background-color: var(--panel-back-sel);
+}
+#umode_sw {
+	display:block;
+	border:inset thin;
+	background:var(--btn-bg-green-alt);
+	height:1.8em;
+	margin:1em auto;
+	border-radius:0.3em;
+	text-align:center;
+	width:10em;
+}
+#umode_sw >span {
+	display:inline-block;
+	margin:0.25em 0.25em 0.25em -1.5em;
+	line-height:1.5;
+	color:var(--panel-back-md);
+}
+#umode_sw[data-state="1"] >span {
+	margin:0.25em -1.5em 0.25em 0.25em;
+}
+#umode_sw >div {
+	cursor:pointer;
+	display:inline-block;
+	border:outset medium;
+	height:1.5em;
+	width:1.5em;
+	margin:0.15em 0.2em;
+	border-radius:0.25em;
+	color:var(--head-text);
+	background: var(--btn-bg-alt);
+	text-align:center;
+	float:left;
+	-webkit-transform: rotate(90deg);
+	-ms-transform: rotate(90deg);
+	transform: rotate(90deg);
+}
+#umode_sw[data-state="1"] >div {
+	float:right;
+}

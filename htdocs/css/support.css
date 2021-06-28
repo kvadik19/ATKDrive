@@ -325,7 +325,7 @@ div.optrow {
 }
 div.optrow h4 {
 	background-color:inherit;
-	color:var(--panel-back-dk);
+	color:var(--btn-bg-dk);
 	padding:0px;
 	text-indent:0px;
 }
@@ -560,8 +560,9 @@ div.options {
 
 #keyHolder .optgroup.bool {
 	display: grid;
-	grid-template-columns: 40% 17% 40%;
+	grid-template-columns: 40% 3em 40%;
 	grid-column-gap: 1%;
+	max-width:500px;
 }
 .optgroup.bool input[type="text"] {
 	padding:0px;
@@ -571,6 +572,7 @@ div.options {
 }
 .optgroup.bool #bool_cond {
 	text-align:center;
+	cursor:default;
 }
 .optgroup.bool .popBox {
 	position:absolute;

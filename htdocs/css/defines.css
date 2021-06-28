@@ -16,10 +16,14 @@
 	--head-back: #1b242d;
 	--head-text: #bdbdbd;
 	--head-text-lt: #ffffff;
+	--head-text-alt: #5a6268;
 
-	--panel-back:#016B45;
-	--panel-back-lt:#00b171;
-	--panel-back-dk: #1d1d1d;
+	--panel-back :#016B45;
+	--panel-back-lt: #00b171;
+	--panel-back-dk: #00301f;
+	--panel-back-md: #005234;
+	--panel-back-alt: #0b4430;
+	--panel-back-sel: #00b171;
 	--panel-text:#ffffff;
 	--panel-text-dk:#b7bfc3;
 	--panel-font:Roboto, Verdana, sans-serif;
@@ -27,6 +31,7 @@
 	--bg-grad-h:linear-gradient(to right, #ffffff, #ebf5ef, #ffffff);
 
 	--btn-bg:linear-gradient(0deg,#cccccc,#fafafa);
+	--btn-bg-dk: #1d1d1d;
 	--btn-bg-alt:linear-gradient(180deg,#cccccc,#fafafa);
 	--btn-fg:#333333;
 	--btn-bg-red:linear-gradient(0deg,#cc9999,#facccc);

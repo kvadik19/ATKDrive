@@ -321,13 +321,62 @@ function elementInViewport(el,parent) {
 
 
 document.addEventListener('DOMContentLoaded', function() {
-
 		document.querySelectorAll('.closebox').forEach( b => {
 				b.addEventListener('click', function(e) {
-						let p = findParentBy(b, function(o) { return o.className.match(/\s*over\-panel/i) });
+						let p = findParentBy(b, function(o) { return o.matches('.over-panel') });
 						p.style.display = 'none';
 					});
 			});
+		document.querySelectorAll('.navbar_item.sublist').forEach( li =>{ 		// Sidebar operations support
+							let cookOpt = { 'path':'/', 'domain':document.location.host,'max-age':60*60*24*365 };
+							li.querySelector('span').onclick = function() { 
+														if ( li.matches('.show') ) {
+															li.className = li.className.replace(/\s*show/g,'');
+															setCookie('sl' + li.dataset.order, '0', cookOpt);
+														} else {
+															li.className += ' show';
+															setCookie('sl' + li.dataset.order, '1', cookOpt);
+														} 
+													};
+						});
+
+		document.querySelectorAll('#umode_sw>div').forEach( d =>{ d.onclick = function(e) {
+							let disp = document.querySelector('#umode_sw>span');
+							this.parentNode.dataset.state = 3 - this.parentNode.dataset.state * 1;
+							disp.innerText = disp.parentNode.dataset.alt;
+							setCookie('_umode', this.parentNode.dataset.state, 
+								{ 'path':'/', 'domain':document.location.host,'max-age':60*60*24*365 });
+							e.stopImmediatePropagation();
+							document.location.reload();
+						};
+					});			// Prevent querySelector() errors
+
+		let box = document.getElementById('menu_holder');
+		let host = document.getElementById('menu_burger');
+		if ( host && box ) {						// Only for mobile devices
+			let ifMenuClick = function(e) {
+					let idx = e.path.findIndex( i =>{ try { return i.matches('aside.main_menu')} catch(e) { return false} });
+					if ( idx < 0 ) {
+						e.stopImmediatePropagation();
+						hideMenu();
+					}
+				};
+			let hideMenu = function() {
+								host.innerHTML = '&#9776;';
+								box.className = box.className.replace(/\s*active/g,'');
+								document.removeEventListener('click', ifMenuClick);
+				};
+			host.onclick = function(e) {
+							if ( box.matches('.active') ) {
+								hideMenu();
+							} else {
+								host.innerHTML = '&#10005;';	// U+2715	MULTIPLICATION X
+								box.className += ' active';
+								document.addEventListener('click', ifMenuClick);
+							}
+							e.stopImmediatePropagation();
+						};
+		}
 
 /* Drag element support */
 		document.querySelectorAll('.dragbar').forEach( d => {
@@ -359,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				d.ondragstart = function() { return false };
 				panel.ondragstart = function() { return false };
 			});
-/* Drag element support END*/
+   /* Drag element support END*/
 	});
 
 // Tab switching support

@@ -425,9 +425,6 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 												}
 												d.querySelectorAll('span.keyVal').forEach( s =>{
 																	let key = s.innerText.replace(/^\$/,'');
-// 																	if ( translate[key] ) {
-// 																		s.innerText = '$'+translate[key];
-// 																	}
 																});
 											});
 									bodyIn.querySelector('.qw_code .code').value = define.qw_init.qw_recv.code
@@ -570,6 +567,7 @@ let keyTool = {			// Add key-value floating window operations
 				this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				Object.keys(this.preset).forEach( k =>{ delete( this.preset[k] ) });
 				this.panel.querySelector('#bool_cond').onfocus = this.condSelector;
+				this.panel.querySelector('#bool_val').onblur = this.inpCheck;
 				this.panel.querySelector('#bool_dict').onclick = this.valSelector;
 				return this;
 			},
@@ -600,7 +598,7 @@ let keyTool = {			// Add key-value floating window operations
 					for ( let nO=0; nO < others.length; nO++ ) {
 						if ( others[nO].matches('.qItem.value[data-name]') ) {
 							if ( !others[nO].lastElementChild.matches('span.keyVal') ) continue;
-							vbox.add(createObj('option',{'value':'$'+others[nO].dataset.name,'innerText':others[nO].dataset.name}));
+							vbox.add( createObj('option',{'value':'$'+others[nO].dataset.name,'innerText':others[nO].dataset.name}));
 						}
 					}
 					for ( let dk in dict ) {		// Add our dictionaries
@@ -611,6 +609,11 @@ let keyTool = {			// Add key-value floating window operations
 							grp.appendChild(createObj('option',{'value':dict[dk][ok].value,'innerText':dict[dk][ok].title}))
 						}
 						vbox.appendChild(grp);
+					}
+					if ( chcd.lastElementChild.matches('span.keyVal')
+							&& chcd.lastElementChild.innerText.match(/^(true|false)$/i) ) {
+						vbox.insertBefore( createObj('option',{'value':'false','innerText':'false'}), vbox.children[0]);
+						vbox.insertBefore( createObj('option',{'value':'true','innerText':'true'}), vbox.children[0]);
 					}
 					vbox.size = vbox.options.length;
 				}
@@ -798,14 +801,17 @@ let keyTool = {			// Add key-value floating window operations
 						let val = document.getElementById('bool_val').value;
 						if ( val.replace(/\s+/g,'').match(/^\d+$/ ) ) {		// IsDigit?
 							val = val.replace(/\s+/g,'');
-						} else if ( val.match(/^\$/ ) ) {			// Key name?
+						} else if ( val.match(/^\$/ ) ) {			// Key name? Assumed As Is
+						} else if ( val.match(/^(true|false)$/i ) ) {			// Reserved keywords? Assumed As Is
+							val = val.toLowerCase();
 						} else {							// Character data
 							val = "'"+val+"'";
 						}
 						clone.dataset.name = '('+name+cond+val+')';
 					} else if ( keyTool.preset.items && keyTool.preset.items[0] === 'check' ) {
 						clone.dataset.value = keyTool.panel.querySelector('.optgroup.check .box input.keyText').value;
-					} else if (val.parentNode) {
+					}
+					if (val.parentNode) {
 						let upper = val;
 						while ( upper = upper.parentNode.closest('.domItem[data-name]') ) {
 							clone.stack.push(upper.dataset.name);
@@ -837,12 +843,13 @@ let keyTool = {			// Add key-value floating window operations
 				keyTool.inpCheck();
 			},
 		inpCheck: function(evt) {		// Check for some of list selected
+				if ( !this.panel ) return;
 				let txt = this.panel.querySelector('input#keyName');
 				let li = this.panel.querySelector('li.active') 
 											|| (txt.dataset.value !== txt.value);	// Ignore this check - allow empty keyName
 				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {			// Stub for ignore list checking is being used!
 					this.panel.querySelector('button.ok').removeAttribute('disabled');
-					this.panel.querySelector('button.ok').focus();
+// 					this.panel.querySelector('button.ok').focus();
 				} else {
 					this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				}

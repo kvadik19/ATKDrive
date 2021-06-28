@@ -205,7 +205,7 @@ my $self = shift;
 							);
 			if ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
 				eval{ $ret->{'json'}->{'data'} = decode_json($resp) };
-				$self->logger->dump("$qdata : $@", 3);
+				$self->logger->dump("$qdata : $@", 3) if $@;
 				$ret->{'json'}->{'fail'} = "Test query result : $@" if $@;
 			} else {
 				$self->logger->dump("$qdata : $resp", 3);
@@ -220,7 +220,7 @@ my $self = shift;
 		} elsif ( $param->{'data'}->{'type'} eq 'int' && $action =~ /^(load|commit)$/ ) {		# Queries from *.pm(s)
 			my $mod_lib = $param->{'data'}->{'name'};
 			eval( "use $mod_lib" );
-			$self->logger->debug($@, 2) if $@;
+			$self->logger->debug("use $mod_lib: $@", 2) if $@;
 			my $module;
 			my $oper;
 			eval{ $module = $mod_lib->new(  dbh => $self->dbh, 
@@ -229,7 +229,7 @@ my $self = shift;
 					$oper = $module->$action( $param->{'data'} );
 				};
 			if ( $@ ) {
-				$self->logger->debug($@, 2);
+				$self->logger->debug("Activate $mod_lib: $@", 2);
 				$ret->{'json'}->{'fail'} = $@;
 			} else {
 				$module->DESTROY();
@@ -262,6 +262,7 @@ my $self = shift;
 		while ( my ($name, $data) = each(%$modules) ) {
 			$ret->{$name} = $data;
 		}
+		$ret->{'translate'} = $self->translate_keys;
 	}
 
 	return $ret;
@@ -305,6 +306,7 @@ sub apply_data {	# Apply data on data template
 			if ( $okey->{'classname'} =~ /bool/ ) {			# Conditional assignment
 # 				$ret->{$k} = 0;		# Leave unassigned, if no condition description
 				if ( $dk =~ /^\(\$([^<^>^=^!]+)([<>=!]+)([^<^>^=^!]+)\)$/ ) {		# Condition description
+					my $bool = 0;
 					my ($lt, $cmp, $rt) = ($1, $2, $3);
 					if ( exists($init->{'data'}->{$lt}) ) {
 						$lt = $init->{'data'}->{$lt};
@@ -315,6 +317,14 @@ sub apply_data {	# Apply data on data template
 						my $tchk = $rt;			# TypeCheck support variable
 						$tchk =~ s/\s+//g;
 						if ( $tchk =~ /^[0-9]+$/ ) {		# Numeric data? Compare as is
+						} elsif( $tchk =~ /^(true|false)$/i ) {		# Equals for logicals
+							if ( $tchk =~ /true/i ) {
+								$rt = 1 ;
+							} elsif( $tchk =~ /false/i ) {
+								$rt = 0;
+							}
+							$cmp = '!=' if $cmp ne '==';
+
 						} elsif( $cmp eq '==') {		# Equals for strings
 							$lt =~ s/^'|'$//g;
 							$lt =~ s/(['"])/\\$1/g;
@@ -332,9 +342,9 @@ sub apply_data {	# Apply data on data template
 							$rt = "'$rt'";
 							$cmp = 'ne';
 						}
-						my $bool = 0;
 						eval "\$bool = ($lt $cmp $rt)";
 						$ret->{$k} = $bool unless $@;
+# $Drive::logger->dump("Check \$bool = ($lt $cmp $rt)  -> $bool");
 					}
 				}
 			} else {
@@ -388,9 +398,12 @@ my $param = shift;
 		close( $fh);
 
 		my $define = $self->template_map( $tmpl_name);			# Load translaton map defines for template
+		$define = { 'init'=>{'qw_recv' => {'data'=>{} }, 
+							'qw_send' => {'data'=>{} }} 
+					} if $define->{'fail'};				# Set defaults
 
-		my $defdata = $define->{'init'}->{'qw_send'}->{'data'} ;
-		my $defdata = $self->required_query( $define->{'init'}->{'qw_send'}->{'data'} );
+		my $defdata = $define->{'init'}->{'qw_send'}->{'data'} || {};
+		$defdata = $self->required_query( $defdata );
 		my $defcode = $define->{'init'}->{'qw_send'}->{'code'} || $tmpl_name;
 		$define->{'init'}->{'qw_send'} = {'code' => $defcode, 'data' => $defdata};
 
@@ -419,6 +432,7 @@ my $param = shift;
 			$ret->{'fail'} = $res;
 		} else {
 			$ret->{'success'} = 1;
+			Drive::write_json( $param->{'data'}->{'translate'}, "$config_path/translate_keys.json") if $param->{'data'}->{'translate'};
 			delete( $ret->{'fail'} );
 		}
 	}
@@ -437,7 +451,7 @@ my ($self, $query, $init) = @_;
 					'_umode'=>'$_umode',
 					'begin'=>$def_begin->TimeFormat( $sys->{'datefmt_send'}),
 					'end'=>$def_end->TimeFormat( $sys->{'datefmt_send'}),
-					'koldoc'=>1
+					'koldoc'=>10,
 				};		# Default data always must present
 
 	my $keyfld;
@@ -450,15 +464,19 @@ my ($self, $query, $init) = @_;
 	$query = $defdata unless $query;
 	
 	while ( my($par, $val) = each(%$defdata) ) {		# Insert required data if need
+		##### Forgotten feature???
 		my $at_ut = Drive::find_first( $utdef, 
 									sub { my $fld = shift; return $fld->{'name'} eq $par } );	# Look at users stucture
+
 		my $at_qt = Drive::find_hash( $query, 
 									sub { my ($key, $mask) = @_;
-											my @name = split(/;/, $key);
-											return ($name[1] eq $mask );
+											my @name = split(/;/, $key);		# We have composed keyname as 'uname;name;opts'
+											my $name = $name[1] || $name[0];		# Or just a 'name'
+											return ( $name eq $mask );
 										}, $par);		# Look at passed query
-		$query->{$par} = $val unless $at_qt;		# Key is'nt defined
-		$query->{$at_qt} = $val if $at_ut < 0 && $at_qt;		# Defined key is not from utable fields?
+		unless ( $at_qt ) {
+			$query->{$par} = $val ;		# Key is'nt defined
+		}
 	}
 	while ( my($pn, $pv) = each(%$init) ) {			# Apply init data if passed
 		my $at_qt = Drive::find_hash( $query, 
@@ -538,6 +556,7 @@ my $owner = shift;
 sub from_json {			# Make JSON query from JSON query definition, ignore overload infos (See also: query.js->fromJSON )
 #####################
 my ($self, $obj, $nouname) = @_;
+	my $tr_table = Drive::translate_keys;
 	my $res;
 	if ( ref( $obj) eq 'ARRAY' ) {
 		$res = [];
@@ -551,9 +570,14 @@ my ($self, $obj, $nouname) = @_;
 		while( my ($key, $val) = each( %$obj) ) {
 			next if $key =~ /^==manifest/;
 			my $okey = $self->key_split( $key);
-			my $out = 'uname';
-			$out = 'name' if $nouname;			# User defined or original keynames can be returned
-			$res->{$okey->{$out}} = $self->from_json($val);
+			
+			my $keyIn = $okey->{'uname'};
+			if ( $nouname ) {			# User defined or original keynames can be returned
+				$keyIn = $okey->{'name'};
+			} elsif( exists($tr_table->{ $okey->{'uname'}}) ) {
+				$keyIn = $tr_table->{ $okey->{'uname'}};
+			}
+			$res->{$keyIn} = $self->from_json($val);
 		}
 	} else {
 		$res = $obj;
@@ -589,17 +613,7 @@ my $item = shift;
 		my $tagname = $item->children->[$_]->tag;
 		my ($varname, $keyname);
 
-		if ( $tagname eq 'input') {
-			if ( $item->children->[$_]->val =~ /tmpl_var/i ) {
-				my $valdom = Mojo::DOM->new->parse( $item->children->[$_]->val );
-				$varname = $valdom->at('tmpl_var')->attr('name') if $valdom->at('tmpl_var');
-				if ( $varname ) {
-					$varname =~ s/\-d[dt]$// if $varname =~ /\-d[dt]$/;			# Special names for date or time variables
-					$map->{$varname} = "\$$varname";
-				}
-			}
-
-		} elsif ( $tagname =~ /^tmpl_/i ) {				# HTML::Template's tag
+		if ( $tagname =~ /^tmpl_/i ) {				# HTML::Template's tag
 			$varname = $item->children->[$_]->attr('name');
 			$keyname = $varname;
 
@@ -615,7 +629,22 @@ my $item = shift;
 				$keyname =~ s/\-d[dt]$// if $keyname =~ /\-d[dt]$/;			# Special names for date or time variables
 				$map->{$keyname} = "\$$keyname";
 			}
+		} else {
+			my $inset = $item->children->[$_]->attr('value')
+						|| $item->children->[$_]->attr('href')
+						|| $item->children->[$_]->attr('src');			# Possible included variables
+			if ( $inset =~ /<tmpl_/i ) {
+				my $valdom = Mojo::DOM->new->parse( $inset );
+				foreach my $tag ( qw(tmpl_var tmpl_if) ) {
+					$varname = $valdom->at($tag)->attr('name') if $valdom->at($tag);
+					if ( $varname ) {
+						$varname =~ s/\-d[dt]$// if $varname =~ /\-d[dt]$/;			# Special names for date or time variables
+						$map->{$varname} = "\$$varname" ;
+					}
+				}
+			}
 		}
+
 		if ( $item->children->[$_]->children ) {
 			my $branch = $self->dom_json( $item->children->[$_] );		# Skip into hole
 			if ( $branch ) {
@@ -636,7 +665,7 @@ sub get_modules {			# Prepare installed modules
 #####################
 my $self = shift;
 	my $mods;
-	my $translate = {};			# Collect translation tables from modules
+# 	my $translate = {};			# Collect translation tables from modules
 	my $config_path = Drive::upper_dir("$Drive::sys_root$sys->{'conf_dir'}/query");
 	mkpath( $config_path, { mode => 0775 } ) unless -d( $config_path );		# Prepare storage, if need
 
@@ -665,12 +694,12 @@ my $self = shift;
 				$self->logger->debug($@, 2);
 				push( @{$mods->{'int'}}, {'fail' => $@} );
 			} else {
-				if ( ref($qw_info->{'translate'}) eq 'HASH' ) {
-					while ( my ($int, $ext) = each(%{$qw_info->{'translate'}}) ) {
-						$translate->{$int} = $ext if $int ne $ext;
-					}
-					delete( $qw_info->{'translate'} );
-				}
+# 				if ( ref($qw_info->{'translate'}) eq 'HASH' ) {				# Obsoleted local translation tables
+# 					while ( my ($int, $ext) = each(%{$qw_info->{'translate'}}) ) {
+# 						$translate->{$int} = $ext if $int ne $ext;
+# 					}
+# 					delete( $qw_info->{'translate'} );
+# 				}
 				push( @{$mods->{'int'}}, $qw_info );
 				$module->DESTROY();
 			}
@@ -688,7 +717,7 @@ my $self = shift;
 	} else {
 		push( @{$mods->{'ext'}}, {'fail' => "$qw_dir not exists"} );
 	}
-	$mods->{'translate'} = $translate;
+# 	$mods->{'translate'} = $translate;
 	return $mods;
 }
 #####################
@@ -710,29 +739,9 @@ my $dirname = shift;
 			my $tmpl_info = $self->tmpl_info( "$dirname/$tmpl" );
 			push( @$list, $tmpl_info ) if $tmpl_info;
 		}
+		$list = [sort { $a->{'order'} cmp $b->{'order'} } @$list];
 	}
 	return $list;
-}
-#####################
-sub tmpl_info {			# Read single template definition
-#####################
-my $self = shift;
-my $filename = shift;
-
-	my ( $tmpl ) = $filename =~ /\/([^\/]+)$/;
-	my $tmpl_info = {'name'=>$tmpl, 'filename'=>$tmpl, 'title'=>$tmpl};
-
-	open( my $fh, "< $filename");
-	my $template = decode_utf8( join('', <$fh>));
-	close( $fh);
-	return undef if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
-
-	my $dom = Mojo::DOM->new( $template );
-	my $title = $dom->find('h1')->[0];			# Extract page title as module name
-
-	$tmpl_info->{'name'} =~ s/\.tmpl$//;
-	$tmpl_info->{'title'} = $title->text() if $title;
-	return $tmpl_info;
 }
 #####################
 sub template {			# Client pages templates/functionality
@@ -789,14 +798,20 @@ my $self = shift;
 		} elsif ( $param->{'code'} eq 'upload' ) {
 			my $done = $self->loadfile( $filedir );
 			if ( ref( $done) eq 'ARRAY' ) {
-				my $file_info = $done->[0];
-				if ( $param->{'type'} eq 'dir' ) {
-					$file_info = $self->file_info( "$filedir/$file_info->{'filename'}");
-				} else {
-					$file_info = $self->tmpl_info( "$filedir/$file_info->{'filename'}");
+				$ret->{'json'}->{'data'} = [];
+				foreach my $file ( @$done ) {
+					my $file_info;
+					if ( $param->{'type'} eq 'dir' ) {
+						$file_info = $self->file_info( "$filedir/$file->{'filename'}");
+					} else {
+						$file_info = $self->tmpl_info( "$filedir/$file->{'filename'}");
+					}
+					if ( $file_info ) {
+						push( @{$ret->{'json'}->{'data'}}, $file_info );
+					} else {
+						$ret->{'json'}->{'fail'} .= "Error reading info from $filedir/$file->{'filename'};\n";
+					}
 				}
-				$ret->{'json'}->{'data'} = $file_info;
-				$ret->{'json'}->{'fail'} = "Error reading info from $filedir/$done->{'filename'}" unless $file_info;
 			} else {
 				$ret->{'json'}->{'fail'} = $done;
 			}
@@ -826,10 +841,37 @@ my $self = shift;
 	return $ret;
 }
 #####################
+sub tmpl_info {			# Read single template definition
+#####################
+my $self = shift;
+my $filename = shift;
+
+	my ( $tmpl ) = $filename =~ /\/([^\/]+)$/;
+	my $tmpl_info = {'name'=>$tmpl, 'filename'=>$tmpl, 'title'=>$tmpl};
+	my $title;
+
+	open( my $fh, "< $filename");
+	my $template = decode_utf8( join('', <$fh>));
+	close( $fh);
+	return undef if $template =~ /<!--\s*local\s*-->/i;		# Ignore unaccessible pages
+
+	my $dom = Mojo::DOM->new( $template );
+	$title = $dom->find('h1')->[0];			# Extract page title as module name
+	if ( $title ) {
+		$tmpl_info->{'order'} = $title->attr('order');
+		$tmpl_info->{'group'} = $title->attr('group');		# Submenu for specified template name
+		$tmpl_info->{'strict'} = $title->attr('strict');		# Only for specified user_mode.name (see at dict.xml)
+		$tmpl_info->{'title'} = $title->text;
+	}
+	$tmpl_info->{'name'} =~ s/\.tmpl$//;
+	return $tmpl_info;
+}
+#####################
 sub file_info {			# Read single file stats
 #####################
 my $self = shift;
 my $filename = shift;
+	return undef unless -r( $filename );
 	my @stat = stat( $filename );
 	my @ftime = Drive::timestr( $stat[9] );
 	return { 'filename' => $filename,
@@ -1208,7 +1250,7 @@ my $self = shift;
 		eval{ $qry = decode_json( $msg_recv) };
 		if ( $@) {
 			$msg_send->{'fail'} = "Decode JSON : $@";
-			$self->logger->dump( $msg_send->{'fail'} );
+			$self->logger->dump( "hsocket $msg_send->{'fail'}" );
 		} else {
 			if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
 				my $qry_out = decode_utf8( encode_json( $qry));
@@ -1332,6 +1374,18 @@ my $res;
 				$finfo->{$name} = decode_utf8($value);
 			}
 			if ( $finfo->{'filename'} ) {
+				if ( -f( "$path/$finfo->{'filename'}~") ) {
+					push( @$res, {'filename' => "$finfo->{'filename'}~~", 
+								'size'=> (stat( "$path/$finfo->{'filename'}~" ))[7],
+								'mime' => 'application/x-trash'} );
+					rename( "$path/$finfo->{'filename'}~", "$path/$finfo->{'filename'}~~") ;
+				}
+				if ( -f( "$path/$finfo->{'filename'}") ) {
+					push( @$res, {'filename' => "$finfo->{'filename'}~", 
+								'size'=> (stat( "$path/$finfo->{'filename'}" ))[7],
+								'mime' => 'application/x-trash'} );
+					rename( "$path/$finfo->{'filename'}", "$path/$finfo->{'filename'}~") ;
+				}
 				eval { $part->asset->move_to("$path/$finfo->{'filename'}") };
 				if ( $@ ) {
 					$res = $@;

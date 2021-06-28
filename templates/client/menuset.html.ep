@@ -1,0 +1,57 @@
+
+<aside class="main_menu">
+<nav class="navbar">
+	<div class="navbar_logobox">
+		<img src="/img/lkp_avatar.svg" alt="LOGO MENU" class="navbar_logo" />
+	</div>
+
+% if ( $user->{'record'}->{'_umode'} 
+%		== $sys->{$Drive::dict_fields->{'_umode'}}->{'both'}->{'value'}
+%			&& $main_menu->{'umode_name'}) {		# User registered as carrier+customer
+	<div id="umode_sw" data-state="<%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}->{'value'}%>"
+						data-alt="<%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_other'}}->{'title'} %>">
+		<div>&#9776;</div><!-- U+2630 TRIGRAM FOR HEAVEN -->
+		<span><%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}->{'title'} %></span>
+	</div>
+% } else {
+	<span class="logo_name"><%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}->{'title'} %></span>
+% }
+	<span class="logo_title"><%= $user->{'record'}->{'compname'} %></span>
+	<span class="logo_name"><%= $user->{'record'}->{'fullname'} %></span>
+% #### Append setup menu item
+% push( @{$main_menu->{'list'}}, {'name'=>'account', 'title'=>'Настройки профиля', 'order'=>-1} );
+
+	<ul class="navbar_list">
+% foreach my $item ( @{$main_menu->{'list'}} ) {
+%	next if $item->{'strict'} && $item->{'strict'} ne $main_menu->{'umode_name'};
+%	my $classname = 'navbar_item';
+%	my $tag;
+%	if ( substr($main_menu->{'path'}, 0, length($item->{'name'})+1) eq "/$item->{'name'}" ) {
+%		$tag = "<span>$item->{'title'}</span>";
+%	} else {
+%		$tag = "<a href=\"/$item->{'name'}\">$item->{'title'}</a>";
+%	}
+%
+%	if ( $item->{'sublist'} ) {
+%		$classname .= ' sublist';
+%		if ( $user->{'cookie'}->{"sl$item->{'order'}"} == 1 ) {		# Cookie set to 'This Sublist is opened'
+%			$classname .= ' show'
+%		}
+%		$tag = "<span>$item->{'title'}</span>\n";
+%		$tag .= "\t\t\t<ul class=\"navbar_sublist\">\n";
+%		foreach my $sub ( @{$item->{'sublist'}} ) {
+%			if ( substr($main_menu->{'path'}, 0, length($sub->{'name'})+1) eq "/$sub->{'name'}" ) {
+%				$tag .= "\t\t\t\t<li><span>$sub->{'title'}</span></li>\n";
+%			} else {
+%				$tag .= "\t\t\t\t<li><a href=\"/$sub->{'name'}\">$sub->{'title'}</a></li>\n";
+%			}
+%		}
+%		$tag .= "\t\t\t</ul>\n";
+%	}
+		<li class="<%= $classname %>" data-order="<%= $item->{'order'} %>" data-strict="<%= $item->{'strict'} %>">
+			<%== $tag %>
+		</li>
+% }
+	</ul>
+</nav>
+</aside>

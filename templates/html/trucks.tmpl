@@ -1,0 +1,592 @@
+<div class="content_body">
+   <h1 order="2" strict="carrier" group="Мой парк">Автомобили и прицепы</h1>
+   <div class="drivers__sort">
+      <div class="drivers__sort--property property ">
+         <span class="property__title span-title">Автомобиль в собственности:</span>
+         <label for="property-yes">
+            <input type="radio" name="property" id="property-yes" class="property__input" checked />
+            <span class="property__new--radio"></span>
+            <span class="property__label span-title">Да</span>
+         </label>
+         <label for="property-not">
+            <input type="radio" name="property" id="property-not" class="property__input" />
+            <span class="property__new--radio"></span>
+            <span class="property__label span-title">Нет</span>
+         </label>
+      </div>
+      <div class="drivers__sort--trailer property trailer">
+         <span class="property__title span-title">С прицепом:</span>
+         <label for="trailer-yes">
+            <input type="radio" name="trailer" id="trailer-yes" class="property__input" checked />
+            <span class="property__new--radio"></span>
+            <span class="property__label span-title">Да</span>
+         </label>
+         <label for="trailer-not">
+            <input type="radio" name="trailer" id="trailer-not" class="property__input" />
+            <span class="property__new--radio"></span>
+            <span class="property__label span-title">Нет</span>
+         </label>
+      </div>
+   </div>
+      <TMPL_LOOP NAME="auto">   <!--Начало цикла вывода данных о автомобиле-->
+   <div class="drivers-tab__header">
+      <div class="drivers-tab__header--block-surname">
+         <span class="drivers-tab__header--surname">
+            <TMPL_VAR NAME="autoBrand">
+         </span>
+      </div>
+      <div class="drivers-tab__header--block-wrap">
+         <div class="drivers-tab__header--block">
+            <label for="tab-property">
+               <span class="drivers-tab__label span-title__info">Автомобиль в собственности:</span>
+               <input type="checkbox" name="tab-property" id="tab-property" class="drivers-tab__input">   
+               <span class="drivers-tab__new--checkbox"></span>
+            </label>
+         </div>
+         <div class="drivers-tab__header--block">
+            <label for="tab-trailer">
+               <span class="drivers-tab__label span-title__info">С прицепом:</span>
+               <input type="checkbox" name="tab-trailer" id="tab-trailer" class="drivers-tab__input" checked>
+               <span class="drivers-tab__new--checkbox"></span>
+            </label>
+         </div>
+      </div>
+      <div class="drivers-tab__open">
+         <img src="img/arrow-bottom.svg" alt="ARROW-BOTTOM" class="drivers-tab__open--img" />
+      </div>
+   </div>
+   <div class="drivers-info">
+      <div class="drivers-info__property">
+         <label for="info-property" class="drivers-info__property--label">
+            <span class="drivers-tab__label span-title__info">Автомобиль в собственности:</span>
+            <input type="checkbox" name="tab-property" id="info-property" class="drivers-tab__input">
+            <span class="drivers-tab__new--checkbox"></span>
+         </label>
+      </div>
+      <div class="drivers-info__car">
+         <div class="drivers-info__car--title">
+            <span class="drivers-info__car--text info__title">Автомобиль</span>
+         </div>
+         <div class="drivers-info__car--data">
+            <div class="drivers-info__car--num">
+               <div class="drivers-info__car--num-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Марка:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="autoBrand">:</span>
+               </div>
+               <div class="drivers-info__car--carnum">
+                  <span class="drivers-info__car--number span-title__info--text">
+                     <TMPL_VAR NAME="autoNumber">
+                  </span>
+                  <!--<span class="drivers-info__car--region span-title__info--text">63</span>-->
+               </div>
+            </div>
+            <div class="drivers-info__car--type">
+               <div class="drivers-info__car--type-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Тип кузова:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="autoType">
+                  </span>
+               </div>
+               <div class="drivers-info__car--type-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Тип загрузки:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="loadingType">
+                  </span>
+               </div>
+               <div class="drivers-info__car--type-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Цвет кузова:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="autoColor">
+                  </span>
+               </div>
+            </div>
+         </div>
+      </div>
+      <div class="drivers-info__trailer drivers-info__car">
+         <div class="drivers-info__car--title">
+            <span class="drivers-info__car--text info__title">Прицеп</span>
+         </div>
+         <div class="drivers-info__trailer--data drivers-info__car--data">
+            <div class="drivers-info__trailer--num drivers-info__car--num">
+               <div class="drivers-info__car--carnum">
+                  <span class="drivers-info__car--number span-title__info--text">
+                     <TMPL_VAR NAME="trailerNumber">
+                  </span>
+                  <!--<span class="drivers-info__car--region span-title__info--text">63</span>-->
+               </div>
+               <div class="drivers-info__car--num-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Цвет прицепа:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="trailerColor">
+                  </span>
+               </div>
+            </div>
+            <div class="drivers-info__trailer--type drivers-info__car--type">
+               <div class="drivers-info__car--type-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Длина, м:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="trailerLength">
+                  </span>
+               </div>
+               <div class="drivers-info__car--type-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Ширина,м:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">2,45</span>
+               </div>
+               <div class="drivers-info__car--type-wrap">
+                  <span class="drivers-info__car--cartext span-title__info">Высота, м:</span>
+                  <span class="drivers-info__car--cartext span-title__info--text">
+                     <TMPL_VAR NAME="trailerWidth">
+                  </span>
+               </div>
+            </div>
+         </div>
+         <div class="drivers-info__trailer--data-last">
+            <div class="drivers-info__trailer--type-wrap">
+               <span class="drivers-info__car--cartext span-title__info">Грузоподъемность, тонн:</span>
+               <span class="drivers-info__car--cartext span-title__info--text">
+                  <TMPL_VAR NAME="trailerCarrying">
+               </span>
+            </div>
+            <div class="drivers-info__trailer--type-wrap">
+               <span class="drivers-info__car--cartext span-title__info">Объем кузова, куб.м:</span>
+               <span class="drivers-info__car--cartext span-title__info--text">
+                  <TMPL_VAR NAME="trailerVolume">
+               </span>
+            </div>
+         </div>
+      </div>
+      <div class="drivers-info__comment">
+         <div class="drivers-info__comment--title drivers-info__car--title">
+            <span class="drivers-info__car--text info__title">Комментарий:</span>
+         </div>
+         <div class="drivers-info__comment--text">
+            <p class="drivers-info__comment--text-descr p__info--text">
+               <TMPL_VAR NAME="comment">
+            </p>
+         </div>
+         <div class="drivers-info__comment--btn">
+            <div class="drivers-info__btn--link-wrap">
+               <a href="#" class="btn__link">Выбрать водителя</a>
+                  <img src="img/checking.svg" alt="CHECKED" class="drivers-info__btn--link-img" />
+            </div>
+         </div>
+      </div>
+   </div>
+      </TMPL_LOOP>   <!--Конец цикла вывода паспортных данных о автомобиле-->
+</div>
+<div class="content_wide">
+   <div class="drivers-search">
+      <div class="container">
+         <div class="drivers-search__body">
+            <h2 class="drivers-search__title section__title">Расширенный поиск водителя</h2>
+            <div class="search">
+               <div class="serach__body">
+                  <div class="search__body--title">
+                     <span class="search__body--title-text">Поиск по параметрам</span>
+                  </div>
+                  <form action="#" class="search-form">
+                     <div class="search-form__body">
+                        <label for="search-form" class="search-form__label">
+                           <span class="search-form__title">Поиск в истории</span>
+                           <input type="text" name="search" id="search-form" class="search-form__input"
+                              placeholder="Поиск в истории">
+                           <button type="submit" class="search-form__btn">
+                                 <img src="img/lupa.svg" alt="SEARCH" />
+                           </button>
+                        </label>
+                     </div>
+                  </form>
+               </div>
+            </div>
+            <div class="filter">
+               <div class="filter__body">
+                  <form action="#" class="filter__form">
+                     <div class="filter__form--body">
+                        <div class="filter__property filter__property--radio">
+                           <span class="filter__title span-title">Автомобиль в собственности:</span>
+                           <label for="filter-yes" class="filter__label">
+                              <input type="radio" name="property-filter" id="filter-yes" class="property__input"
+                                 checked />
+                              <span class="property__new--radio"></span>
+                              <span class="filter__label--text span-title">Да</span>
+                           </label>
+                           <label for="filter-not" class="filter__label">
+                              <input type="radio" name="property-filter" id="filter-not" class="property__input" />
+                              <span class="property__new--radio"></span>
+                              <span class="filter__label--text span-title">Нет</span>
+                           </label>
+                        </div>
+                        <div class="filter__property filter__trailer--radio">
+                           <span class="filter__title span-title">Тип загрузки:</span>
+                           <label for="filter-yes__trailer" class="filter__label">
+                              <input type="radio" name="trailer-filter" id="filter-yes__trailer" class="property__input"
+                                 checked />
+                              <span class="property__new--radio"></span>
+                              <span class="filter__label--text span-title">Да</span>
+                           </label>
+                           <label for="filter-not__trailer" class="filter__label">
+                              <input type="radio" name="trailer-filter" id="filter-not__trailer"
+                                 class="property__input" />
+                              <span class="property__new--radio"></span>
+                              <span class="filter__label--text span-title">Нет</span>
+                           </label>
+                        </div>
+                        <div class="filter__brand filter__item filter__item--center car__filter--brand">
+                           <input type="text" name="filter__brand" id="filter__brand" class="filter__input"
+                              placeholder="Марка">
+                           <button type="submit" class="filter__btn">
+                                 <img src="img/arrow3.svg" alt="ARROW-TOP" />
+                           </button>
+                        </div>
+                        <div class="filter__weight filter__item filter__item--center car__filter--weight">
+                           <input type="text" name="filter__weight" id="filter__weight" class="filter__input"
+                              placeholder="Грузоподъемность">
+                           <button type="submit" class="filter__btn">
+                                 <img src="img/arrow3.svg" alt="ARROW-TOP" />
+                           </button>
+                        </div>
+                        <div class="filter__volume filter__item filter__item--center car__filter--volume">
+                           <input type="text" name="filter__volume" id="filter__volume" class="filter__input"
+                              placeholder="Объем кузова">
+                           <button type="submit" class="filter__btn">
+                                 <img src="img/arrow3.svg" alt="ARROW-TOP" />
+                           </button>
+                        </div>
+                        <div class="filter__trailer filter__item filter__item--center car__filter--trailer">
+                           <input type="text" name="filter__trailer" id="filter__trailer" class="filter__input"
+                              placeholder="Тип загрузки">
+                           <button type="submit" class="filter__btn">
+                                 <img src="img/arrow3.svg" alt="ARROW-TOP" />
+                           </button>
+                        </div>
+                        <div class="filter__clean">
+                           <button type="reset" class="filter__btn--reset">Очистить фильтр</button>
+                        </div>
+                        <div class="filter__submit">
+                           <button type="submit" class="filter__submit--btn btn__link">Фильтровать заявки</button>
+                        </div>
+                     </div>
+                  </form>
+               </div>
+            </div>
+            <div class="drivers-result">
+               <span class="drivers-result__title">Найдено 26 авто</span>
+               <div class="drivers-result__body">
+                  <div class="drivers-result__header result-header">
+                     <div class="result-header__name">
+                        <span class="span-title__info--text result-header__text">Автомобиль</span>
+                     </div>
+                     <div class="result-header__property">
+                        <span class="span-title__info--text result-header__text">Собственный автомобиль</span>
+                     </div>
+                     <div class="result-header__brand">
+                        <span class="span-title__info--text result-header__text">Марка</span>
+                     </div>
+
+                     <div class="result-header__wrap--center">
+                        <div class="result-header__numcar">
+                           <span class="span-title__info--text result-header__text">Госномер</span>
+                        </div>
+                        <div class="result-header__weight">
+                           <span class="span-title__info--text result-header__text">Грузоподъемность, тонн</span>
+                        </div>
+                        <div class="result-header__volume">
+                           <span class="span-title__info--text result-header__text">Объем кузова, куб.м</span>
+                        </div>
+                     </div>
+                     <div class="result-header__setting">
+                           <img src="img/gear.svg" alt="SETTING" class="result-header__setting--img" />
+                        <div class="setting-modal">
+                           <div class="setting-modal__close"></div>
+                           <form action="#" class="setting-form">
+                              <div class="setting-form__body">
+                                 <span class="setting-form__title">Настройка вывода</span>
+                                 <div class="setting-form__checkbox--wrap">
+                                    <label for="checkbox-1" class="setting-form__label">
+                                       <input type="checkbox" id="checkbox-1" class="setting-form__checkbox"
+                                          name="checkboxname" value="block-1">
+                                       <span class="setting-form__checkbox--new"></span>
+                                       Автомобиль</label>
+                                 </div>
+                                 <div class="setting-form__checkbox--wrap">
+                                    <label for="checkbox-2" class="setting-form__label">
+                                       <input type="checkbox" id="checkbox-2" class="setting-form__checkbox"
+                                          name="checkboxname" value="block-2">
+                                       <span class="setting-form__checkbox--new"></span>
+                                       Собственный автомобиль</label>
+                                 </div>
+                                 <div class="setting-form__checkbox--wrap">
+                                    <label for="checkbox-3" class="setting-form__label">
+                                       <input type="checkbox" id="checkbox-3" class="setting-form__checkbox"
+                                          name="checkboxname" value="block-3">
+                                       <span class="setting-form__checkbox--new"></span>
+                                       Марка</label>
+                                 </div>
+                                 <div class="setting-form__checkbox--wrap">
+                                    <label for="checkbox-4" class="setting-form__label">
+                                       <input type="checkbox" id="checkbox-4" class="setting-form__checkbox"
+                                          name="checkboxname" value="block-4">
+                                       <span class="setting-form__checkbox--new"></span>
+                                       Госномер</label>
+                                 </div>
+                                 <div class="setting-form__checkbox--wrap">
+                                    <label for="checkbox-5" class="setting-form__label">
+                                       <input type="checkbox" id="checkbox-5" class="setting-form__checkbox"
+                                          name="checkboxname" value="block-5">
+                                       <span class="setting-form__checkbox--new"></span>
+                                       Грузоподъемность, тонн</label>
+                                 </div>
+                                 <div class="setting-form__checkbox--wrap">
+                                    <label for="checkbox-6" class="setting-form__label">
+                                       <input type="checkbox" id="checkbox-6" class="setting-form__checkbox"
+                                          name="checkboxname" value="block-6">
+                                       <span class="setting-form__checkbox--new"></span>
+                                       Объем кузова, куб.м</label>
+                                 </div>
+                              </div>
+                           </form>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="drivers-result__tab drivers-result__tab--test">
+                     <div class="result-tab__body">
+                        <div class="result-tab__name">
+                           <span class="drivers-tab__header--surname">Камаз 5490-S5 X744 ХК 163 ПП ВЕ187663</span>
+                        </div>
+                        <div class="result-tab__property">
+                           <label for="tab-property__result">
+                              <span class="drivers-tab__label span-title__info">Автомобиль в собственности:</span>
+                              <input type="checkbox" name="tab-property__result" id="tab-property__result"
+                                 class="drivers-tab__input">
+                              <span class="drivers-tab__new--checkbox"></span>
+                           </label>
+                        </div>
+                        <div class="result-tab__brand">
+                           <span class="span-title__info--text">Камаз</span>
+                        </div>
+                        <div class="result-header__wrap--center result-tab__wrap--center">
+                           <div class="result-tab__numcar">
+                              <span class="span-title__info--text">А1233ХМ 38</span>
+                           </div>
+                           <div class="result-tab__weight">
+                              <span class="span-title__info--text">20</span>
+                           </div>
+                           <div class="result-tab__volume">
+                              <span class="span-title__info--text">300</span>
+                           </div>
+                        </div>
+                        <div class="result-tab__open">
+                           <img src="img/arrow-bottom.svg" alt="ARROW-BOTTOM" class="result-tab__open--img" />
+                        </div>
+                     </div>
+                  </div>
+                  <div class="drivers-result-tab-open">
+                     <div class="drivers-info__property">
+                        <label for="result-property" class="drivers-info__property--label">
+                           <span class="drivers-tab__label span-title__info">Автомобиль в собственности:</span>
+                           <input type="checkbox" name="result-property" id="result-property"
+                              class="drivers-tab__input">
+                           <span class="drivers-tab__new--checkbox"></span>
+                        </label>
+                     </div>
+                     <div class="drivers-info__car">
+                        <div class="drivers-info__car--title">
+                           <span class="drivers-info__car--text info__title">Автомобиль</span>
+                        </div>
+                        <div class="drivers-info__car--data">
+                           <div class="drivers-info__car--num">
+                              <div class="drivers-info__car--num-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Марка:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">Камаз:</span>
+                              </div>
+                              <div class="drivers-info__car--carnum">
+                                 <span class="drivers-info__car--number span-title__info--text">А1234ХМ</span>
+                                 <span class="drivers-info__car--region span-title__info--text">63</span>
+                              </div>
+                           </div>
+                           <div class="drivers-info__car--type">
+                              <div class="drivers-info__car--type-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Тип кузова:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">Бортовой</span>
+                              </div>
+                              <div class="drivers-info__car--type-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Тип загрузки:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">Боковой</span>
+                              </div>
+                              <div class="drivers-info__car--type-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Цвет кузова:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">Белый</span>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="drivers-info__trailer drivers-info__car">
+                        <div class="drivers-info__car--title">
+                           <span class="drivers-info__car--text info__title">Прицеп</span>
+                        </div>
+                        <div class="drivers-info__trailer--data drivers-info__car--data">
+                           <div class="drivers-info__trailer--num drivers-info__car--num">
+                              <div class="drivers-info__car--carnum">
+                                 <span class="drivers-info__car--number span-title__info--text">А1234ХМ</span>
+                                 <span class="drivers-info__car--region span-title__info--text">63</span>
+                              </div>
+                              <div class="drivers-info__car--num-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Цвет прицепа:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">Серый</span>
+                              </div>
+                           </div>
+                           <div class="drivers-info__trailer--type drivers-info__car--type">
+                              <div class="drivers-info__car--type-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Длина, м:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">13,60</span>
+                              </div>
+                              <div class="drivers-info__car--type-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Ширина,м:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">2,45</span>
+                              </div>
+                              <div class="drivers-info__car--type-wrap">
+                                 <span class="drivers-info__car--cartext span-title__info">Высота, м:</span>
+                                 <span class="drivers-info__car--cartext span-title__info--text">2,70</span>
+                              </div>
+                           </div>
+                        </div>
+                        <div class="drivers-info__trailer--data-last">
+                           <div class="drivers-info__trailer--type-wrap">
+                              <span class="drivers-info__car--cartext span-title__info">Грузоподъемность,
+                                 тонн:</span>
+                              <span class="drivers-info__car--cartext span-title__info--text">20</span>
+                           </div>
+                           <div class="drivers-info__trailer--type-wrap">
+                              <span class="drivers-info__car--cartext span-title__info">Объем кузова, куб.м:</span>
+                              <span class="drivers-info__car--cartext span-title__info--text">27</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="drivers-info__comment">
+                        <div class="drivers-info__comment--title drivers-info__car--title">
+                           <span class="drivers-info__car--text info__title">Комментарий:</span>
+                        </div>
+                        <div class="drivers-info__comment--text">
+                           <p class="drivers-info__comment--text-descr p__info--text">Phasellus a mollis justo. Donec
+                              hendrerit, metus ut scelerisque blandit, elit nulla scelerisque tortor, eget euismod
+                              dolor
+                              ligula a
+                              dolor. Integer dictum fermentum ligula a pretium. Morbi id egestas nisl. Quisque
+                              tristique euismod neque, in facilisis enim facilisis a.</p>
+                        </div>
+                        <div class="drivers-info__comment--btn">
+                           <div class="drivers-info__btn--link-wrap">
+                              <a href="#" class="btn__link">Выбрать водителя</a>
+                                 <img src="img/checking.svg" alt="CHECKED" class="drivers-info__btn--link-img" />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="other other-drivers">
+            <ul class="pagination">
+               <li class="page-item page-item__previous disabled">
+                  <a class="page-link page-link__previous" href="#">
+                     <picture>
+                        <source srcset="img/main/left-grey.svg" type="image/webp"><img src="img/main/left-grey.svg"
+                           alt="" class="page-link__previous--img page-link__img">
+                     </picture>
+                  </a>
+               </li>
+               <li class="page-item page-item__active">
+                  <a class="page-link" href="#">1</a>
+               </li>
+               <li class="page-item"><a class="page-link" href="#">2</a></li>
+               <li class="page-item"><a class="page-link" href="#">3</a></li>
+               <li class="page-item"><a class="page-link" href="#">4</a></li>
+               <li class="page-item"><a class="page-link" href="#">5</a></li>
+               <li class="page-item page-item__next">
+                  <a class="page-link page-link__next" href="#">
+                     <picture>
+                        <source srcset="img/main/right-green.svg" type="image/webp"><img src="img/main/right-green.svg"
+                           alt="" class="page-link__next--img page-link__img">
+                     </picture>
+                  </a>
+               </li>
+            </ul>
+         </div>
+      </div>
+   </div>
+</div>
+
+<script>
+   window.onload = function () {
+      // Выпадающее меню сайдbара
+
+      /*let linkDesktop = document.querySelector(".navbar__list--link-desktop");
+      let subMenu = document.querySelector(".navbar__submenu--list-desktop");
+      let decktopArrow = document.querySelector(".navbar__submenu--link-desktop");
+      linkDesktop.addEventListener("click", (e) => {
+         e.preventDefault();
+         let target = e.target;
+         if (target) {
+         subMenu.classList.toggle("active-desktop");
+         decktopArrow.classList.toggle("decktop-arrow");
+         }
+      });*/
+
+      //Выпадающее меню мобильного сайдбара
+
+      /* let linkMobile = document.querySelector(".navbar__list--link-dropdown");
+      let subMenuMobile = document.querySelector(".navbar__submenu--list-mobile");
+      let mobileArrow = document.querySelector(".navbar__list--link-mobile");
+      linkMobile.addEventListener("click", (e) => {
+         e.preventDefault();
+         let target = e.target;
+         if (target) {
+         subMenuMobile.classList.toggle("active-desktop");
+         mobileArrow.classList.toggle("mobile-arrow");
+         }
+      }); */
+
+      //Открытие блока информации о водителе
+      let driversInfo = document.querySelector(".drivers-info");
+      let driversTabOpen = document.querySelector(".drivers-tab__open");
+      let driversTabImgOpen = document.querySelector(".drivers-tab__open--img");
+      let driversBlockWrap = document.querySelector(".drivers-tab__header--block-wrap");
+      driversTabOpen.addEventListener("click", (e) => {
+         if (e.target) {
+            driversInfo.classList.toggle("drivers-info__active");
+            driversTabImgOpen.classList.toggle("drivers-tab__open--img-active");
+            driversBlockWrap.classList.toggle("drivers-tab__block-active");
+         }
+      });
+
+      //* Открытие таба поиска водителей
+      let resultTabOpen = document.querySelector(".result-tab__open");
+      let resultTab = document.querySelector(".drivers-result-tab-open");
+      let resultTabImgOpen = document.querySelector(".result-tab__open--img");
+      let resultWrapCenter = document.querySelector(".result-tab__wrap--center");
+      let resultTabProperty = document.querySelector(".result-tab__property");
+      let resultTabBrand = document.querySelector(".result-tab__brand");
+
+      resultTabOpen.addEventListener("click", (e) => {
+         if (e.target) {
+            resultTab.classList.toggle("result-tab__active");
+            resultTabImgOpen.classList.toggle("result-tab__open--img-active");
+            resultWrapCenter.classList.toggle("result-tab__block-active");
+            resultTabProperty.classList.toggle("result-tab__block-active");
+            resultTabBrand.classList.toggle("result-tab__block-active");
+         }
+      });
+
+      //Раскрытие блока настройки
+      let settingOpen = document.querySelector(".result-header__setting");
+      let blockOpen = document.querySelector(".setting-modal");
+      let settingClose = document.querySelector(".setting-modal__close");
+      settingOpen.addEventListener("click", (e) => {
+         if (e.target) {
+            blockOpen.classList.toggle("setting-open");
+         }
+      });
+   };
+
+</script>

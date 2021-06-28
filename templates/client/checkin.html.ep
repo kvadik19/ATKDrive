@@ -1,6 +1,5 @@
 %# Mojolicious template
 
-<div class="container">
 	<div id="login-body" class="panel">
 		<h1 class="form__title">Добро пожаловать<br>в личный кабинет АЛВЕ&nbsp;ТрансКарго</h1>
 		<div class="opts">
@@ -20,7 +19,6 @@
 		</div>
 		</div>
 	</div>
-</div>
 
 <style type="text/css">
 	#buttonbar {
@@ -35,8 +33,8 @@
 		border: 1px solid var(--panel-text);
 	}
 	button.alter:hover {
-		background: var(--panel-back-dk);
-		border-color: var(--panel-back-dk);
+		background: var(--btn-bg-dk);
+		border-color: var(--btn-bg-dk);
 	}
 </style>
 <script type="text/javascript">

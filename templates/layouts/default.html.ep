@@ -21,16 +21,17 @@
 
 	<link rel="stylesheet" type="text/css" href="/css/defines.css?<%== $stats->{'css'} %>" />
 	<link rel="stylesheet" type="text/css" href="/css/main.css?<%== $stats->{'css'} %>" />
+	<link rel="stylesheet" type="text/css" href="/css/menuset.css?<%== $stats->{'css'} %>" />
 % if ( $user->{'on_mobile'} ) {
 	<link rel="stylesheet" type="text/css" href="/css/compact.css?<%== $stats->{'css'} %>" />
 	<meta name="viewport" content="width=device-width, target-densityDpi=144, user-scalable=yes, initial-scale=1.0" />
 	<meta name="HandHeldFriendly" content="true" />
 	<!-- Chrome, Firefox OS and Opera -->
-	<meta name="theme-color" content="#016B45">
+	<meta name="theme-color" content="#016B45" />
 	<!-- Windows Phone -->
-	<meta name="msapplication-navbutton-color" content="#016B45">
+	<meta name="msapplication-navbutton-color" content="#016B45" />
 	<!-- iOS Safari -->
-	<meta name="apple-mobile-web-app-status-bar-style" content="#016B45">
+	<meta name="apple-mobile-web-app-status-bar-style" content="#016B45" />
 % }
 	<script type="text/javascript">
 		function createObj(type, descr) {
@@ -41,8 +42,9 @@
 			return inp;
 		}
 		window.on_mobile = <%= ($user->{'on_mobile'}) ? 'true' : 'false' %>;
+		window.realpath = '<%= $main_menu->{'path'} %>';
 	</script>
-	<script type="text/javascript" src="/js/support.min.js?<%= $stats->{'js'} %>"></script>
+	<script type="text/javascript" src="/js/support.js?<%= $stats->{'js'} %>"></script>
 </head>
 <body>
 <header class="header">
@@ -58,45 +60,64 @@
 %	if( url_for() =~ /^\/account/i ) {		# Predefined page in Drive::Client
 				<a href="/">Кабинет клиента</a>
 % 	} else {
-				<a href="/account">Настройки профиля</a>
+				<a href="/account"><%= $user->{'login'} %></a>
 %	}
 				<a href="/logout">Выход</a>
 % }
 			</div>
+% if ( $user->{'on_mobile'} ) {
+% 	if ( $user->{'logged'} == 1 && scalar( @{$main_menu->{'list'}}) ) {
+			<div class="head_part">
+				<a href="#" id="menu_burger">&#9776;</a>
+			</div>
+%	}
+% }
 		</div>
 	</div>
 </header>
-<div id="main">
+
+<div id="main" class="container">
+% if ( $user->{'logged'} == 1 && scalar( @{$main_menu->{'list'}}) ) {
+% 	if ( $user->{'on_mobile'} ) {
+	<div id="menu_holder">
+	%= include 'client/menuset'
+	</div>
+%	} else {
+	%= include 'client/menuset'
+%	}
+% }
 <%== content %>
 </div>
 <footer class="footer">
 	<div class="container">
 		<div class="footer-block">
-		<p class="footer-block__text">&copy; <%= $tags->{'years'} %> «АЛВЕ ТрансКарго». Все права защищены, использование материалов
+		<p class="footer-block-line">&copy; <%= $tags->{'years'} %> «АЛВЕ ТрансКарго». Все права защищены, использование материалов
 			сайта возможно только с указанием источника</p>
-		<div class="footer-block__mobile">
-			<span>Скачать приложение</span>
-			<div>
-				<a href="//alvetk.ru/mobilnoe-prilozhenie-atk/">Mobile app</a>
+		<div class="footer-block-line">
+			<div class="footer-block__mobile">
+				<span>Скачать приложение</span>
+				<div>
+					<a href="//alvetk.ru/mobilnoe-prilozhenie-atk/">Mobile app</a>
+				</div>
 			</div>
-		</div>
-		<ul class="footer-list">
-			<li>
-			<a href="//www.facebook.com/ALVETK/" target="_blank">
-				<img src="/img/fb.svg" alt="icon_facebook" />
-			</a>
-			</li>
-			<li>
-			<a href="//www.instagram.com/alve_tk" target="_blank">
-				<img src="/img/instagram.svg" alt="icon_instagram" />
-			</a>
-			</li>
-			<li>
-			<a href="//vk.com/alvetk163" target="_blank">
-				<img src="/img/vk.svg" alt="icon_vk" />
-			</a>
-			</li>
-		</ul>
+			<ul class="footer-list">
+				<li>
+				<a href="//www.facebook.com/ALVETK/" target="_blank">
+					<img src="/img/fb.svg" alt="icon_facebook" />
+				</a>
+				</li>
+				<li>
+				<a href="//www.instagram.com/alve_tk" target="_blank">
+					<img src="/img/instagram.svg" alt="icon_instagram" />
+				</a>
+				</li>
+				<li>
+				<a href="//vk.com/alvetk163" target="_blank">
+					<img src="/img/vk.svg" alt="icon_vk" />
+				</a>
+				</li>
+			</ul>
+			</div>
 		</div>
 	</div>
 </footer>

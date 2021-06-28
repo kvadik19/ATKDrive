@@ -23,8 +23,15 @@ our $sys_root;
 our $logger;
 our $dbh;
 our $gate_config;
+our $translate;
 our $our_timezone = `cat /etc/timezone` || 'Europe/Moscow';
 our $our_locale = `locale | head -n1` || 'ru_RU';
+our $dict_fields = {'user_mode'=>'_umode', 
+					'user_state'=>'_ustate', 
+					'user_type'=>'_usubj', 
+					'_umode'=>'user_mode', 
+					'_ustate'=>'user_state', 
+					'_usubj'=>'user_type'};		# Define relations betweed dict.xml values and `users` table fields
 
 #################
 sub startup {
@@ -85,18 +92,10 @@ sub startup {
 			log_cycle => $sys{'logcycle'}
 		);
 
-	$self->helper(logger => sub { return $logger } );
+	$self->helper( logger => sub { return $logger } );
+	$self->helper( hostConfig => sub  { return $self->hostConfig });		#		Load/renew configuration
+	$self->helper( translate_keys => sub  { return $self->translate_keys });		#		Load/renew translation table
 
-	$self->helper( hostConfig => sub  {		#		Load/renew configuration
-		return $self->hostConfig;
-# 										my $filename = "$sys_root$sys{'conf_dir'}/config.xml";
-# 										if ( !$gate_config->{'_upd'} || $gate_config->{'_upd'} < (stat($filename))[9] ) {
-# 											$gate_config = Drive::read_xml( $filename );
-# 											$gate_config->{'_upd'} = (stat($filename))[9];
-# 										}
-# 										return $gate_config;
-									}
-				);
 	my @db_str = ( $sys{'db_base'},
 					$sys{'db_host'} || 'localhost:3306',
 				);
@@ -147,6 +146,7 @@ sub startup {
 						$default_tags->{'years'} = "2021-$default_tags->{'years'}" if $default_tags->{'years'} ne '2021';
 						$self->stash(
 								user => $self->{'qdata'}->{'user_state'},
+								main_menu => {'path' => undef, 'list' => []},
 								encoding => $sys{'encoding'},
 								html_code => $self->{'qdata'}->{'html_code'},
 								http_state => 200,
@@ -195,6 +195,17 @@ sub hostConfig {	#		Read/Renew
 		$gate_config->{'_upd'} = (stat($filename))[9];
 	}
 	return $gate_config;
+}
+#####################
+sub translate_keys {	#		Read/Renew translation table
+#####################
+	my ($self, ) = @_;
+	my $filename = "$sys_root$sys{'conf_dir'}/query/translate_keys.json";
+	if ( !$translate->{'_upd'} || $translate->{'_upd'} < (stat($filename))[9] ) {
+		$translate = Drive::read_json( $filename, undef, 'utf8' );
+		$translate->{'_upd'} = (stat($filename))[9];
+	}
+	return $translate;
 }
 #####################
 sub query_data {	#		Collect query data as hash
@@ -276,6 +287,7 @@ sub check_user {	# Check for user logged in
 		if ( $udata->[0]->{'_uid'} ) {
 			$usr->{'cookie'}->{'uid'} = $udata->[0]->{'_uid'};
 			$usr->{'logged'} = 1;
+			$usr->{'login'} = $udata->[0]->{'_login'};
 			$self->dbh->do("UPDATE users SET _fp='$new_fp',_ltime='$logtime' WHERE _uid='$udata->[0]->{'_uid'}'");
 		} else {
 			$usr->{'cookie'}->{'uid'} = 0;

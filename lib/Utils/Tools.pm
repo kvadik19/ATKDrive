@@ -117,11 +117,12 @@ my ($self, $owner, $qdata) = @_;
 
 	my $config_path = Drive::upper_dir("$Drive::sys_root$Drive::sys{'conf_dir'}/query");
 
-	my $table = {};
-	$self->add_translate( $table, $qdata->{'qw_send'}->{'data'} );
-	$self->add_translate( $table, $qdata->{'qw_recv'}->{'data'} );
+# 	my $table = {};
+# 	$self->add_translate( $table, $qdata->{'qw_send'}->{'data'} );
+# 	$self->add_translate( $table, $qdata->{'qw_recv'}->{'data'} );
+	Drive::write_json( $qdata->{'translate'}, "$config_path/translate_keys.json") if $qdata->{'translate'};
 	my $def = { 
-				'translate' => $table, 
+# 				'translate' => $table, 
 				'define_recv' => {'code' => $qdata->{'qw_recv'}->{'code'}, 'data' =>$qdata->{'qw_recv'}->{'data'} },
 				'define_send' => {'code' => $qdata->{'qw_send'}->{'code'}, 'data' =>$qdata->{'qw_send'}->{'data'} },
 			};
@@ -140,7 +141,7 @@ my ($self, $owner) = @_;
 	if ( -e( $filename ) ) {
 		my $def = Drive::read_json( $filename, undef, 'utf8');
 		if( ref($def) ) {
-			$ret->{'translate'} = $def->{'translate'};
+# 			$ret->{'translate'} = $def->{'translate'};
 			$ret->{'qw_send'} = $def->{'define_send'};
 			$ret->{'qw_recv'} = $def->{'define_recv'};
 		} else {

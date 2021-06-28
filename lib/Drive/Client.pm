@@ -19,12 +19,10 @@ use Drive::Media;
 use Drive::Support;
 
 our $templates;
-our $pages;
+our $menus;
 our $my_name = 'client';
 our $sys = \%Drive::sys;
 my $uncheck = 'logout';
-our $dict_fields = {'user_mode'=>'_umode', 'user_state'=>'_ustate', 'user_type'=>'_usubj',
-					'_umode'=>'user_mode', '_ustate'=>'user_state', '_usubj'=>'user_type'};
 
 use Data::Dumper;
 
@@ -140,6 +138,7 @@ my $self = shift;
 		}
 
 		my $upath = $urec->{'_setup'}->{'start'};		# Personal start page for root of site
+		$upath = $udata->{'cookie'}->{'path'} if exists( $udata->{'cookie'}->{'path'});			# Clients last used page
 		$upath =~ s/^\///g;
 		$upath = [ split(/\//, $upath) ];
 		push( @{$self->{'qdata'}->{'stack'}}, @$upath) unless scalar( @{$self->{'qdata'}->{'stack'}} );
@@ -149,7 +148,7 @@ my $self = shift;
 		my $permission = Drive::find_hash( $refstate, sub { my $key = shift; 
 												return ($refstate->{$key}->{'value'} == $urec->{'_ustate'}); # Modifying hashref!
 											});
-		$permission = $sys->{'user_state'}->{$permission}->{'allow'};
+		$permission = $sys->{'user_state'}->{$permission}->{'allow'};		# Check permissions and compose url
 		if ( $permission eq 'all') {
 			# All pages permitted, leave query stack unchanged
 		} elsif( $permission eq 'none') {		# Drop logged state, redirect to sign in
@@ -213,17 +212,22 @@ my $tmpname = shift;
 	my $tmplfile = "$Drive::sys_root$sys->{'html_dir'}/$tmpname.tmpl";
 	my $qryfile = "$Drive::sys_root$sys->{'conf_dir'}/query/$tmpname.json";
 
-	my $query_load = sub {	my $ttxt = shift;
+	my $query_load = sub {	my $ttxt = shift;		# Load data models for template
 							my $dom = Mojo::DOM->new( $ttxt );
 							my $define = Drive::Support->template_map( $tmpname);
-							$self->logger->dump("prepare_tmpl $tmpname $define->{'fail'}", 2) if $define->{'fail'};
+							 if ( $define->{'fail'} ) {
+								$self->logger->dump("Prepare_tmpl $tmpname $define->{'fail'}", 2);
+								$define = { 'init'=>{'qw_recv' => {'data'=>{} }, 
+													'qw_send' => {'data'=>{} }} 
+											};
+							 }				# Set defaults
 							my $tmpl_json = Drive::Support->dom_json( $dom);
 							my $json_sync = Drive::Support->json_sync( $define->{'init'}->{'qw_recv'}->{'data'}, $tmpl_json);
 							$define->{'init'}->{'qw_recv'}->{'data'} = $json_sync;
 							return $define;
 						};
 	
-	my $tmpl_load = sub  {	open( my $th, "< $tmplfile");
+	my $tmpl_load = sub  {	open( my $th, "< $tmplfile");		# Load and create HTML::Template
 							my $ttxt = decode_utf8(join('', <$th>));
 							close( $th);
 							my $templ;
@@ -281,15 +285,32 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 	my $udata = $self->{'qdata'}->{'user_state'};
 	my $conf = $self->hostConfig;
 	my ( $host, $port ) = ( $conf->{'connect'}->{'host'}, $conf->{'connect'}->{'port'});
-	if ( $conf->{'connect'}->{'emulate'} ) {			# See at script/1Cemulate.pl
+	if ( $conf->{'connect'}->{'emulate'} ) {			# See also script/1Cemulate.pl
 		$host = 'localhost';
 		$port = '10001';
 	}
 
 	if ( $templates->{$action} && $templates->{$action}->{'tmpl'} ) {
-		my $is_ajax = ( $self->req->content->headers->content_type eq 'application/x-www-form-urlencoded' && $param->{'code'} );
+		my $is_ajax = ( $param->{'code'} && $self->req->content->headers->content_type eq 'application/x-www-form-urlencoded' );
+
+		#### Check allowed for _umode template
+		my $ifstate = {};			# if-dictionaries, used later
+		my $current_umode = $udata->{'record'}->{'_umode'};
+		if ( $udata->{'record'}->{'_umode'} 
+					== $sys->{$Drive::dict_fields->{'_umode'}}->{'both'}->{'value'} ) {		# User registered as carrier+customer
+			map { $ifstate->{$_} = 0 } keys( %{$sys->{$Drive::dict_fields->{'_umode'}}});		# Zeroing all of user if-modes
+			if ( $udata->{'cookie'}->{'_umode'} =~ /^\d+$/ ) {				# Have user choiced mode?
+				$current_umode = $udata->{'cookie'}->{'_umode'};
+			} else {
+				$current_umode = $sys->{$Drive::dict_fields->{'_umode'}}->{'customer'}->{'value'};		# Default threat as customer
+			}
+		}
+		my $umode_name = Drive::find_hash( $sys->{ $Drive::dict_fields->{'_umode'}}, 
+					sub { my $k = shift;
+						return $sys->{$Drive::dict_fields->{'_umode'}}->{$k}->{'value'} 
+											== $current_umode; 
+						} );			# Current choiced _umode
 		my ($qw_send, $qw_recv, $qw_load);
-		$qw_load = $templates->{$action}->{'query'}->{'load'};
 
 		if ( $is_ajax ) {
 			if ( ref( $templates->{$action}->{'query'}->{'ajax'}) eq 'ARRAY' ) {	# Have ordered list of postprocessors?
@@ -300,26 +321,60 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 				$templates->{$action}->{'query'}->{'ajax'} = $ajax;
 			}
 			$qw_send = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_send'} || $param;
-			$qw_recv = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_recv'};
+			$qw_recv = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_recv'} 
+										|| $templates->{$action}->{'query'}->{'init'}->{'qw_recv'};		# OR Use `init' data model
 		} else {
+			# Prepare menu data for output
+			my $umode_other = Drive::find_hash( $sys->{ $Drive::dict_fields->{'_umode'}}, 
+						sub { my $k = shift;
+							return $sys->{$Drive::dict_fields->{'_umode'}}->{$k}->{'value'} 
+												== 3 - $current_umode; 
+							} );			# Other of 2 _umodes
+
+			my $menu_list = $self->build_menus;
+			my $menuitem = $self->menu_item( $menu_list, $action);
+			if ( $menuitem->{'strict'} && $umode_name ne $menuitem->{'strict'} ) {
+				my $idx = Drive::find_first( $menu_list, sub { my $itm = shift; return !$itm->{'strict'} || $itm->{'strict'} eq $umode_name});
+				$menuitem = $menu_list->[$idx];
+			}
+			if ( $action ne $menuitem->{'name'} ) {		# Redefine location, if stricted to _umode
+				$action = $menuitem->{'name'};
+				$udata->{'cookie'}->{'path'} = "/$action";
+				$self->prepare_tmpl( $action );
+			} else {
+				my @setpath = @{$self->{'qdata'}->{'stack'}};		# Create last page visited cookie
+				unshift( @setpath, "/$action" );
+				$udata->{'cookie'}->{'path'} = join('/', @setpath);
+			}
+			$self->stash( main_menu => {'list' => $menu_list, 
+										'path' => $udata->{'cookie'}->{'path'},
+										'umode_name' => $umode_name,
+										'umode_other' => $umode_other }
+						);
+			#### /Check allowed for _umode template END
+
 			$qw_send = $templates->{$action}->{'query'}->{'init'}->{'qw_send'};
 			$qw_recv = $templates->{$action}->{'query'}->{'init'}->{'qw_recv'};
 		}
 
+		$qw_load = $templates->{$action}->{'query'}->{'load'};			# Default data for testing purposes
 		$qw_load = {} unless $udata->{'record'}->{'_uid'} == $qw_load->{'_uid'};
 														# Apply test data for same user ID (means tester unit)
-while ( my($k, $v) = each( %{$templates->{$action}->{'query'}->{'translate'}}) ) {
-	$self->logger->dump( $k);
-}
+
 		$qw_send->{'data'} = Drive::Support->required_query( $qw_send->{'data'}, $qw_load );
 														# Assign required data & possible defaults
+# $self->logger->dump('Required '.Dumper($qw_send->{'data'}));
 
-		my $send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);			# Original named parameners for HTML::Template
-		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});		# Remove overload info from keys
-$self->logger->dump( 'Udata '.Dumper($udata->{'record'}));
-		Drive::Support->apply_user( $qw_send->{'data'}, $udata->{'record'} );
+			# Collect Original named parameners for HTML::Template (used later)
+		my $send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);
+		my $send_code = $qw_send->{'code'};
+
+			# Remove overload info from keys and translate keys for 1C
+		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});
+		my $userdata = {%{$udata->{'record'}}};						# User switcheable parameters
+		$userdata->{'_umode'} = $current_umode;						# 
+		Drive::Support->apply_user( $qw_send->{'data'}, $userdata );
 		$qw_send = encode_json( $qw_send);
-$self->logger->dump($qw_send);
 
 		my $resp = Utils::Tools->ask_inet(
 							host => $host,
@@ -328,19 +383,29 @@ $self->logger->dump($qw_send);
 							login => $conf->{'connect'}->{'htlogin'},
 							pwd => $conf->{'connect'}->{'htpasswd'},
 						);
-$self->logger->dump($resp);
-		unless ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
-			$out = {'html_code' => $resp};
-			$out = {'json' => {'fail' => $resp}} if $is_ajax;
-			goto RESULT;
+# $self->logger->dump($qw_send);
+# $self->logger->dump($resp);
+		if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
+			open( my $fh, "> $Drive::sys_root/watchdog" );
+			print $fh $resp;
+			close($fh);
 		}
 
-		eval{ $resp = decode_json($resp) };
-		if ( $@ ) {
-			$out = {'html_code' => $@};
-			$out = {'json' => {'fail' => $@}} if $is_ajax;
-			goto RESULT;
+		if ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
+			eval{ $resp = decode_json($resp) };
+			if ( $@ ) {
+				$self->logger->dump("Request $send_code : Decode response JSON: $@", 3);
+				$out->{'fail'} = $@;
+				$out->{'json'}->{'fail'} = $@ if $is_ajax;
+				$resp = {'code' => $send_code, 'data' => {}, 'fail' => $@};
+			}
+		} else {
+			$self->logger->dump("Request $send_code : Unknown response $resp", 3);
+			$resp = {'code' => $send_code, 'data' => {}, 'fail' => $resp};
+			$out->{'fail'} = $resp;
+			$out->{'json'}->{'fail'} = $resp if $is_ajax;
 		}
+
 
 		my $testdate = Drive::datemask( $sys->{'datefmt_recv'});		# RegExp for date type detection
 		$testdate = qr/^$testdate$/;
@@ -348,20 +413,25 @@ $self->logger->dump($resp);
 		$qw_recv->{'data'} = $resp->{'data'} unless $qw_recv->{'data'};			# Undefined AJAX model yet?
 		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
 
+$self->logger->dump(Dumper($qw_recv->{'data'}),1,1);
+		eval {
 		$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
 											data => $resp->{'data'},
 											reg_date => $testdate,
 										);
+				};
+		$self->logger->dump("Apply data on response to $action: $@", 3) if $@;
 		if ( $is_ajax ) {
-			$out->{'json'} = $out;
+			$out->{'json'} = {'code' => $resp->{'code'}, 'data' => {%$out}};
 		} else {
-			my $ifstate = {};
+
+			$ifstate->{"is_$umode_name"} = 1 if $umode_name;
 			foreach my $dname ( qw(user_mode user_state user_type) ) {			# Create if-dictionaries
 				my $dict = $sys->{$dname};
 				while ( my($name, $value) = each( %$dict) ) {
-					my $cmp = $udata->{'record'}->{$dict_fields->{$dname}};
-					$cmp = $qw_load->{$dict_fields->{$dname}} if exists($qw_load->{$dict_fields->{$dname}});
-					$ifstate->{"is_$name"} = ($cmp == $value->{'value'});
+					my $cmp = $udata->{'record'}->{$Drive::dict_fields->{$dname}};
+					$cmp = $qw_load->{$Drive::dict_fields->{$dname}} if exists($qw_load->{$Drive::dict_fields->{$dname}});
+					$ifstate->{"is_$name"} = ($cmp == $value->{'value'}) unless exists( $ifstate->{"is_$name"} );
 				}
 			}
 			foreach my $dname ( qw(begin end) ) {			# Bring dates into JS format
@@ -379,17 +449,65 @@ $self->logger->dump($resp);
 			$templates->{$action}->{'tmpl'}->param($sys);
 			$templates->{$action}->{'tmpl'}->param($udata->{'record'});
 			$templates->{$action}->{'tmpl'}->param($out) if ref( $out) eq 'HASH';
+
 			$out = $templates->{$action}->{'tmpl'}->output();
 			my $dom = Mojo::DOM->new( $out );
 			my $title = $dom->find('h1')->[0];
 			$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
+
 		}
+
 	} else {
 		$out->{'fail'} = "Undefined processor";
 	}
 
 	RESULT:
 	return $out;
+}
+
+#####################
+sub menu_item {	#		Find menu item definition by its name
+#####################
+my ($self, $menulist, $name) = @_;
+	foreach my $item (  @$menulist ) {
+		if ( $name eq $item->{'name'} ) {
+			return $item;
+		} elsif( $item->{'sublist'} ) {
+			my $got = $self->menu_item( $item->{'sublist'}, $name);
+			return $got if $got;
+		}
+	}
+	return undef;
+}
+#####################
+sub build_menus {	#		Build/Renew menu definition
+#####################
+	my ($self, ) = @_;
+	my $pagedir = "$Drive::sys_root$sys->{'html_dir'}";
+	if ( !$menus->{'_upd'} || $menus->{'_upd'} < (stat($pagedir))[9] ) {
+		$menus->{'list'} = [];
+		my $tmpl_list = Drive::Support->tmpl_collect($pagedir );
+		foreach my $item ( @$tmpl_list ) {
+			if ( $item->{'group'} ) {
+				my $idx = Drive::find_first( $menus->{'list'}, 
+								sub { my $it = shift; return $it->{'group'} eq $item->{'group'}});
+				if ( $idx < 0) {
+					my $group = {%$item};
+# 					$group->{'name'} = $item->{'name'};		# Just for compatibiliity
+					$group->{'title'} = $item->{'group'};
+					$group->{'sublist'} = [ {%$item} ];			# Add copy of item as first element of sublist
+					push( @{$menus->{'list'}}, $group);
+				} else {
+					push( @{$menus->{'list'}->[$idx]->{'sublist'}}, $item )
+				}
+			} else {
+				push( @{$menus->{'list'}}, $item);
+			}
+		}
+		$menus->{'_upd'} = (stat($pagedir))[9];
+	}
+# $self->logger->dump(Dumper($menus));
+	return [ @{$menus->{'list'}} ];			# Return copy of list. Not reference!
 }
 #################
 sub account {	# Setup user account form
@@ -456,7 +574,7 @@ my $out;
 		my $title = $dom->find('h1')->[0];
 		$self->{'qdata'}->{'tags'}->{'page_title'} = $title->text() if $title;
 
-
+		$self->stash( main_menu => {'list' => $self->build_menus, 'path' => '/account'} );
 	}
 	return $out;
 }

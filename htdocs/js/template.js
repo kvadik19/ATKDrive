@@ -47,17 +47,32 @@ let onLoaded = function(def) { 		// When upload success
 			}
 			dispatch.display();
 		} else {			// Just anyfile uploaded
+			fname = def.filename.split('/').pop();
 			let box = document.querySelector('.tabContent.shown .fileBox.filelist');
-			let row = createObj('div',{'className':'filerow','title':def.filename,'onclick':fileSelect});
-			Object.keys(def).forEach( k=>{ row.dataset[k] = def[k] });
-			row.appendChild(createObj('span',{'className':'name','innerText':def.filename}));
+			let row = createObj('div', {'className':'filerow','title':fname,'onclick':fileSelect,
+										'data-mime':def.mime,'data-size':def.size,'data-filename':fname} );
+			row.appendChild(createObj('span',{'className':'name','innerText':fname}));
 			row.appendChild(createObj('span',{'className':'size','innerText':def.size}));
 			row.appendChild(createObj('span',{'className':'mtime','innerText':def.mtime}));
-			let exist = box.querySelector('.filerow[data-filename="'+def.filename+'"]');
+			let exist = box.querySelector('.filerow[data-filename="'+fname+'"]');
+			let resort = false;
 			if ( exist ) {
 				box.replaceChild( row, exist);
 			} else {
 				box.appendChild( row );
+				resort = true;
+			}
+			if ( resort ) {			// Added file, need to resort file list
+				let flist = [];
+				box.querySelectorAll('div.filerow').forEach( fr=>{ flist.push(fr.dataset.filename) });
+				flist.sort();
+				let lastRow = null;
+				let fn;
+				while ( fn = flist.pop() ) {
+					let curRow = box.querySelector('div.filerow[data-filename="'+fn+'"]');
+					box.insertBefore( curRow, lastRow);
+					lastRow = curRow;
+				}
 			}
 		}
 	};
@@ -108,9 +123,9 @@ let dispatch = {
 						lines.forEach( l =>{ let str = line.cloneNode();
 												l = l.replace(/</g,'&lt;');
 												l = l.replace(/>/g,'&gt;');
-												if ( resp.data.filename.match(/css$/) ) {			// Colouring syntax
+												if ( resp.data.filename.match(/css~*$/) ) {			// Colouring syntax
 													l = l.replace(/(\S+)(\s*:)/g,'<b>$1</b>$2');
-												} else if ( resp.data.filename.match(/js$/) ) {			// Colouring syntax
+												} else if ( resp.data.filename.match(/js~*$/) ) {			// Colouring syntax
 													l = l.replace(/(function\s*[^\(\)]*\s*\([^\)]*\))/ig,'<span>$1</span>');
 													l = l.replace(/\b(let|var|const)\b/ig,'<b><i>$1</i></b>');
 												} else {
@@ -176,8 +191,13 @@ let dispatch = {
 				let tab = document.querySelector('.tabContent.shown .subTab.active');
 				let filename = document.querySelector('.tabContent.shown .fileBody').dataset.filename;
 				if ( tab && dispatch.cache.length > 0 ) {
-					let data = 'data:text/plain;charset=utf-8;base64,'+base64Encode( dispatch.cache);
-					let url = window.URL.createObjectURL( dataURLtoBlob(data) );
+					let url;
+					if ( dispatch.cache.match(/^Known mime type/) ) {
+						url = document.location.origin+tab.innerText+tab.dataset.subdir+'/'+filename;
+					} else {
+						let data = 'data:text/plain;charset=utf-8;base64,'+base64Encode( dispatch.cache);
+						url = window.URL.createObjectURL( dataURLtoBlob(data) );
+					}
 					let link = createObj('a', {'href':url, 'download':filename});
 					link.click();
 					window.URL.revokeObjectURL(url);
@@ -261,7 +281,14 @@ let dispatch = {
 								window.alert('Загрузка '+host.files[0].name+' не удалась\n'+data.fail);
 
 							} else if( data.data && host.callback) {
-								host.callback(data.data);
+								if ( data.data.constructor.toString().match(/Object/i) ) {
+									data.data = [data.data];					// Estimate list of files
+								}
+								if ( data.data.constructor.toString().match(/Array/i) ) {
+									data.data.forEach( fo =>{host.callback(fo)});
+								} else {
+									host.callback(data.data);		// Some exceptions?
+								}
 							}
 						} else {
 							window.alert('Загрузка '+host.files[0].name+' не удалась\n'+this.lastError.text);
