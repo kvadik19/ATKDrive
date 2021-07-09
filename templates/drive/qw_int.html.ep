@@ -26,10 +26,10 @@
 					<div class="qw_data">
 					</div>
 			<div class="buttonbar">
-				<p class="comment">Ожидание входящего запроса в течение <span id="tout">3</span>&nbsp;<span id="tunit">минут</span>
+				<p class="comment">Ожидание входящего запроса в течение <span class="tout">3</span>&nbsp;<span class="tunit">минут</span>
 				</p>
-				<button type="button" id="listen">Принять запрос</button>
-				<button type="button" id="abort" style="display:none;">Стоп</button>
+				<button type="button" class="listen" data-type="int">Принять запрос</button>
+				<button type="button" class="abort" style="display:none;">Стоп</button>
 			</div>
 				</div>
 			</div>

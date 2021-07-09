@@ -360,20 +360,24 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 		$qw_load = $templates->{$action}->{'query'}->{'load'};			# Default data for testing purposes
 		$qw_load = {} unless $udata->{'record'}->{'_uid'} == $qw_load->{'_uid'};
 														# Apply test data for same user ID (means tester unit)
+		$qw_load = {%{$param->{'data'}}} if $is_ajax;
 
 		$qw_send->{'data'} = Drive::Support->required_query( $qw_send->{'data'}, $qw_load );
 														# Assign required data & possible defaults
-# $self->logger->dump('Required '.Dumper($qw_send->{'data'}));
 
-			# Collect Original named parameners for HTML::Template (used later)
-		my $send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);
+		my $userdata = {%{$udata->{'record'}}};						# User switcheable parameters
+		$userdata->{'_umode'} = $current_umode;						# 
+		Drive::Support->apply_user( $qw_send->{'data'}, $userdata );
+# $self->logger->dump( "With user: ".Dumper($qw_send->{'data'}) );
+
+		# Collect Original named parameners for HTML::Template (used later)
+		my $tmpl_send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);
+# $self->logger->dump( "After Tmpl: ".Dumper($qw_send->{'data'}) );
+# $self->logger->dump( "For Tmpl: ".Dumper($tmpl_send_data) );
 		my $send_code = $qw_send->{'code'};
 
 			# Remove overload info from keys and translate keys for 1C
 		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});
-		my $userdata = {%{$udata->{'record'}}};						# User switcheable parameters
-		$userdata->{'_umode'} = $current_umode;						# 
-		Drive::Support->apply_user( $qw_send->{'data'}, $userdata );
 		$qw_send = encode_json( $qw_send);
 
 		my $resp = Utils::Tools->ask_inet(
@@ -383,13 +387,8 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 							login => $conf->{'connect'}->{'htlogin'},
 							pwd => $conf->{'connect'}->{'htpasswd'},
 						);
-# $self->logger->dump($qw_send);
-# $self->logger->dump($resp);
-		if ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
-			open( my $fh, "> $Drive::sys_root/watchdog" );
-			print $fh $resp;
-			close($fh);
-		}
+$self->logger->dump($qw_send);
+$self->logger->dump($resp);
 
 		if ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
 			eval{ $resp = decode_json($resp) };
@@ -398,6 +397,15 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 				$out->{'fail'} = $@;
 				$out->{'json'}->{'fail'} = $@ if $is_ajax;
 				$resp = {'code' => $send_code, 'data' => {}, 'fail' => $@};
+
+			} elsif ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
+				my $watch = {
+								'qw_send' => {'code' => $send_code, 'data' => $tmpl_send_data},
+								'qw_recv' => $resp,
+							};
+				open( my $fh, "> $Drive::sys_root/watchdog" );
+				print $fh encode_json($watch);
+				close($fh);
 			}
 		} else {
 			$self->logger->dump("Request $send_code : Unknown response $resp", 3);
@@ -413,13 +421,14 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 		$qw_recv->{'data'} = $resp->{'data'} unless $qw_recv->{'data'};			# Undefined AJAX model yet?
 		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
 
-$self->logger->dump(Dumper($qw_recv->{'data'}),1,1);
 		eval {
 		$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
 											data => $resp->{'data'},
-											reg_date => $testdate,
+											date_mask => $testdate,
 										);
 				};
+# $self->logger->dump('Model: '.Dumper($qw_recv->{'data'}),1,1);
+# $self->logger->dump('Applied: '.Dumper($out),1,1);
 		$self->logger->dump("Apply data on response to $action: $@", 3) if $@;
 		if ( $is_ajax ) {
 			$out->{'json'} = {'code' => $resp->{'code'}, 'data' => {%$out}};
@@ -429,25 +438,27 @@ $self->logger->dump(Dumper($qw_recv->{'data'}),1,1);
 			foreach my $dname ( qw(user_mode user_state user_type) ) {			# Create if-dictionaries
 				my $dict = $sys->{$dname};
 				while ( my($name, $value) = each( %$dict) ) {
-					my $cmp = $udata->{'record'}->{$Drive::dict_fields->{$dname}};
+# 					my $cmp = $udata->{'record'}->{$Drive::dict_fields->{$dname}};
+					my $cmp = $userdata->{$Drive::dict_fields->{$dname}};
 					$cmp = $qw_load->{$Drive::dict_fields->{$dname}} if exists($qw_load->{$Drive::dict_fields->{$dname}});
 					$ifstate->{"is_$name"} = ($cmp == $value->{'value'}) unless exists( $ifstate->{"is_$name"} );
 				}
 			}
 			foreach my $dname ( qw(begin end) ) {			# Bring dates into JS format
-				$send_data->{$dname} = Drive::from_dateformat( $send_data->{$dname}, $sys->{'datefmt_send'}, '%Y-%m-%dT%T');
-				$send_data->{"$dname-dd"} = $send_data->{$dname};
-				$send_data->{"$dname-dt"} = $send_data->{$dname};
-				$send_data->{"$dname-dd"} =~ s/T[0-9:]{8}$//;
-				$send_data->{"$dname-dt"} =~ s/^[0-9\-]+T([0-9:]{5})[0-9:]{3}$/$1/;
+				$tmpl_send_data->{$dname} = Drive::from_dateformat( $tmpl_send_data->{$dname}, $sys->{'datefmt_send'}, '%Y-%m-%dT%T');
+				$tmpl_send_data->{"$dname-dd"} = $tmpl_send_data->{$dname};
+				$tmpl_send_data->{"$dname-dt"} = $tmpl_send_data->{$dname};
+				$tmpl_send_data->{"$dname-dd"} =~ s/T[0-9:]{8}$//;
+				$tmpl_send_data->{"$dname-dt"} =~ s/^[0-9\-]+T([0-9:]{5})[0-9:]{3}$/$1/;
 			}
 			
 			#### Apply parameters. Order is matter!
 			$templates->{$action}->{'tmpl'}->param($ifstate);
-			$templates->{$action}->{'tmpl'}->param($send_data);
+			$templates->{$action}->{'tmpl'}->param($tmpl_send_data);
 			$templates->{$action}->{'tmpl'}->param($udata);
 			$templates->{$action}->{'tmpl'}->param($sys);
-			$templates->{$action}->{'tmpl'}->param($udata->{'record'});
+			$templates->{$action}->{'tmpl'}->param($Drive::stats);
+			$templates->{$action}->{'tmpl'}->param($userdata);
 			$templates->{$action}->{'tmpl'}->param($out) if ref( $out) eq 'HASH';
 
 			$out = $templates->{$action}->{'tmpl'}->output();

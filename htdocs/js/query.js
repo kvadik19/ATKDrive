@@ -78,6 +78,7 @@ let getVal = function(item) {		// Obtain key:value pair from DOM <div class="val
 		if ( typeof(value.val) === 'string' ) {
 			let parts = value.val.match(/^([^\[]+)(\s\[([^\]]+)\])?$/);		// Defined test data?
 			if ( parts ) value.val = parts[1];						// Omit test data
+			if ( value.val.match(/^\d+$/) ) value.val = parseInt(value.val);			// Convert string to number for 1C
 		}
 		return value;
 	};
@@ -406,7 +407,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									if ( define.qw_load && typeof(define.qw_load) === 'object' ) {
 										Object.keys( define.qw_load).forEach( k =>{ checkload[k] = define.qw_load[k] });
 									}
-									bodyOut.querySelector('.qw_code .code').value = define.qw_init.qw_send.code
+									bodyOut.querySelector('.qw_code .code').value = define.qw_init.qw_send.code;
+									bodyOut.closest('.qw_talks').dataset.code = define.qw_init.qw_send.code;
 									let domsend = toDOM( define.qw_init.qw_send.data);
 									domsend.querySelectorAll('div').forEach( d =>{		// External query type specific settings
 												d.className = d.className.replace(/\s*jsonItem/g,'');		// Prevent
@@ -1078,7 +1080,7 @@ let recoder = {			// Assign codec table to recoding dictionary values
 				if ( !this.panel ) {				// Create & draw setup panel, unless exists
 					let bbar = createObj('div',{'className':'buttonbar'});
 					bbar.appendChild(createObj('button',{'type':'buttton','className':'ok','innerText':'Ok','onclick':this.done}));
-					bbar.appendChild(createObj('button',{'type':'buttton','className':'esc','innerText':'Отмена','onclick':this.done}));
+// 					bbar.appendChild(createObj('button',{'type':'buttton','className':'esc','innerText':'Отмена','onclick':this.done}));
 					this.panel = createObj('div',{'id':'recoder','className':'over-panel',
 													'style.min-width':'10em','style.position':'absolute'});
 					this.panel.appendChild(createObj('h',{'style.marginBottom':'1em'}));
@@ -1212,19 +1214,19 @@ let btnActivate = function() {		// Buttons for OUT message JSON composer
 
 let qState = function(state) {		// Income Awaiting service fn
 		if (state == 1) {
-			document.getElementById('listen').disabled = true;
-			document.getElementById('abort').style.display = 'initial';
+			document.querySelectorAll('button.listen').forEach( b =>{b.disabled = true});
+			document.querySelectorAll('button.abort').forEach( b =>{b.style.display = 'initial'});
 		} else {
 			window.clearTimeout(tick);
 			flush({'code':'watchdog', 'data':{'cleanup':1}}, url);
-			document.getElementById('listen').disabled = false;
-			document.getElementById('abort').style.display = 'none';
-			document.getElementById('tunit').innerText = 'минут';		// Time units
-			document.getElementById('tout').innerText = timeout;
+			document.querySelectorAll('button.listen').forEach( b =>{ b.disabled = false});
+			document.querySelectorAll('button.abort').forEach( b =>{b.style.display = 'none'});
+			document.querySelectorAll('span.tunit').forEach( s =>{s.innerText = 'минут'});		// Time units
+			document.querySelectorAll('span.tout').forEach( s =>{s.innerText = timeout});
 		}
 	};
-document.getElementById('abort').onclick = qState;		// Income query listener stop
-document.getElementById('listen').onclick = function(e) {		// Income query listener activate
+document.querySelectorAll('button.abort').forEach( b =>{b.onclick = qState});		// Income query listener stop
+document.querySelectorAll('button.listen').forEach( b =>{ b.onclick = function(e) {		// Income query listener activate
 		let btn = this;
 		qState(1);
 		let tstart = Date.now();
@@ -1235,8 +1237,33 @@ document.getElementById('listen').onclick = function(e) {		// Income query liste
 
 				if ( msg.data ) {
 					if ( typeof(msg.data) === 'string' && msg.data.match(/^[\{\[]/) ) msg = JSON.parse(msg.data);
-					bodyIn.querySelector('.qw_data').innerHTML='';
-					showQRY(bodyIn, msg);
+					if ( b.dataset.type === 'int' ) {
+						bodyIn.querySelector('.qw_data').innerHTML='';
+						showQRY(bodyIn, msg);
+					} else if ( b.dataset.type === 'ext' ) {
+						let outBox = document.querySelector('.qw_talks.ajax[data-code="'+msg.qw_send.code+'"]');
+						if ( outBox ) {
+							outBox.querySelector('.message.qw_send .qw_data').innerHTML = '';		// Cleanup
+							outBox.querySelector('.message.qw_recv .qw_data').innerHTML = '';
+						} else {
+							let sample = document.querySelector('.qw_talks.ajax.control');		// Just clone existing node
+							outBox = sample.cloneNode(true);									// for newly added data
+							let bar = outBox.querySelector('div.buttonbar');
+							bar.parentNode.removeChild(bar);						// Remove `listen` button
+
+							outBox.dataset.code = msg.qw_send.code;
+							outBox.className = outBox.className.replace(/\s*control/i,'');
+							sample.parentNode.insertBefore(outBox, sample);
+						}
+						let domsend = toDOM(msg.qw_send.data);
+						let domrecv = toDOM(msg.qw_recv.data);
+						let body_send = outBox.querySelector('.message.qw_send .qw_body');
+						let body_recv = outBox.querySelector('.message.qw_recv .qw_body');
+						body_send.querySelector('.qw_code.qwHdr code').innerText = msg.qw_send.code;
+						body_recv.querySelector('.qw_code.qwHdr code').innerText = msg.qw_recv.code;
+						body_send.querySelector('.qw_data').appendChild(domsend);
+						body_recv.querySelector('.qw_data').appendChild(domrecv);
+					}
 					commitEnable();
 					qState(0);
 
@@ -1246,16 +1273,17 @@ document.getElementById('listen').onclick = function(e) {		// Income query liste
 				} else {
 					let left = timeout*60 - Math.round( (Date.now()-tstart)/1000 );
 					if (left < 60) {
-						document.getElementById('tunit').innerText = 'секунд';		// Time units
+						document.querySelectorAll('span.tunit').forEach( s =>{s.innerText = 'секунд'})
 					} else {
 						left = Math.round(left/60);
 					}
-					document.getElementById('tout').innerText = left;
+					document.querySelectorAll('span.tout').forEach( s =>{s.innerText = left});
 					tick = window.setTimeout( function() { flush(msg_send, url, msgGot) }, period*1000);
 				}
 			};
 		flush(msg_send, url, msgGot);
-	};
+	} });
+
 document.getElementById('checkload').onclick = function(e) {		// Debugging query send
 		let name = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
 		let code = bodyOut.querySelector('.qw_code .code').innerText || bodyOut.querySelector('.qw_code .code').value;

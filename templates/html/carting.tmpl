@@ -3,22 +3,14 @@
 		<p>Страница выполненных перевозок заказчика ( same as request)
 		</p>
 		<div class="usermode">
-	<TMPL_IF name="is_customer">
-			Заказчик:
-	<TMPL_ELSE>
-		<TMPL_IF name="is_carrier">
-			Перевозчик:
-		<TMPL_ELSE>
-			Заказчик/Перевозчик:
-		</TMPL_IF>
-	</TMPL_IF>
-		<TMPL_VAR NAME="compname">
+			Заказчик: <TMPL_VAR NAME="compname">
 		</div>
 
 		<h2>Заявки за период </h2>
 		<div class="form__data">
 			<input type="hidden" data-key="koldoc" class="udata" value="<TMPL_VAR NAME='koldoc'>" />
 			<input type="hidden" data-key="_umode" class="udata" value="<TMPL_VAR NAME='_umode'>" />
+			<input type="hidden" data-key="from" class="udata" value="<TMPL_VAR NAME='from'>" />
 			<input type="hidden" data-key="_uid" class="udata" value="<TMPL_VAR NAME='_uid'>" />
 			<div class="optrow">
 				<label for="d_start">Начало периода: </label><input data-key="begin" class="udata" id="d_start" type="date" value="<TMPL_VAR NAME='begin-dd'>" />
@@ -30,6 +22,8 @@
 				<button type="button" class="form__btn" data-code="request" id="sendquery">Запросить</button>
 			</div>
 		</div>
+
+	<div class="report body<TMPL_UNLESS NAME='quantity'> hidden</TMPL_UNLESS>">
 		<table id="orderList">
 			<tr class="thead">
 				<th>Дата заявки</th>
@@ -38,61 +32,27 @@
 				<th>Масса</th>
 				<th>Общая стоимость</th>
 			</tr>
-<TMPL_LOOP NAME="list">
-			<tr class="tdata">
-				<td data-varname="orddate-dd"><TMPL_VAR NAME='orddate-dd'></td>
-				<td data-varname="orddate-dt"><TMPL_VAR NAME='orddate-dt'></td>
-				<td data-varname="driver"><TMPL_VAR NAME='driver'></td>
-				<td data-varname="weight"><TMPL_VAR NAME='weight'></td>
-				<td data-varname="total"><TMPL_VAR NAME="total"></td>
-			</tr>
-</TMPL_LOOP>
+			<TMPL_LOOP NAME="list">
+				<tr class="tdata">
+					<td data-varname="orddate-dd"><TMPL_VAR NAME='orddate-dd'></td>
+					<td data-varname="orddate-dt"><TMPL_VAR NAME='orddate-dt'></td>
+					<td data-varname="driver"><TMPL_VAR NAME='driver'></td>
+					<td data-varname="weight"><TMPL_VAR NAME='weight'></td>
+					<td data-varname="total"><TMPL_VAR NAME="total"></td>
+				</tr>
+			</TMPL_LOOP>
 		</table>
 
-	<h3>Показано <strong id="shownRec"><TMPL_VAR NAME="list-nn"></strong> записей из <strong id="totalRec"><TMPL_VAR NAME="quantity"></strong></h3>
+		<h3>Показано <strong id="shownRec"><TMPL_VAR NAME="list-nn"></strong> записей из <strong id="totalRec"><TMPL_VAR NAME="quantity"></strong></h3>
+		<ul data-code="request" class="pagination">
+		</ul>
+	</div>
+	<div class="report fail<TMPL_IF NAME='quantity'> hidden</TMPL_IF>">
+		<h3><strong>За период c <span><TMPL_VAR NAME='begin-dd'></span> по <span><TMPL_VAR NAME='end-dd'></span> заявки не найдены</strong></h3>
+	</div>
+
 </div>
 <div class="drivers-search content_wide">
 		<h2>Детали перевозки</h2>
 </div>
-<script type="text/javascript">
-document.addEventListener('DOMContentLoaded', function() {
-
-		let tblCols = ['orddate-dd', 'orddate-dt', 'driver', 'weight', 'total'];
-		document.getElementById('sendquery').onclick = function() {
-				let btn = this;
-				let formdata = {};
-				document.querySelectorAll('input.udata').forEach( inp =>{
-															let val = inp.value;
-															if ( val.match(/^\d+$/) ) {
-																val *= 1;			// Bring to a number
-															} else if( inp.type === 'date') {
-																val = val.replace(/\-/g,'');
-															}
-															formdata[inp.dataset.key] = val;
-														});
-				let msg = {'code':btn.dataset.code,'data':formdata};
-				flush(msg, document.location.origin+window.realpath, function(resp) {
-							if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
-							if ( resp.fail ) {
-								alert( resp.fail);
-							} else {
-								document.getElementById('totalRec').innerText = resp.data.quantity;
-								document.getElementById('shownRec').innerText = resp.data.list.length;
-								let tbl = document.querySelector('#orderList tbody') || document.getElementById('orderList');
-								let td;
-								while ( td = tbl.querySelector('td') ) {
-									tbl.removeChild( td.parentNode );			// Kill only `td' rows
-								}
-								resp.data.list.forEach( itm =>{ let row = createObj('tr',{'className':'tdata'});
-										tblCols.forEach( vn =>{ let cell = createObj('td', 
-																			{'data-varname':vn, 'innerText':itm[vn]});
-													row.appendChild(cell);
-											});
-										tbl.appendChild(row);
-									});
-								
-							}
-						});
-			};
-	});
-</script>
+<script type="text/javascript" src="/js/assy_request.js?<TMPL_VAR NAME='js'>"></script>

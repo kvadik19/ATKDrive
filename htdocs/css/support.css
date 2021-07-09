@@ -304,9 +304,15 @@ ol.subTabs li.subTab.active {
 }
 .buttonbar button.anima {
 	width:9em;
+}
+h4 button.anima {
+	width:12.5em;
+	margin-left:1em;
+}
+button.anima {
 	text-align:left;
 }
-.buttonbar button.anima img {
+button.anima img {
 	width:1.3em;
 	height:1.3em;
 	vertical-align:middle;
@@ -525,6 +531,15 @@ div.options {
 	display:flex;
 	flex-direction:row;
 	width:100%;
+}
+.qw_talks.ajax.control .qw_body {
+	display:none;
+}
+.qw_talks.ajax {
+	border-top:double var(--panel-back-lt, '#00b171');
+}
+.qw_talks.ajax:not(first-of-type) .buttonbar {
+	border-top:none;
 }
 .message {
 	width:50%;

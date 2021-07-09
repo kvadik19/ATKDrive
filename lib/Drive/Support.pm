@@ -348,28 +348,29 @@ sub apply_data {	# Apply data on data template
 					}
 				}
 			} else {
-				my $data = $self->apply_data( model =>$v, data =>$init->{'data'}->{$dk}, reg_date =>$init->{'reg_date'});
+				my $data = $self->apply_data( model =>$v, data =>$init->{'data'}->{$dk}, date_mask =>$init->{'date_mask'});
 				if ( ref($data) eq 'HASH' ) {		# Special processed Date type value
 					$ret->{$k} = $data->{'datetime'};
 					$ret->{"$k-dd"} = $data->{'date'};		# Special keynames
 					$ret->{"$k-dt"} = $data->{'time'};		# nnnn = datetime, nnnn-dd = date, nnnn-dt = time
 
-				} elsif( $data ) {				# Only exists data
-					$ret->{$k} = $data
+				} elsif( $data ne undef ) {				# Only existing data
+					$ret->{$k} = $data;
+					$ret->{"$k-nn"} = scalar( @$data) if ref($data) eq 'ARRAY';
 				}
 			}
-		}
+		}			# DataModel keys cycle
 	} elsif ( ref( $init->{'model'}) eq 'ARRAY' && ref($init->{'data'}) eq 'ARRAY' ) {
 		$ret = [];
 		foreach my $di ( @{$init->{'data'}}) {
 			foreach my $mi ( @{$init->{'model'}} ) {
 				next if $mi =~ /^==manifest/;
-				push( @$ret, $self->apply_data( model =>$mi, data =>$di, reg_date =>$init->{'reg_date'}));
+				push( @$ret, $self->apply_data( model =>$mi, data =>$di, date_mask =>$init->{'date_mask'}));
 			}
 		}
 	} elsif( $init->{'model'} =~ /^\$/ ) {
 		my $data = $init->{'data'};
-		if ( $data =~ /$init->{'reg_date'}/ ) {		# Special processing for Date type value, detected on data formatting
+		if ( $data =~ /$init->{'date_mask'}/ ) {		# Special processing for Date type value, detected on data formatting
 			my $datetime = Date::Handler->new( date => Mojo::Date->new($data)->epoch, 
 												time_zone => $Drive::our_timezone, 
 												locale => $Drive::our_locale );
@@ -447,11 +448,12 @@ my ($self, $query, $init) = @_;
 	my $def_end = Date::Handler->new( date => time, time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
 	my $def_begin = Date::Handler->new( date => [$def_end->Year(), $def_end->Month(), 1], 
 										time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
-	my $defdata = { '_uid'=>'$_uid',
-					'_umode'=>'$_umode',
-					'begin'=>$def_begin->TimeFormat( $sys->{'datefmt_send'}),
-					'end'=>$def_end->TimeFormat( $sys->{'datefmt_send'}),
-					'koldoc'=>10,
+	my $defdata = { '_uid' => {'data'=>'$_uid'},
+					'_umode' => {'data'=>'$_umode'},
+					'begin' => {'data'=>$def_begin->TimeFormat( $sys->{'datefmt_send'}), 'force'=>1},
+					'end' => {'data'=>$def_end->TimeFormat( $sys->{'datefmt_send'}), 'force'=>1},
+					'koldoc' => {'data'=>10},
+					'from' => {'data'=>1}
 				};		# Default data always must present
 
 	my $keyfld;
@@ -459,35 +461,41 @@ my ($self, $query, $init) = @_;
 
 	my $idx = Drive::find_first( $utdef, sub { my $fld = shift; return $fld->{'link'} == 1 } );
 	$keyfld = $utdef->[$idx]->{'name'} if $idx > -1;					# Detect control field
-	$defdata->{$keyfld} = "\$$keyfld" if $keyfld;
+	$defdata->{$keyfld} = {'data'=>"\$$keyfld"} if $keyfld;
 
-	$query = $defdata unless $query;
+	$query = {%$defdata} unless $query;
 	
 	while ( my($par, $val) = each(%$defdata) ) {		# Insert required data if need
 		##### Forgotten feature???
-		my $at_ut = Drive::find_first( $utdef, 
-									sub { my $fld = shift; return $fld->{'name'} eq $par } );	# Look at users stucture
+# 		my $at_ut = Drive::find_first( $utdef, 
+# 									sub { my $fld = shift; return $fld->{'name'} eq $par } );	# Look at users stucture
 
 		my $at_qt = Drive::find_hash( $query, 
 									sub { my ($key, $mask) = @_;
 											my @name = split(/;/, $key);		# We have composed keyname as 'uname;name;opts'
 											my $name = $name[1] || $name[0];		# Or just a 'name'
-											return ( $name eq $mask );
+											return $name eq $mask;
 										}, $par);		# Look at passed query
-		unless ( $at_qt ) {
-			$query->{$par} = $val ;		# Key is'nt defined
+		unless ( $at_qt) {
+			$query->{$par} = $val->{'data'} ;		# Key is'nt defined
+		} elsif( $val->{'force'} ) {
+			$query->{$at_qt} = $val->{'data'} ;		# Forced data assign
+# 		} elsif( $at_ut < 0 ) {					# Assign, if defined key is not from utable fields?
+# 			$query->{$at_qt} = $val->{'data'} ;
 		}
 	}
-	while ( my($pn, $pv) = each(%$init) ) {			# Apply init data if passed
+
+	foreach my $pn ( keys(%$init) ) {			# Apply init data if passed
 		my $at_qt = Drive::find_hash( $query, 
 									sub { my ($key, $mask) = @_;
 											my @name = split(/;/, $key);
-											return ($name[1] eq $mask );
+											my $name = $name[1] || $name[0];		# Or just a 'name'
+											return $name eq $mask;
 										}, $pn);		# Look at passed query
 		if ( $at_qt ) {
-			$query->{$at_qt} = $pv;
+			$query->{$at_qt} = $init->{$pn};
 		} else {
-			$query->{$pn} = $pv;
+			$query->{$pn} = $init->{$pn};
 		}
 	}
 	return $query;
@@ -572,7 +580,7 @@ my ($self, $obj, $nouname) = @_;
 			my $okey = $self->key_split( $key);
 			
 			my $keyIn = $okey->{'uname'};
-			if ( $nouname ) {			# User defined or original keynames can be returned
+			if ( $nouname && $okey->{'name'} ) {			# User defined or original keynames can be returned
 				$keyIn = $okey->{'name'};
 			} elsif( exists($tr_table->{ $okey->{'uname'}}) ) {
 				$keyIn = $tr_table->{ $okey->{'uname'}};
@@ -617,7 +625,7 @@ my $item = shift;
 			$varname = $item->children->[$_]->attr('name');
 			$keyname = $varname;
 
-			if ( $tagname =~ /^tmpl_else/i ) {			# Ignore tag
+			if ( $tagname =~ /^tmpl_(else|include)/i ) {			# Ignore tag
 				undef $varname;
 				undef $keyname;
 			} elsif ( $tagname =~ /^tmpl_(if|unless)/i ) {		# Binary condition tag
@@ -631,6 +639,7 @@ my $item = shift;
 			}
 		} else {
 			my $inset = $item->children->[$_]->attr('value')
+						|| $item->children->[$_]->attr('class')
 						|| $item->children->[$_]->attr('href')
 						|| $item->children->[$_]->attr('src');			# Possible included variables
 			if ( $inset =~ /<tmpl_/i ) {

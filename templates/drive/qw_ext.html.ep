@@ -59,11 +59,36 @@
 			</div>
 		</div>
 		<h4>AJAX запросы на адрес <code class="pageurl"></code></h4>
-		<div class="qw_talks ajax">
+
+%# This node is used to create new query displays by cloneNode() at query.js
+		<div class="qw_talks ajax control">
 			<div class="message qw_send">
-			</div>
+				<div class="qw_body">
+					<div class="qw_code qwHdr">Отправляемый ключ &laquo;code&raquo;: <code class="udata code"></code>
+						<button type="button">Удалить обработчик</button>
+					</div>
+					<div class="qwHdr">Отправляемый ключ &laquo;data&raquo;:</div>
+					<div class="qw_data">
+					</div>
+				</div>
+				<div class="buttonbar">
+					<p class="comment">
+						Ожидание AJAX со страницы в течение <span class="tout">3</span>&nbsp;<span class="tunit">минут</span>
+					</p>
+					<button type="button" class="listen" data-type="ext">Принять запрос</button>
+					<button type="button" class="abort" style="display:none;">Стоп</button>
+				</div>
+ 			</div>
 			<div class="message qw_recv">
-			</div>
+				<div class="qw_body">
+					<div class="qw_code qwHdr">Полученный ключ &laquo;code&raquo;: <code class="udata code"></code></div>
+					<div class="qwHdr">Принимаемый ключ &laquo;data&raquo;:</div>
+					<div class="qw_data">
+					</div>
+				</div>
+			</div> 
 		</div>
+%# Sample node
+
 	</div>
 </div>

@@ -88,7 +88,7 @@
 			Object.keys(localdata).forEach(k =>{ checkload[k] = localdata[k] });
 		}
 		tabSwitch();
-		document.getElementById('tout').innerText = timeout;
+		document.querySelectorAll('span.tout').forEach( s  =>{s.innerText = timeout});
 		let tabs = document.querySelectorAll('.subTab:not(.fail)');
 		tabs.forEach( st =>{
 				st.onclick = function(e) { if (e.target.matches('.active')) return;

@@ -60,6 +60,10 @@ a:active {
 	outline: none;
 }
 
+.hidden {
+	display: none;
+}
+
 input,
 button,
 textarea {
@@ -307,6 +311,10 @@ span {
 	display: block;
 	width: 100%;
 	clear: both;
+}
+
+input.carting__checkbox {
+   margin-right: 10px;
 }
 
 @media (max-width: 1180px) {
@@ -2249,7 +2257,8 @@ h2 {
 	line-height: 16px;
 	color: rgba(0, 0, 0, 0.75);
 	padding: 0 16px;
-	background: url(../img/main/lupa.svg) 98% center no-repeat;
+   cursor: pointer;
+	background: url(../img/lupa.svg) 98% center no-repeat;
 }
 
 .head {
@@ -2379,7 +2388,7 @@ h2 {
 	font-weight: 500;
 	font-size: 16px;
 	line-height: 19px;
-	color: #ffffff;
+	color: #ffffff!important;
 	width: 270px;
 	padding: 14px 0 10px 0;
 	-webkit-transition: all 0.3s ease 0s;

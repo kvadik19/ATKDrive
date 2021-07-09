@@ -637,13 +637,13 @@
 
 	document.querySelectorAll('.drivers-tab__header').forEach(dt =>{
 			dt.onclick = function () {
-										let infoContent = dt.nextElementSibling;
-										if ( infoContent.matches('.drivers-info__active') ) {
-											infoContent.className = infoContent.className.replace(/\s*drivers-info__active/g,'');
-										} else {
-											infoContent.className += ' drivers-info__active';
-										}
-									};
+            let infoContent = dt.nextElementSibling;
+            if ( infoContent.matches('.drivers-info__active') ) {
+               infoContent.className = infoContent.className.replace(/\s*drivers-info__active/g,'');
+            } else {
+               infoContent.className += ' drivers-info__active';
+            }
+         };
 		});
 //       let infoOpen = document.getElementsByClassName('drivers-tab__header');
 //       for (let i = 0; i < infoOpen.length; i++) {

@@ -1,70 +1,16 @@
 <div class="content_body">
 	<h1 order="0" strict="carrier">Мои перевозки</h1>
-	<div id="finance-body" class="panel light wide">
-		<p>Игровая страница гипотетического запроса
+		<p>Страница выполненных заказов перевозчика
 		</p>
 		<div class="usermode">
-	<TMPL_IF name="is_customer">
-			Заказчик:
-	<TMPL_ELSE>
-		<TMPL_IF name="is_carrier">
-			Перевозчик:
-		<TMPL_ELSE>
-			Заказчик/Перевозчик:
-		</TMPL_IF>
-	</TMPL_IF>
-		<TMPL_VAR NAME="contragent">
+			Перевозчик: <TMPL_VAR NAME="compname">
 		</div>
 
-		<h2>Грузовики</h2>
-		<table>
-			<tr>
-			<td>Дата заявки:</td><td><input type="text" value="<TMPL_VAR NAME='orddate-dd'>" /></td>
-			<tr>
-			</tr>
-			<td>Время заявки:</td><td><input type="text" value="<TMPL_VAR NAME='orddate-dt'>" /></td>
-			</tr>
-			<tr>
-		<td>Водитель:</td><td><input type="text" value="<TMPL_VAR NAME='driver'>" /></td>
-			</tr>
-			<tr>
-		<td>Масса:</td><td><input type="text" value="<TMPL_VAR NAME='weight'>" /></td>
-			</tr>
-			<tr>
-		<td>Общая стоимость</td><td><strong><TMPL_VAR NAME="total"></strong> руб</td>
-			</tr>
-		</table>
-		<h2>Детали перевозки</h2>
-		<table>
-<TMPL_LOOP NAME="list">
-		<tr>
-		<td>
-	<TMPL_VAR NAME="oper_type">
-		</td>
-		<td>
-	<TMPL_VAR NAME="oper_date-dd">
-		</td>
-		<td>
-	<TMPL_VAR NAME="load_type">
-		</td>
-		<td>
-	<TMPL_VAR NAME="load_city">
-		</td>
-		</tr>
-</TMPL_LOOP>
-<h3>
-<TMPL_IF NAME="payed">
-	Оплачен
-<TMPL_ELSE>
-	Нет оплаты
-</TMPL_IF>
-</h3>
-		</table>
-		<hr>
-		<div class="block_header">Изменить параметры выборки</div>
+		<h2>Заявки за период </h2>
 		<div class="form__data">
 			<input type="hidden" data-key="koldoc" class="udata" value="<TMPL_VAR NAME='koldoc'>" />
 			<input type="hidden" data-key="_umode" class="udata" value="<TMPL_VAR NAME='_umode'>" />
+			<input type="hidden" data-key="from" class="udata" value="<TMPL_VAR NAME='from'>" />
 			<input type="hidden" data-key="_uid" class="udata" value="<TMPL_VAR NAME='_uid'>" />
 			<div class="optrow">
 				<label for="d_start">Начало периода: </label><input data-key="begin" class="udata" id="d_start" type="date" value="<TMPL_VAR NAME='begin-dd'>" />
@@ -76,31 +22,38 @@
 				<button type="button" class="form__btn" data-code="request" id="sendquery">Запросить</button>
 			</div>
 		</div>
+
+
+	<div class="report body<TMPL_UNLESS NAME='quantity'> hidden</TMPL_UNLESS>">
+		<table id="orderList">
+			<tr class="thead">
+				<th>Дата заявки</th>
+				<th>Время заявки</th>
+				<th>Водитель</th>
+				<th>Масса</th>
+				<th>Общая стоимость</th>
+			</tr>
+<TMPL_LOOP NAME="list">
+			<tr class="tdata">
+				<td data-varname="orddate-dd"><TMPL_VAR NAME='orddate-dd'></td>
+				<td data-varname="orddate-dt"><TMPL_VAR NAME='orddate-dt'></td>
+				<td data-varname="driver"><TMPL_VAR NAME='driver'></td>
+				<td data-varname="weight"><TMPL_VAR NAME='weight'></td>
+				<td data-varname="total"><TMPL_VAR NAME="total"></td>
+			</tr>
+</TMPL_LOOP>
+		</table>
+
+		<h3>Показано <strong id="shownRec"><TMPL_VAR NAME="list-nn"></strong> записей из <strong id="totalRec"><TMPL_VAR NAME="quantity"></strong></h3>
+		<ul data-code="request" class="pagination">
+		</ul>
 	</div>
+	<div class="report fail<TMPL_IF NAME='quantity'> hidden</TMPL_IF>">
+		<h3><strong>За период c <span><TMPL_VAR NAME='begin-dd'></span> по <span><TMPL_VAR NAME='end-dd'></span> заявки не найдены</strong></h3>
+	</div>
+
 </div>
-<script type="text/javascript">
-document.addEventListener('DOMContentLoaded', function() {
-		document.getElementById('sendquery').onclick = function() {
-				let btn = this;
-				let formdata = {};
-				document.querySelectorAll('input.udata').forEach( inp =>{
-															let val = inp.value;
-															if ( val.match(/^\d+$/) ) {
-																val *= 1;			// Bring to a number
-															} else if( inp.type === 'date') {
-																val = val.replace(/\-/g,'');
-															}
-															formdata[inp.dataset.key] = val;
-														});
-				let msg = {'code':btn.dataset.code,'data':formdata};
-				flush(msg, document.location.origin+window.realpath, function(resp) {
-							if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
-							if ( resp.fail ) {
-								alert( resp.fail);
-							} else {
-								console.log(resp);
-							}
-						});
-			};
-	});
-</script>
+<div class="drivers-search content_wide">
+		<h2>Детали перевозки</h2>
+</div>
+<script type="text/javascript" src="/js/assy_request.js?<TMPL_VAR NAME='js'>"></script>
