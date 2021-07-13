@@ -65,13 +65,15 @@
 			<div class="message qw_send">
 				<div class="qw_body">
 					<div class="qw_code qwHdr">Отправляемый ключ &laquo;code&raquo;: <code class="udata code"></code>
-						<button type="button">Удалить обработчик</button>
 					</div>
 					<div class="qwHdr">Отправляемый ключ &laquo;data&raquo;:</div>
 					<div class="qw_data">
 					</div>
+					<div class="buttonbar killer">
+						<button type="button">Удалить обработчик запроса &laquo;<code></code>&raquo;</button>
+					</div>
 				</div>
-				<div class="buttonbar">
+				<div class="buttonbar listener">
 					<p class="comment">
 						Ожидание AJAX со страницы в течение <span class="tout">3</span>&nbsp;<span class="tunit">минут</span>
 					</p>

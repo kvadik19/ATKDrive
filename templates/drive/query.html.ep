@@ -82,11 +82,11 @@
 	var checkload = <%== decode_utf8( encode_json($checkload)) %>;
 	let url = document.location.origin+document.location.pathname;
 	document.addEventListener('DOMContentLoaded', function() {
-		let cook = getCookie('__checkload');			// Test data to provide test queries
-		if ( cook ) {
-			let localdata = JSON.parse( decodeURIComponent(cook) );
-			Object.keys(localdata).forEach(k =>{ checkload[k] = localdata[k] });
-		}
+// 		let cook = getCookie('__checkload');			// Test data to provide test queries
+// 		if ( cook ) {
+// 			let localdata = JSON.parse( decodeURIComponent(cook) );
+// 			Object.keys(localdata).forEach(k =>{ checkload[k] = localdata[k] });
+// 		}
 		tabSwitch();
 		document.querySelectorAll('span.tout').forEach( s  =>{s.innerText = timeout});
 		let tabs = document.querySelectorAll('.subTab:not(.fail)');

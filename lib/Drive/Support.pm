@@ -638,17 +638,16 @@ my $item = shift;
 				$map->{$keyname} = "\$$keyname";
 			}
 		} else {
-			my $inset = $item->children->[$_]->attr('value')
-						|| $item->children->[$_]->attr('class')
-						|| $item->children->[$_]->attr('href')
-						|| $item->children->[$_]->attr('src');			# Possible included variables
-			if ( $inset =~ /<tmpl_/i ) {
-				my $valdom = Mojo::DOM->new->parse( $inset );
-				foreach my $tag ( qw(tmpl_var tmpl_if) ) {
-					$varname = $valdom->at($tag)->attr('name') if $valdom->at($tag);
-					if ( $varname ) {
-						$varname =~ s/\-d[dt]$// if $varname =~ /\-d[dt]$/;			# Special names for date or time variables
-						$map->{$varname} = "\$$varname" ;
+			foreach my $attr ( qw/value style class href src/ ) {			# Possible variables included to attributes 
+				my $inset = $item->children->[$_]->attr($attr);
+				if ( $inset =~ /<tmpl_/i ) {
+					my $valdom = Mojo::DOM->new->parse( $inset );
+					foreach my $tag ( qw(tmpl_var tmpl_if) ) {
+						$varname = $valdom->at($tag)->attr('name') if $valdom->at($tag);
+						if ( $varname ) {
+							$varname =~ s/\-d[dt]$// if $varname =~ /\-d[dt]$/;			# Special names for date or time variables
+							$map->{$varname} = "\$$varname" ;
+						}
 					}
 				}
 			}

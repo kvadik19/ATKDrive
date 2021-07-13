@@ -4,20 +4,19 @@
 	<div class="navbar_logobox">
 		<img src="/img/lkp_avatar.svg" alt="LOGO MENU" class="navbar_logo" />
 	</div>
-
-% if ( $user->{'record'}->{'_umode'} 
-%		== $sys->{$Drive::dict_fields->{'_umode'}}->{'both'}->{'value'}
-%			&& $main_menu->{'umode_name'}) {		# User registered as carrier+customer
+% if ( $user->{'record'}->{'_umode'} eq $sys->{$Drive::dict_fields->{'_umode'}}->{'both'}->{'value'}
+%							&& $main_menu->{'umode_name'}) {		# User registered as carrier+customer
 	<div id="umode_sw" data-state="<%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}->{'value'}%>"
 						data-alt="<%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_other'}}->{'title'} %>">
 		<div>&#9776;</div><!-- U+2630 TRIGRAM FOR HEAVEN -->
 		<span><%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}->{'title'} %></span>
 	</div>
-% } else {
+% } elsif( exists( $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}) ) {
 	<span class="logo_name"><%= $sys->{$Drive::dict_fields->{'_umode'}}->{$main_menu->{'umode_name'}}->{'title'} %></span>
 % }
 	<span class="logo_title"><%= $user->{'record'}->{'compname'} %></span>
 	<span class="logo_name"><%= $user->{'record'}->{'fullname'} %></span>
+
 % #### Append setup menu item
 % push( @{$main_menu->{'list'}}, {'name'=>'account', 'title'=>'Настройки профиля', 'order'=>-1} );
 
@@ -34,9 +33,7 @@
 %
 %	if ( $item->{'sublist'} ) {
 %		$classname .= ' sublist';
-%		if ( $user->{'cookie'}->{"sl$item->{'order'}"} == 1 ) {		# Cookie set to 'This Sublist is opened'
-%			$classname .= ' show'
-%		}
+%		$classname .= ' show' if $user->{'cookie'}->{"sl$item->{'order'}"} == 1;		# Cookie set to 'This Sublist is opened'
 %		$tag = "<span>$item->{'title'}</span>\n";
 %		$tag .= "\t\t\t<ul class=\"navbar_sublist\">\n";
 %		foreach my $sub ( @{$item->{'sublist'}} ) {

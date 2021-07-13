@@ -57,7 +57,8 @@ sub ask_inet {		# Process inet transactions
 			eval { $msg_recv = encode_json($got->res->json) };
 			$msg_recv = $got->res->to_string if $@;
 		} else {
-			$msg_recv = $got->res->code.': '.$got->res->error->{'message'};
+			$msg_recv = $got->res->code || '524';		# 524 A Timeout Occurred 
+			$msg_recv .= ': '.$got->res->error->{'message'};
 		}
 
 	} else {

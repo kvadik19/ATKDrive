@@ -187,7 +187,6 @@ my $self = shift;
 	$out = $self->process($action) if $@;		# Process queries based on template
 
 	if ( ref($out) eq 'HASH' ) {
-		$self->logger->dump("Failure in '$action': $out->{'fail'}", 3) if $out->{'fail'};
 		if ( exists( $out->{'json'}) ) {
 			$self->render( type => 'application/json', json => $out->{'json'} );
 			return;
@@ -307,8 +306,8 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 		}
 		my $umode_name = Drive::find_hash( $sys->{ $Drive::dict_fields->{'_umode'}}, 
 					sub { my $k = shift;
-						return $sys->{$Drive::dict_fields->{'_umode'}}->{$k}->{'value'} 
-											== $current_umode; 
+							return $sys->{$Drive::dict_fields->{'_umode'}}->{$k}->{'value'} 
+																					== $current_umode; 
 						} );			# Current choiced _umode
 		my ($qw_send, $qw_recv, $qw_load);
 
@@ -327,16 +326,19 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 			# Prepare menu data for output
 			my $umode_other = Drive::find_hash( $sys->{ $Drive::dict_fields->{'_umode'}}, 
 						sub { my $k = shift;
-							return $sys->{$Drive::dict_fields->{'_umode'}}->{$k}->{'value'} 
-												== 3 - $current_umode; 
+								return $sys->{$Drive::dict_fields->{'_umode'}}->{$k}->{'value'} 
+													== 3 - $current_umode; 
 							} );			# Other of 2 _umodes
 
 			my $menu_list = $self->build_menus;
 			my $menuitem = $self->menu_item( $menu_list, $action);
 			if ( $menuitem->{'strict'} && $umode_name ne $menuitem->{'strict'} ) {
-				my $idx = Drive::find_first( $menu_list, sub { my $itm = shift; return !$itm->{'strict'} || $itm->{'strict'} eq $umode_name});
+				my $idx = Drive::find_first( $menu_list, sub { my $itm = shift; 
+																return !$itm->{'strict'} || $itm->{'strict'} eq $umode_name }
+											);
 				$menuitem = $menu_list->[$idx];
 			}
+
 			if ( $action ne $menuitem->{'name'} ) {		# Redefine location, if stricted to _umode
 				$action = $menuitem->{'name'};
 				$udata->{'cookie'}->{'path'} = "/$action";
@@ -387,16 +389,15 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 							login => $conf->{'connect'}->{'htlogin'},
 							pwd => $conf->{'connect'}->{'htpasswd'},
 						);
-$self->logger->dump($qw_send);
-$self->logger->dump($resp);
+$self->logger->dump("SEND: $qw_send");
+$self->logger->dump("RECV: $resp");
 
 		if ( $resp =~ /^[\{\[].*[\}\]]$/ ) {
 			eval{ $resp = decode_json($resp) };
 			if ( $@ ) {
-				$self->logger->dump("Request $send_code : Decode response JSON: $@", 3);
-				$out->{'fail'} = $@;
-				$out->{'json'}->{'fail'} = $@ if $is_ajax;
+				$self->logger->dump("Decode JSON on `$send_code' : $@", 3);
 				$resp = {'code' => $send_code, 'data' => {}, 'fail' => $@};
+				$out = {%$resp};				# Use HASH copy To prevent cyclic reference
 
 			} elsif ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
 				my $watch = {
@@ -408,10 +409,9 @@ $self->logger->dump($resp);
 				close($fh);
 			}
 		} else {
-			$self->logger->dump("Request $send_code : Unknown response $resp", 3);
+			$self->logger->dump("Request `$send_code' returned unexpected : $resp", 3);
 			$resp = {'code' => $send_code, 'data' => {}, 'fail' => $resp};
-			$out->{'fail'} = $resp;
-			$out->{'json'}->{'fail'} = $resp if $is_ajax;
+			$out = {%$resp};				# Use HASH copy To prevent cyclic reference
 		}
 
 
@@ -421,17 +421,23 @@ $self->logger->dump($resp);
 		$qw_recv->{'data'} = $resp->{'data'} unless $qw_recv->{'data'};			# Undefined AJAX model yet?
 		$resp->{'data'} = shift( @{$resp->{'data'}}) if ref($qw_recv->{'data'}) eq 'HASH' && ref($resp->{'data'}) eq 'ARRAY';
 
-		eval {
-		$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
-											data => $resp->{'data'},
-											date_mask => $testdate,
-										);
+		unless ( exists( $out->{'fail'}) ) {			# Response is okay, process data apply
+			eval {
+				$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
+													data => $resp->{'data'},
+													date_mask => $testdate,
+												);
 				};
+		}
 # $self->logger->dump('Model: '.Dumper($qw_recv->{'data'}),1,1);
 # $self->logger->dump('Applied: '.Dumper($out),1,1);
 		$self->logger->dump("Apply data on response to $action: $@", 3) if $@;
 		if ( $is_ajax ) {
-			$out->{'json'} = {'code' => $resp->{'code'}, 'data' => {%$out}};
+			if ( exists( $out->{'fail'}) ) {
+				$out->{'json'} = {%$out};				# Use HASH copy To prevent cyclic reference
+			} else {
+				$out->{'json'} = {'code' => $resp->{'code'}, 'data' => {%$out}};
+			}
 		} else {
 
 			$ifstate->{"is_$umode_name"} = 1 if $umode_name;
@@ -459,7 +465,7 @@ $self->logger->dump($resp);
 			$templates->{$action}->{'tmpl'}->param($sys);
 			$templates->{$action}->{'tmpl'}->param($Drive::stats);
 			$templates->{$action}->{'tmpl'}->param($userdata);
-			$templates->{$action}->{'tmpl'}->param($out) if ref( $out) eq 'HASH';
+			$templates->{$action}->{'tmpl'}->param($out);
 
 			$out = $templates->{$action}->{'tmpl'}->output();
 			my $dom = Mojo::DOM->new( $out );
@@ -552,20 +558,20 @@ my $out;
 			$out->{'json'} = $self->udata_commit( $udata->{'cookie'}->{'uid'} );
 		}
 
-	} else {
-		foreach my $sparam ( qw(user_mode user_type) ) {		# Add some defined codes
-			while( my($p,$v) = each( %{$sys->{$sparam}} ) ) {
+	} else {			# Draw static page
+		foreach my $spar ( qw(user_mode user_type) ) {		# Add some defined codes
+			while( my($p, $v) = each( %{$sys->{$spar}} ) ) {
 				$param->{$p} = $v->{'value'};
 			}
 		}
 		if ( $udata->{'record'}->{'_umode'} == $sys->{'user_mode'}->{'both'}->{'value'} ) {
-			$param->{"carrier_mark"} = 'checked';
-			$param->{"customer_mark"} = 'checked';			## Markup checkboxes
+			$param->{'carrier_mark'} = 'checked';
+			$param->{'customer_mark'} = 'checked';			## Markup checkboxes
+
 		} else {
 			while ( my($mod, $def) =  each( %{$sys->{'user_mode'}} ) ) {
-				if ( $udata->{'record'}->{'_umode'} == $def->{'value'} ) {
-					$param->{"$mod\_mark"} = 'checked';
-				}
+				$param->{"$mod\_mark"} = '';
+				$param->{"$mod\_mark"} = 'checked' if $udata->{'record'}->{'_umode'} eq $def->{'value'};
 			}
 		}
 
@@ -576,9 +582,9 @@ my $out;
 		foreach my $row ( @{$param->{'uploads'}} ) {
 			$row->{'list'} = [grep { $_->{'owner_field'} eq $row->{'name'} } @$umedia];
 		}
-		$templates->{'account'}->{'tmpl'}->param($param);
-		$templates->{'account'}->{'tmpl'}->param($sys);
 		$templates->{'account'}->{'tmpl'}->param($udata->{'record'});
+		$templates->{'account'}->{'tmpl'}->param($sys);
+		$templates->{'account'}->{'tmpl'}->param($param);
 		$out = $templates->{'account'}->{'tmpl'}->output();
 
 		my $dom = Mojo::DOM->new( $out );
@@ -714,8 +720,8 @@ my $out;
 		$param->{'session'} = $udata->{'fp'};
 		$param->{'uploads'} = [ grep { $_->{'type'} eq 'file' } @$struct ];
 		$param->{'email'} = $param->{'login'} if $param->{'login'} =~ /\w+@\w+/;
-		foreach my $sparam ( qw(user_mode user_type) ) {
-			while( my($p,$v) = each( %{$sys->{$sparam}} ) ) {
+		foreach my $spar ( qw(user_mode user_type) ) {
+			while( my($p,$v) = each( %{$sys->{$spar}} ) ) {
 				$param->{$p} = $v->{'value'};
 			}
 		}

@@ -4,65 +4,75 @@ document.addEventListener('DOMContentLoaded', function() {
 		let tblCols = ['orddate-dd', 'orddate-dt', 'driver', 'weight', 'total'];
 		let display = document.querySelector('.report.body');
 		let failure = document.querySelector('.report.fail');
+		let formData = {};
 
 		let gotData = function(resp) {			// When response received
 						if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
-						if ( resp.fail ) {
-							alert( resp.fail);
-						} else {
-							// Prepare to display failure or success data
-							display.className = display.className.replace(/\s*hidden/g,'');
-							failure.className = failure.className.replace(/\s*hidden/g,'');
-							if ( resp.data.quantity > 0 ) {
-								failure.className += ' hidden';
-							} else {
-								display.className += ' hidden';
-								let period = [resp.data['begin-dd'], resp.data['end-dd']];
-								failure.querySelectorAll('span').forEach( sp =>{ sp.innerText = period.shift()});
-							}
+						if ( resp.fail ) console.log( resp.fail);
+
+						// Prepare to display failure or success data
+						display.className = display.className.replace(/\s*hidden/g,'');
+						failure.className = failure.className.replace(/\s*hidden/g,'');
+						if ( resp.data.quantity > 0 ) {
+							failure.className += ' hidden';
 							document.getElementById('totalRec').innerText = resp.data.quantity;
 							document.getElementById('shownRec').innerText = resp.data.list.length;
-							
-							// Refresh paginator
-							let pgBox = document.querySelector('ul.pagination');
-							pgBox.innerHTML = '';
+
+						} else {
+							display.className += ' hidden';
+							let period = [];
+							[formData.begin, formData.end].forEach( dv =>{ 
+									if ( !dv ) return;
+									if ( dv.match(/\d{8}/ ) ) {
+										dv = dv.replace(/(\d{4})(\d{2})(\d{2})/,'$3-$2-$1');
+									}
+									period.push( dv );
+								});
+							failure.querySelectorAll('span').forEach( sp =>{ sp.innerText = period.shift()});
+						}			// Prepare showplaces
+
+						// Cleanup display
+						let pgBox = document.querySelector('ul.pagination');
+						pgBox.innerHTML = '';
+						let tbl = document.querySelector('#orderList tbody') || document.getElementById('orderList');
+						let td;
+						while ( td = tbl.querySelector('td') ) {
+							tbl.removeChild( td.parentNode );			// Kill only `td' rows, leave `th'
+						}
+						if ( !resp.data.list ) return;			// Break process if no data.list
+
+						// Refresh paginator
 console.log('Create pages');
-							if ( resp.data.quantity > resp.data.list.length ) {
-								let pQ = Math.ceil(resp.data.quantity/resp.data.list.length);
-								for ( let nP=1; nP <= pQ; nP++ ) {
-									let page = createObj('li',{'className':'page-item','innerText':nP, 
-											'onclick': function(evt) {let num = this.innerText*1 - 1;
-															let data = collectForm();
-															data.from = num*data.koldoc + 1;
-															evt.stopImmediatePropagation();
+						if ( resp.data.quantity > resp.data.list.length ) {
+							let pQ = Math.ceil(resp.data.quantity/resp.data.list.length);
+							for ( let nP=1; nP <= pQ; nP++ ) {
+								let page = createObj('li',{'className':'page-item','innerText':nP, 
+										'onclick': function(evt) {let num = this.innerText*1 - 1;
+														let data = collectForm();
+														data.from = num*data.koldoc + 1;
+														evt.stopImmediatePropagation();
 console.log('Click to '+data.from);
-															flush( {'code':pgBox.dataset.code,'data':data}, 
-																	document.location.origin+window.realpath, gotData);
-														},
-											});
-									pgBox.appendChild( page );
-								}
+														flush( {'code':pgBox.dataset.code,'data':data}, 
+																document.location.origin+window.realpath, gotData);
+													},
+										});
+								pgBox.appendChild( page );
 							}
+						}
 
 console.log('Update table');
-							// Update list table
-							let tbl = document.querySelector('#orderList tbody') || document.getElementById('orderList');
-							let td;
-							while ( td = tbl.querySelector('td') ) {
-								tbl.removeChild( td.parentNode );			// Kill only `td' rows, leave `th'
-							}
-							resp.data.list.forEach( itm =>{ let row = createObj('tr',{'className':'tdata'});
-									tblCols.forEach( vn =>{ let cell = createObj('td', 
-																		{'data-varname':vn, 'innerText':itm[vn]});
-												row.appendChild(cell);
-										});
-									tbl.appendChild(row);
-								});
-							
-						}
+						// Update list table
+						resp.data.list.forEach( itm =>{ let row = createObj('tr',{'className':'tdata'});
+								tblCols.forEach( vn =>{ let cell = createObj('td', 
+																	{'data-varname':vn, 'innerText':itm[vn]});
+											row.appendChild(cell);
+									});
+								tbl.appendChild(row);
+							});
 					};			// gotData END
+
 		let collectForm = function() {
-				let formdata = {};
+				let dataRead = {};
 				document.querySelectorAll('input.udata').forEach( inp =>{
 															let val = inp.value;
 															if ( val.match(/^\d+$/) ) {
@@ -70,9 +80,9 @@ console.log('Update table');
 															} else if( inp.type === 'date') {
 																val = val.replace(/\-/g,'');
 															}
-															formdata[inp.dataset.key] = val;
+															dataRead[inp.dataset.key] = val;
 														});
-				return formdata;
+				return dataRead;
 			};
 
 		document.querySelectorAll('input[type="date"]').forEach( di =>{
@@ -81,8 +91,8 @@ console.log('Update table');
 						});
 		document.getElementById('sendquery').onclick = function() {
 				let btn = this;
-				let formdata = collectForm();
-				let msg = {'code':btn.dataset.code,'data':formdata};
+				formData = collectForm();
+				let msg = {'code':btn.dataset.code,'data':formData};
 				flush(msg, document.location.origin+window.realpath, gotData);
 			};
 	});

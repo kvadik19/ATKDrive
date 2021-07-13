@@ -405,7 +405,8 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 									let define = resp.data;
 
 									if ( define.qw_load && typeof(define.qw_load) === 'object' ) {
-										Object.keys( define.qw_load).forEach( k =>{ checkload[k] = define.qw_load[k] });
+										Object.keys( checkload).forEach( k =>{ delete checkload[k] });		// Purge previous
+										Object.keys( define.qw_load).forEach( k =>{ checkload[k] = define.qw_load[k] });	// Assign loaded
 									}
 									bodyOut.querySelector('.qw_code .code').value = define.qw_init.qw_send.code;
 									bodyOut.closest('.qw_talks').dataset.code = define.qw_init.qw_send.code;
@@ -861,7 +862,20 @@ let keyTool = {			// Add key-value floating window operations
 
 let keyEdit = {
 		keyname: function(evt) {
-				this.target = evt.target;
+				keyEdit.target = evt.target;
+				let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
+				keyEdit.preval = evt.target.innerText;
+				evt.target.innerHTML = '';
+				let inpt = createObj('input',{'type':'text','className':'jsonKeyEdit',
+						'style.width':w+'px','style.height':h+'px',
+						'value':keyEdit.preval,
+						'onblur':keyEdit.killInpt,'onkeydown':keyEdit.keyOut });
+				evt.target.appendChild(inpt);
+				inpt.focus();
+				inpt.select();
+			},
+		varname: function(evt) {
+				keyEdit.target = evt.target;
 				let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
 				keyEdit.preval = evt.target.innerText;
 				evt.target.innerHTML = '';
@@ -891,7 +905,7 @@ let keyEdit = {
 								} );
 			},
 		killInpt: function(evt) {
-				let host = evt.target.closest('.keyName');
+				let host = evt.target.closest('.keyName') || evt.target.closest('.keyVal');
 				let value = evt.target.value;
 				host.removeChild(evt.target);
 				if ( value.replace(/\s+/g,'').length > 0) {
@@ -1230,6 +1244,7 @@ document.querySelectorAll('button.listen').forEach( b =>{ b.onclick = function(e
 		let btn = this;
 		qState(1);
 		let tstart = Date.now();
+		let template  = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
 		let msg_send = {'code':'watchdog', 'data':{'period':period,'timeout':timeout}};
 
 		let msgGot = function(msg) {
@@ -1248,21 +1263,42 @@ document.querySelectorAll('button.listen').forEach( b =>{ b.onclick = function(e
 						} else {
 							let sample = document.querySelector('.qw_talks.ajax.control');		// Just clone existing node
 							outBox = sample.cloneNode(true);									// for newly added data
-							let bar = outBox.querySelector('div.buttonbar');
+							let bar = outBox.querySelector('div.buttonbar.listener');
 							bar.parentNode.removeChild(bar);						// Remove `listen` button
 
 							outBox.dataset.code = msg.qw_send.code;
 							outBox.className = outBox.className.replace(/\s*control/i,'');
 							sample.parentNode.insertBefore(outBox, sample);
 						}
+						// Try to get same translation table from known processor
+						let sameData = document.querySelector('.qw_talks.init[data-code="'
+																+ msg.qw_send.code
+																+ '"] .message.qw_recv .qw_body .qw_data');
+						if (sameData) {
+							
+						} else {
+							flush( {'code':'samedata','data':{'code':msg.qw_send.code,'template':'',}}, url)
+						}
 						let domsend = toDOM(msg.qw_send.data);
 						let domrecv = toDOM(msg.qw_recv.data);
 						let body_send = outBox.querySelector('.message.qw_send .qw_body');
 						let body_recv = outBox.querySelector('.message.qw_recv .qw_body');
+						outBox.querySelector('.buttonbar.killer code').innerText = msg.qw_send.code;
 						body_send.querySelector('.qw_code.qwHdr code').innerText = msg.qw_send.code;
 						body_recv.querySelector('.qw_code.qwHdr code').innerText = msg.qw_recv.code;
 						body_send.querySelector('.qw_data').appendChild(domsend);
 						body_recv.querySelector('.qw_data').appendChild(domrecv);
+
+						body_send.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
+						body_recv.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.varname});
+						document.querySelectorAll('.buttonbar.killer').forEach( kb =>{ 		// Kill processor
+									kb.onclick = function() {
+										let prodiv = this.closest('.qw_talks.ajax');
+										if ( confirm('Вы желаете удалить обработчик запроса\n\xAB'+prodiv.dataset.code+'\xBB?') ) {
+											prodiv.parentNode.removeChild(prodiv);
+										}
+									} 
+								});
 					}
 					commitEnable();
 					qState(0);

@@ -2117,10 +2117,12 @@ h2 {
 	-ms-flex-pack: center;
 	justify-content: center;
 	margin-right: 9px;
+   max-width: 410px;
 }
 
 .requests-stage__sity {
-	width: 165px;
+	/*width: 165px;*/
+   width: auto;
 	padding: 10px 0;
 	background: #ffffff;
 	border: 1px solid #e8e8e8;
