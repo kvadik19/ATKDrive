@@ -34,24 +34,6 @@ let subSwitch = function(tab) {			// Click on subTabs
 		}
 	};
 
-let showQRY = function(host, query) {			// Display incoming query received by watchdog
-		let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
-		let method = document.querySelector('.tabContent.shown .subTab.active').dataset.type;
-		if ( query.code ) {
-			let code = host.querySelector('.qwHdr code');
-			code.innerHTML = '';
-			code.innerText = query.code;
-		}
-		if ( query.data ) {
-			let data = host.querySelector('.qw_data');
-			data.innerHTML = '';
-			data.appendChild( toDOM( query.data) );
-			if ( method === 'write' ) {
-				data.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
-			}
-		}
-	};
-
 let getVal = function(item) {		// Obtain key:value pair from DOM <div class="value">
 		let value = {};
 		if ( item.firstElementChild.matches('.keyVal') ) {		// Scalar value as array item
@@ -92,6 +74,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			let manifest = '==manifest;';
 			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
 			if ( node.matches('.preset') ) manifest += '%preset;';
+			if ( node.matches('.hide') ) manifest += '%hide;';
 			obj = [ manifest ];
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
@@ -113,6 +96,67 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			let manifest = '';
 			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
 			if ( node.matches('.preset') ) manifest += '%preset;';
+			if ( node.matches('.hide') ) manifest += '%hide;';
+			obj  = { '==manifest':manifest };
+			for (let nC=0; nC< node.children.length; nC++) {
+				let res = getVal(node.children[nC]);
+				obj[res.key] = res.val;
+			}
+
+		} else if ( node.matches('.value') ) {		// Probably, Helpless trigger
+			let res = getVal(node);
+			if ( res.key ) {
+				obj = {};
+				obj[res.key] = res.val;
+			} else {
+				obj = res.val;
+			}
+			
+		} else if ( node.firstElementChild ) {		// Possibly exceptions trap
+			obj = fromDOM(node.firstElementChild);
+		}
+		return obj;
+	};
+
+let keyApply = function(node, data) {
+		if ( !data
+				|| ( data.constructor.toString().match(/String/i) )
+				|| ( data.constructor.toString().match(/Object/i) && Object.keys(data).length == 0 ) 
+				|| ( data.constructor.toString().match(/Array/i) && data.length == 0 )
+			) return false;
+
+		return node;
+		let obj;
+		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra containers
+		if ( !node ) return;
+
+		if ( node.matches('.array') ) {
+			let manifest = '==manifest;';
+			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
+			if ( node.matches('.preset') ) manifest += '%preset;';
+			if ( node.matches('.hide') ) manifest += '%hide;';
+			obj = [ manifest ];
+			for (let nC=0; nC< node.children.length; nC++) {
+				if ( node.children[nC].matches('.same') ) break;
+				if ( node.children[nC].matches('.value') ) {
+					let res = getVal(node.children[nC]);
+					if ( res.key ) {
+						let got = {};
+						got[res.key] = res.val;
+						obj.push(got);
+					} else {
+						obj.push(res.val);
+					}
+				} else {
+					obj.push( fromDOM(node.children[nC]) );
+				}
+			}
+
+		} else if ( node.matches('.object') ) {
+			let manifest = '';
+			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
+			if ( node.matches('.preset') ) manifest += '%preset;';
+			if ( node.matches('.hide') ) manifest += '%hide;';
 			obj  = { '==manifest':manifest };
 			for (let nC=0; nC< node.children.length; nC++) {
 				let res = getVal(node.children[nC]);
@@ -1244,7 +1288,6 @@ document.querySelectorAll('button.listen').forEach( b =>{ b.onclick = function(e
 		let btn = this;
 		qState(1);
 		let tstart = Date.now();
-		let template  = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
 		let msg_send = {'code':'watchdog', 'data':{'period':period,'timeout':timeout}};
 
 		let msgGot = function(msg) {
@@ -1256,49 +1299,7 @@ document.querySelectorAll('button.listen').forEach( b =>{ b.onclick = function(e
 						bodyIn.querySelector('.qw_data').innerHTML='';
 						showQRY(bodyIn, msg);
 					} else if ( b.dataset.type === 'ext' ) {
-						let outBox = document.querySelector('.qw_talks.ajax[data-code="'+msg.qw_send.code+'"]');
-						if ( outBox ) {
-							outBox.querySelector('.message.qw_send .qw_data').innerHTML = '';		// Cleanup
-							outBox.querySelector('.message.qw_recv .qw_data').innerHTML = '';
-						} else {
-							let sample = document.querySelector('.qw_talks.ajax.control');		// Just clone existing node
-							outBox = sample.cloneNode(true);									// for newly added data
-							let bar = outBox.querySelector('div.buttonbar.listener');
-							bar.parentNode.removeChild(bar);						// Remove `listen` button
-
-							outBox.dataset.code = msg.qw_send.code;
-							outBox.className = outBox.className.replace(/\s*control/i,'');
-							sample.parentNode.insertBefore(outBox, sample);
-						}
-						// Try to get same translation table from known processor
-						let sameData = document.querySelector('.qw_talks.init[data-code="'
-																+ msg.qw_send.code
-																+ '"] .message.qw_recv .qw_body .qw_data');
-						if (sameData) {
-							
-						} else {
-							flush( {'code':'samedata','data':{'code':msg.qw_send.code,'template':'',}}, url)
-						}
-						let domsend = toDOM(msg.qw_send.data);
-						let domrecv = toDOM(msg.qw_recv.data);
-						let body_send = outBox.querySelector('.message.qw_send .qw_body');
-						let body_recv = outBox.querySelector('.message.qw_recv .qw_body');
-						outBox.querySelector('.buttonbar.killer code').innerText = msg.qw_send.code;
-						body_send.querySelector('.qw_code.qwHdr code').innerText = msg.qw_send.code;
-						body_recv.querySelector('.qw_code.qwHdr code').innerText = msg.qw_recv.code;
-						body_send.querySelector('.qw_data').appendChild(domsend);
-						body_recv.querySelector('.qw_data').appendChild(domrecv);
-
-						body_send.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
-						body_recv.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.varname});
-						document.querySelectorAll('.buttonbar.killer').forEach( kb =>{ 		// Kill processor
-									kb.onclick = function() {
-										let prodiv = this.closest('.qw_talks.ajax');
-										if ( confirm('Вы желаете удалить обработчик запроса\n\xAB'+prodiv.dataset.code+'\xBB?') ) {
-											prodiv.parentNode.removeChild(prodiv);
-										}
-									} 
-								});
+						showRESP(msg);
 					}
 					commitEnable();
 					qState(0);
@@ -1319,6 +1320,77 @@ document.querySelectorAll('button.listen').forEach( b =>{ b.onclick = function(e
 			};
 		flush(msg_send, url, msgGot);
 	} });
+
+let showRESP = function(resp) {			// Markup and Display incoming response received by watchdog
+		let template  = document.querySelector('.tabContent.shown .subTab.active').dataset.name;
+		let outBox = document.querySelector('.qw_talks.ajax[data-code="'+resp.qw_send.code+'"]');
+		if ( outBox ) {
+			outBox.querySelector('.message.qw_send .qw_data').innerHTML = '';		// Cleanup
+			outBox.querySelector('.message.qw_recv .qw_data').innerHTML = '';
+		} else {
+			let sample = document.querySelector('.qw_talks.ajax.control');		// Just clone existing node
+			outBox = sample.cloneNode(true);									// for newly added data
+			let bar = outBox.querySelector('div.buttonbar.listener');
+			bar.parentNode.removeChild(bar);						// Remove `listen` button
+			outBox.dataset.code = resp.qw_send.code;
+			outBox.className = outBox.className.replace(/\s*control/i,'');
+			sample.parentNode.insertBefore(outBox, sample);
+		}
+		let domsend = toDOM(resp.qw_send.data);
+		let domrecv = toDOM(resp.qw_recv.data);
+		let body_send = outBox.querySelector('.message.qw_send .qw_body');
+		let body_recv = outBox.querySelector('.message.qw_recv .qw_body');
+
+		outBox.querySelector('.buttonbar.killer code').innerText = resp.qw_send.code;
+		body_send.querySelector('.qw_code.qwHdr code').innerText = resp.qw_send.code;
+		body_recv.querySelector('.qw_code.qwHdr code').innerText = resp.qw_recv.code;
+		body_send.querySelector('.qw_data').appendChild(domsend);
+		body_recv.querySelector('.qw_data').appendChild(domrecv);
+
+		body_send.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
+		body_recv.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.varname});
+		body_send.querySelector('.buttonbar.killer')
+					.onclick = function() {
+							let probox = this.closest('.qw_talks.ajax');
+							if ( confirm('Вы желаете удалить обработчик запроса\n\xAB'
+											+probox.dataset.code+'\xBB?') ) {
+								probox.parentNode.removeChild(probox);
+							}
+						}; 		// Kill processor 
+		// Try to import same translation table from known processor
+		let sameData = document.querySelector('.qw_talks.init[data-code="'
+												+ resp.qw_send.code
+												+ '"] .message.qw_recv .qw_body .qw_data');
+		if (sameData) {
+			let json = fromJSON(fromDOM(sameData));
+			keyApply(body_recv.querySelector('.qw_data'), json);
+			console.log(json);
+		} else {				// Or try to get table from other processors
+			flush( {'code':'model','data':{'code':resp.qw_send.code,'template':template}}, url, 
+					function(got) { if ( got.match(/^[\{\[]/) ) got = JSON.parse(got);
+									if ( got.data ) keyApply(body_recv.querySelector('.qw_data'), got.data);
+									}
+				);
+		}
+	};		// Markup and Display incoming response received by watchdog
+
+let showQRY = function(host, query) {			// Display incoming query received by watchdog
+		let type = document.querySelector('.tabContent.shown .subTabs').dataset.type;
+		let method = document.querySelector('.tabContent.shown .subTab.active').dataset.type;
+		if ( query.code ) {
+			let code = host.querySelector('.qwHdr code');
+			code.innerHTML = '';
+			code.innerText = query.code;
+		}
+		if ( query.data ) {
+			let data = host.querySelector('.qw_data');
+			data.innerHTML = '';
+			data.appendChild( toDOM( query.data) );
+			if ( method === 'write' ) {
+				data.querySelectorAll('.keyVal').forEach( vi =>{ vi.ondblclick = keyEdit.keyvalue});
+			}
+		}
+	};		// Display incoming query received by watchdog
 
 document.getElementById('checkload').onclick = function(e) {		// Debugging query send
 		let name = document.querySelector('.tabContent.shown .subTab.active').dataset.name;

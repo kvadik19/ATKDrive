@@ -17,6 +17,13 @@ code {
 	font-family: SansMono, monospace;
 	font-size: 115%;
 }
+
+strong {
+   color: #000;
+   font-size: 14px;
+   font-style: italic;
+}
+
 * {
 	padding: 0;
 	margin: 0;
@@ -545,7 +552,7 @@ input.carting__checkbox {
 	margin: 10px 0px;
 	display: flex;
 	flex-direction: row;
-	justify-content: space-around;
+	justify-content: space-between;
 }
 .optrow .quant {
 	display: inline-flex;
@@ -1483,8 +1490,8 @@ h2 {
 	-ms-flex-direction: column;
 	flex-direction: column;
 	-webkit-box-flex: 0;
-	-ms-flex: 0 1 auto;
-	flex: 0 1 auto;
+	-ms-flex: 0 1 70%;
+	flex: 0 1 70%;
 }
 
 .data__transportation--title {
@@ -1706,6 +1713,7 @@ h2 {
 	font-size: 13px;
 	line-height: 15px;
 	color: #2a2a2a;
+   margin: 0 auto;
 }
 
 .button__tel {
@@ -1749,7 +1757,7 @@ h2 {
 	-webkit-box-pack: justify;
 	-ms-flex-pack: justify;
 	justify-content: space-between;
-	width: 230px;
+	width: 100%;
 }
 
 .trucking-car__toving {
@@ -1845,7 +1853,7 @@ h2 {
 }
 
 .cargo-block__width {
-	max-width: 125px;
+	max-width: 130px;
 	width: 100%;
 }
 
@@ -1925,8 +1933,8 @@ h2 {
 	-webkit-box-align: start;
 	-ms-flex-align: start;
 	align-items: start;
-	width: 300px;
 	margin-left: 26px;
+   flex: 0 1 30%;
 }
 
 .bid-document {
@@ -7214,6 +7222,9 @@ h2 {
 		-ms-flex: 0 1 100%;
 		flex: 0 1 100%;
 	}
+   .contacts-block {
+      margin-bottom: 10px;
+   }
 }
 
 @media (max-width: 557px) {

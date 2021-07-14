@@ -106,15 +106,14 @@
                <div class="customer contacts">
                   <div class="customer-delegate contacts-block">
                      <span
-                        class="customer-delegate__title data__transportation--title contacts-block__title">Представитель
-                        заказчика:</span>
+                        class="customer-delegate__title data__transportation--title contacts-block__title">Контактное лицо заказчика:</span>
                      <span
                         class="customer-delegate__name data__transportation--text contacts-block__name">
                         <TMPL_VAR NAME='customer'>
                         </span>
                   </div>
                   <a href="tel:<TMPL_VAR NAME='customerPhone'>" class="customer-contact contacts-phone button">
-                     <span class="customer-contact__text button__text contacts-phone__text">Связаться с менеджером <TMPL_VAR NAME='customerPhone'></span>
+                     <span class="customer-contact__text button__text contacts-phone__text">Связаться<br><TMPL_VAR NAME='customerPhone'></span>
                      <div class="contacts-phone__tel button__tel">
                         <div class="contacts-phone__border button__border"></div>
                            <img src="img/vector_phone.svg" alt="phone" />
@@ -152,14 +151,14 @@
                <div class="logistician contacts">
                   <div class="logistician-surname contacts-block">
                      <span
-                        class="logistician-surname__title data__transportation--title contacts-block--title">Логист:</span>
+                        class="logistician-surname__title data__transportation--title contacts-block--title">Контактное лицо перевозчика:</span>
                      <span
                         class="logistician-surname__name data__transportation--text contacts-block__name">
                         <TMPL_VAR NAME='logist'>
                         </span>
                   </div>
                   <a href="tel:<TMPL_VAR NAME='logistPhone'>" class="logistician-contact contacts-phone button">
-                     <span class="logistician-contact__text button__text contacts-phone__text">Связаться с логистом <TMPL_VAR NAME='logistPhone'></span>
+                     <span class="logistician-contact__text button__text contacts-phone__text">Связаться<br><TMPL_VAR NAME='logistPhone'></span>
                      <div class="contacts-phone__tel button__tel">
                         <div class="contacts-phone__border button__border"></div>
                            <img src="img/vector_phone.svg" alt="phone" />
@@ -176,7 +175,7 @@
                      </span>
                   </div>
                   <a href="tel:<TMPL_VAR NAME='driverPhone'>" class="driver-contact contacts-phone button">
-                     <span class="driver-contact__text contacts-phone__text button__text">Связаться с водителем <br> <TMPL_VAR NAME='driverPhone'></span>
+                     <span class="driver-contact__text contacts-phone__text button__text">Связаться<br><TMPL_VAR NAME='driverPhone'></span>
                      <div class="contacts-phone__tel button__tel">
                         <div class="contacts-phone__border button__border"></div>
                            <img src="img/vector_phone.svg" alt="phone" />
@@ -195,8 +194,8 @@
                   <div class="cargo-block cargo-block__border cargo-block__border2">
                         <img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
                      <div class="cargo-block__type">
-                        <span class="cargo-block__title data__transportation--title">Задолженность, руб:</span>
-                        <span class="cargo-block__name data__transportation--text">?0?</span>
+                        <span class="cargo-block__title data__transportation--title">Отсрочка платежа, дней:</span>
+                        <span class="cargo-block__name data__transportation--text"><TMPL_VAR NAME='postponement'></span>
                      </div>
                   </div>
                   <div class="cargo-block__last">
@@ -204,7 +203,7 @@
                      <div class="cargo-block__type">
                         <span class="cargo-block__title data__transportation--title">Срок оплаты:</span>
                         <span
-                           class="cargo-block__name data__transportation--text cargo-block__line">?20.11.20-30.11.20?</span>
+                           class="cargo-block__name data__transportation--text cargo-block__line"><TMPL_VAR NAME='paymentOff-dd'></span>
                      </div>
                   </div>
                </div>
@@ -213,6 +212,20 @@
                
                
                <TMPL_LOOP NAME='detailsCargo'>
+               <div class="loading contacts">
+                  <div class="loading-surname contacts-block">
+                     <span class="loading-surname__title data__transportation--title contacts-block__title">Вид: <strong><TMPL_VAR NAME='loadingView'></strong></span>
+                     <span class="loading-surname__name data__transportation--text contacts-block__name"></span>
+                  </div>
+                  <!--<a href="tel:<TMPL_VAR NAME='driverPhone'>" class="loading-contact contacts-phone button">
+                     <span class="loading-contact__text contacts-phone__text button__text">Связаться<br> <TMPL_VAR NAME='driverPhone'></span>
+                     <div class="contacts-phone__tel button__tel">
+                        <div class="contacts-phone__border button__border"></div>
+                           <img src="img/vector_phone.svg" alt="phone" />
+                     </div>
+                  </a>-->
+               </div>
+               <!-- /.loading -->
                <div class="cargo cargo-parameters">
                   <div class="cargo-block cargo-block__border">
                         <img src="img/icon-box.svg" alt="icon-box" class="cargo-block__image">
@@ -232,63 +245,45 @@
                         <img src="img/icon-volume.svg" alt="icon-volume" class="cargo-block__image">
                      <div class="cargo-block__type">
                         <span class="cargo-block__title data__transportation--title">Объем, куб.м:</span>
-                        <span class="cargo-block__name data__transportation--text"><TMPL_VAR NAME='cargoVolume'></span>
+                        <span class="cargo-block__name data__transportation--text">?<TMPL_VAR NAME='cargoVolume'>?</span>
                      </div>
                   </div>
                </div>
                <!-- /.cargo -->
-               </TMPL_LOOP>
-               
-               
-               
-               <div class="loading contacts">
-                  <div class="loading-surname contacts-block">
-                     <span
-                        class="loading-surname__title data__transportation--title contacts-block__title">Погрузка:</span>
-                     <span class="loading-surname__name data__transportation--text contacts-block__name"><TMPL_VAR NAME='driverName'></span>
-                  </div>
-                  <a href="tel:<TMPL_VAR NAME='driverPhone'>" class="loading-contact contacts-phone button">
-                     <span class="loading-contact__text contacts-phone__text button__text">Связаться с погрузкой <br> <TMPL_VAR NAME='driverPhone'></span>
-                     <div class="contacts-phone__tel button__tel">
-                        <div class="contacts-phone__border button__border"></div>
-                           <img src="img/vector_phone.svg" alt="phone" />
-                     </div>
-                  </a>
-               </div>
-               <!-- /.loading -->
-               <TMPL_LOOP NAME='loadingDetails'>
                <div class="loading-cargo ">
                   <div class="loading-cargo__block cargo">
                      <div class="cargo-block cargo-block__width">
                            <img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
                         <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Дата погрузки:</span>
+                           <span class="cargo-block__title data__transportation--title">Дата / <TMPL_VAR NAME='loadingView'>:</span>
                            <span class="cargo-block__name data__transportation--text"><TMPL_VAR NAME='loadingDate-dd'></span>
                         </div>
                      </div>
                      <div class="cargo-block cargo-block__width cargo-block__width2">
                            <img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
                         <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Время погрузки, МСК+1:</span>
+                           <span class="cargo-block__title data__transportation--title">Время / <TMPL_VAR NAME='loadingView'>, МСК+1:</span>
                            <span class="cargo-block__name data__transportation--text"><TMPL_VAR NAME='loadingTimeOn-dt'> - <TMPL_VAR NAME='loadingTimeOff-dt'></span>
                         </div>
                      </div>
                      <div class="cargo-block cargo-block__width">
                            <img src="img/icon-vid.svg" alt="icon-vid" class="cargo-block__image">
                         <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Тип загрузки:</span>
+                           <span class="cargo-block__title data__transportation--title">Тип / <TMPL_VAR NAME='loadingView'>:</span>
                            <span class="cargo-block__name data__transportation--text"><TMPL_VAR NAME='loadingType'></span>
                         </div>
                      </div>
                   </div>
                   <!-- /.loading-cargo__block -->
                   <div class="loading-addres">
-                     <span class="loading-addres__title cargo-block__title data__transportation--title">Адрес погрузки:</span>
+                     <span class="loading-addres__title cargo-block__title data__transportation--title">Адрес / <TMPL_VAR NAME='loadingView'>:</span>
                      <span class="loading-addres__text cargo-block__name data__transportation--text"><TMPL_VAR NAME='loadingAddress'></span>
                   </div>
                </div>
-               <!-- /.loading-cargo -->
                </TMPL_LOOP>
+               
+               <!-- /.loading-cargo -->
+               
                <!--<div class="unloading1 contacts">
                   <div class="unloading1-surname contacts-block">
                      <span class="unloading1-surname__title data__transportation--title contacts-block__title">Разгрузка 1:</span>
@@ -388,49 +383,21 @@
                   <div class="wrar__content">
                      <p class="bid-document__title">Документы:</p>
                      <ul class="bid-document__list">
+                     <TMPL_LOOP NAME='document'>
                         <li class="bid-document__item">
                            <a href="#" class="bid-document__item--link">
                               <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                              <span class="bid-document__text">Счет на оплату, pdf </span>
+                              <span class="bid-document__text"><TMPL_VAR NAME='documentName'>, <TMPL_VAR NAME='documentFile'></span>
                            </a>
                         </li>
-                        <li class="bid-document__item">
-                           <a href="#" class="bid-document__item--link">
-                              <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                              <span class="bid-document__text">Акт выполненных работ, pdf</span>
-                           </a>
-                        </li>
-                        <li class="bid-document__item">
-                           <a href="#" class="bid-document__item--link">
-                              <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                              <span class="bid-document__text">Cчет фактура, pdf</span>
-                           </a>
-                        </li>
-                        <li class="bid-document__item">
-                           <a href="#" class="bid-document__item--link">
-                              <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                              <span class="bid-document__text">Товарная накладная, pdf</span>
-                           </a>
-                        </li>
-                        <li class="bid-document__item">
-                           <a href="#" class="bid-document__item--link">
-                              <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                              <span class="bid-document__text">УПД, pdf</span>
-                           </a>
-                        </li>
-                        <li class="bid-document__item">
-                           <a href="#" class="bid-document__item--link">
-                                 <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                              <span class="bid-document__text">ТТН, pdf</span>
-                           </a>
-                        </li>
+                     </TMPL_LOOP>
                      </ul>
                   </div>
                </div>
                <!-- /.bid-document -->
                <div class="bid-additional">
                   <div class="wrap__content">
-                     <span class="bid-additional__title">Дополнительная информация:</span>
+                     <span class="bid-additional__title">??Дополнительная информация:??</span>
                      <p class="bid-additional__text">Lorem ipsum dolor sit amet, consectetur
                         adipiscing elit. Mauris
                         pretium accumsan est, vitae luctus justo pharetra in. Fusce feugiat
