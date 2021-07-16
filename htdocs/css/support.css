@@ -532,8 +532,17 @@ div.options {
 	flex-direction:row;
 	width:100%;
 }
-.qw_talks.ajax .buttonbar.killer {
-	padding-top:0.5em;
+.qw_talks.ajax .qw_body .buttonbar {
+    background-color: var(--balloon-sel-back,'#6699aa');
+    border-radius: 0.5em 0.5em 0px 0px;
+	padding:0.5em 0px;
+	color:var(--panel-text,'#ffffff');
+	margin-bottom:0.5em;
+	text-indent:1em;
+	height:1.5em;
+}
+.qw_talks.ajax .qw_body.omit .qw_data .domItem.value:not(.set) {
+	display:none;
 }
 .qw_talks.ajax.control .qw_body,
 .qw_talks.ajax.control .buttonbar.killer {
@@ -541,6 +550,12 @@ div.options {
 }
 .qw_talks.ajax {
 	border-top:double var(--panel-back-lt, '#00b171');
+}
+.qw_talks.ajax .buttonbar.hidener input[type="checkbox"] {
+	height:1.5em;
+	width:1.5em;
+	vertical-align:middle;
+	margin:auto;
 }
 .qw_talks.ajax .buttonbar.listener {
 	border-top:none;

@@ -64,13 +64,13 @@
 		<div class="qw_talks ajax control">
 			<div class="message qw_send ajax">
 				<div class="qw_body">
+					<div class="buttonbar killer">
+						<button type="button">Удалить обработчик запроса &laquo;<code></code>&raquo;</button>
+					</div>
 					<div class="qw_code qwHdr">Отправляемый ключ &laquo;code&raquo;: <code class="udata code"></code>
 					</div>
 					<div class="qwHdr">Отправляемый ключ &laquo;data&raquo;:</div>
 					<div class="qw_data">
-					</div>
-					<div class="buttonbar killer">
-						<button type="button">Удалить обработчик запроса &laquo;<code></code>&raquo;</button>
 					</div>
 				</div>
 				<div class="buttonbar listener">
@@ -82,7 +82,10 @@
 				</div>
  			</div>
 			<div class="message qw_recv ajax">
-				<div class="qw_body">
+				<div class="qw_body omit">
+					<div class="buttonbar hidener">
+						<input type="checkbox" id="hide_" checked/><label for="hide_">Скрыть неназначенные ключи</label>
+					</div>
 					<div class="qw_code qwHdr">Полученный ключ &laquo;code&raquo;: <code class="udata code"></code></div>
 					<div class="qwHdr">Принимаемый ключ &laquo;data&raquo;:</div>
 					<div class="qw_data">

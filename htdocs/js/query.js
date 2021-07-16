@@ -78,7 +78,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			let manifest = '==manifest;';
 			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
 			if ( node.matches('.preset') ) manifest += '%preset;';
-			if ( node.matches('.hide') ) manifest += '%hide;';
+			if ( node.matches('.set') ) manifest += '%set;';
 			obj = [ manifest ];
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
@@ -100,7 +100,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			let manifest = '';
 			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
 			if ( node.matches('.preset') ) manifest += '%preset;';
-			if ( node.matches('.hide') ) manifest += '%hide;';
+			if ( node.matches('.set') ) manifest += '%set;';
 			obj  = { '==manifest':manifest };
 			for (let nC=0; nC< node.children.length; nC++) {
 				let res = getDOMVal(node.children[nC]);
@@ -138,6 +138,7 @@ let keyApply = function(node, data) {
 				if ( node.children[nC].matches('.value') ) {
 					node.children[nC].querySelector('span.keyVal').innerText = '$'+data[nC];
 					node.children[nC].dataset.name = data[nC];
+					node.children[nC].className += ' set';
 				} else {
 					keyApply(node.children[nC], data[nC]);
 				}
@@ -163,6 +164,7 @@ let keyApply = function(node, data) {
 						node.children[nC].querySelector('span.keyVal').innerText = '$'+branchName
 						node.children[nC].dataset.name = branchName;
 					}
+					node.children[nC].className += ' set';
 					if ( typeof(data[branchName]) === 'object' ) {		// Select suitable children node
 						let domclass = '.'+data[branchName].constructor.toString()
 											.replace(/^function (Array|Object).+$/,'$1').toLowerCase();
@@ -1333,6 +1335,13 @@ let showRESP = function(resp) {			// Markup and Display incoming response receiv
 			bar.parentNode.removeChild(bar);						// Remove `listen` button
 			outBox.dataset.code = resp.qw_send.code;
 			outBox.className = outBox.className.replace(/\s*control/i,'');
+			let checkHide = outBox.querySelector('.hidener input[type="checkbox"]');		// Hide unassigned?
+			checkHide.onchange = function() { let box = this.closest('.qw_body');
+												box.className = box.className.replace(/\s*omit/g,'');
+												if ( this.checked ) box.className += ' omit';
+											};
+			checkHide.id += resp.qw_send.code;
+			outBox.querySelector('.hidener label').htmlFor += resp.qw_send.code;
 			sample.parentNode.insertBefore(outBox, sample);
 		}
 		let domsend = toDOM(resp.qw_send.data);
