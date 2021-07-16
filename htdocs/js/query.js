@@ -34,30 +34,34 @@ let subSwitch = function(tab) {			// Click on subTabs
 		}
 	};
 
-let getVal = function(item) {		// Obtain key:value pair from DOM <div class="value">
+let getDOMVal = function(item, flat) {		// Obtain key:value pair from DOM <div class="value">
 		let value = {};
 		if ( item.firstElementChild.matches('.keyVal') ) {		// Scalar value as array item
 			value.val = item.firstElementChild.innerText;
 		} else if (item.firstElementChild.matches('.keyName') 
 					&& item.lastElementChild.matches('.keyVal') ) {		// key:scalar value pair
 			value.key = item.firstElementChild.innerText;
-			if ( item.dataset.name ) value.key += ';'+item.dataset.name;
-			if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
-			if ( item.matches('.preset') ) value.key += ';%preset';
-			if ( item.matches('.bool') ) value.key += ';%bool';
 			value.val= item.lastElementChild.innerText;
-		} else if( item.lastElementChild ) {
-			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
-				value.key = item.firstElementChild.innerText;
+			if ( !flat ) {
 				if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 				if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
 				if ( item.matches('.preset') ) value.key += ';%preset';
 				if ( item.matches('.bool') ) value.key += ';%bool';
 			}
-			value.val = fromDOM(item.lastElementChild);
+		} else if( item.lastElementChild ) {
+			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
+				value.key = item.firstElementChild.innerText;
+				if ( !flat ) {
+					if ( item.dataset.name ) value.key += ';'+item.dataset.name;
+					if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
+					if ( item.matches('.preset') ) value.key += ';%preset';
+					if ( item.matches('.bool') ) value.key += ';%bool';
+				}
+			}
+			if ( !flat ) value.val = fromDOM(item.lastElementChild);
 		}
 
-		if ( typeof(value.val) === 'string' ) {
+		if ( !flat && typeof(value.val) === 'string' ) {
 			let parts = value.val.match(/^([^\[]+)(\s\[([^\]]+)\])?$/);		// Defined test data?
 			if ( parts ) value.val = parts[1];						// Omit test data
 			if ( value.val.match(/^\d+$/) ) value.val = parseInt(value.val);			// Convert string to number for 1C
@@ -79,7 +83,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
 				if ( node.children[nC].matches('.value') ) {
-					let res = getVal(node.children[nC]);
+					let res = getDOMVal(node.children[nC]);
 					if ( res.key ) {
 						let got = {};
 						got[res.key] = res.val;
@@ -99,12 +103,12 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			if ( node.matches('.hide') ) manifest += '%hide;';
 			obj  = { '==manifest':manifest };
 			for (let nC=0; nC< node.children.length; nC++) {
-				let res = getVal(node.children[nC]);
+				let res = getDOMVal(node.children[nC]);
 				obj[res.key] = res.val;
 			}
 
 		} else if ( node.matches('.value') ) {		// Probably, Helpless trigger
-			let res = getVal(node);
+			let res = getDOMVal(node);
 			if ( res.key ) {
 				obj = {};
 				obj[res.key] = res.val;
@@ -125,74 +129,69 @@ let keyApply = function(node, data) {
 				|| ( data.constructor.toString().match(/Array/i) && data.length == 0 )
 			) return false;
 
-		return node;
-		let obj;
-		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra containers
-		if ( !node ) return;
+		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra container
+		if ( !node ) return false;
 
-		if ( node.matches('.array') ) {
-			let manifest = '==manifest;';
-			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
-			if ( node.matches('.preset') ) manifest += '%preset;';
-			if ( node.matches('.hide') ) manifest += '%hide;';
-			obj = [ manifest ];
+		if ( node.matches('.array') && data.constructor.toString().match(/Array/i) ) {
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
 				if ( node.children[nC].matches('.value') ) {
-					let res = getVal(node.children[nC]);
-					if ( res.key ) {
-						let got = {};
-						got[res.key] = res.val;
-						obj.push(got);
-					} else {
-						obj.push(res.val);
-					}
+					node.children[nC].querySelector('span.keyVal').innerText = '$'+data[nC];
+					node.children[nC].dataset.name = data[nC];
 				} else {
-					obj.push( fromDOM(node.children[nC]) );
+					keyApply(node.children[nC], data[nC]);
 				}
 			}
 
-		} else if ( node.matches('.object') ) {
-			let manifest = '';
-			if ( node.matches('.jsonItem') ) manifest += '%jsonItem;';
-			if ( node.matches('.preset') ) manifest += '%preset;';
-			if ( node.matches('.hide') ) manifest += '%hide;';
-			obj  = { '==manifest':manifest };
+		} else if ( node.matches('.object') && data.constructor.toString().match(/Object/i) ) {
 			for (let nC=0; nC< node.children.length; nC++) {
-				let res = getVal(node.children[nC]);
-				obj[res.key] = res.val;
+				let res = getDOMVal(node.children[nC], 'This Key Only');
+				let branchName = Object.keys(data).find( kk =>{ 
+								if ( data[kk] == '$'+res.key) {
+									return true;
+								} else if ( kk.match(/^(.+) <= \$(.+)$/) ) {
+									let parts = kk.match(/^(.+) <= \$(.+)$/);
+									return parts[2] == res.key
+								}
+							});
+				if ( branchName ) {			// Some likely found!
+					if ( branchName.match(/^(.+) <= \$(.+)$/) ) {			// Name of array found
+						let parts = branchName.match(/^(.+) <= \$(.+)$/);
+						node.children[nC].querySelector('span.keyName').innerText = parts[2]+' => $'+parts[1];
+						node.children[nC].dataset.name = parts[1];
+					} else {
+						node.children[nC].querySelector('span.keyVal').innerText = '$'+branchName
+						node.children[nC].dataset.name = branchName;
+					}
+					if ( typeof(data[branchName]) === 'object' ) {		// Select suitable children node
+						let domclass = '.'+data[branchName].constructor.toString()
+											.replace(/^function (Array|Object).+$/,'$1').toLowerCase();
+						keyApply(node.children[nC].querySelector(domclass), data[branchName]);
+					}
+				}
 			}
 
-		} else if ( node.matches('.value') ) {		// Probably, Helpless trigger
-			let res = getVal(node);
-			if ( res.key ) {
-				obj = {};
-				obj[res.key] = res.val;
-			} else {
-				obj = res.val;
-			}
-			
 		} else if ( node.firstElementChild ) {		// Possibly exceptions trap
-			obj = fromDOM(node.firstElementChild);
+			keyApply(node.firstElementChild, data);
 		}
-		return obj;
+		return true;
 	};
 
-let fromJSON = function(obj) {			// Make JSON query from JSON query definition, ignore overload infos
+let fromJSON = function(obj, noload) {			// Make JSON query from JSON query definition, ignore overload infos
 		let res;
 		if ( obj.constructor.toString().match(/Array/) ) {
 			res = [];
 			obj.forEach( ai =>{ if ( typeof(ai) === 'string' && ai.match(/^==manifest/) ) return;
-								let val = fromJSON(ai);
+								let val = fromJSON(ai, noload);
 								res.push( val ) });
 		} else if ( obj.constructor.toString().match(/Object/) ) {
 			res = {};
 			Object.keys(obj).forEach( key =>{ 
 								if ( key.match(/^==manifest/) ) return;
 								let okey = keySplit(key);
-								let val = fromJSON( obj[key] );
-								if ( checkload[okey.name] ) {
-									val = checkload[okey.name];		// Assign test data
+								let val = fromJSON(obj[key], noload);
+								if ( !noload && checkload[okey.name] ) {
+									val = checkload[okey.name];		// Assign test data if not overrided
 								}
 								res[okey.uname] = val;
 							});
@@ -610,11 +609,11 @@ let keyTool = {			// Add key-value floating window operations
 																	d.className = d.className.replace(/\s*active/g,'')});
 													keyTool.result();
 												};
-				this.panel.querySelector('input#keyName').oninput = this.inpCheck;
-				this.panel.querySelector('button.ok').setAttribute('disabled',1);
+// 				this.panel.querySelector('input#keyName').oninput = this.inpCheck;
+// 				this.panel.querySelector('button.ok').setAttribute('disabled',1);
 				Object.keys(this.preset).forEach( k =>{ delete( this.preset[k] ) });
 				this.panel.querySelector('#bool_cond').onfocus = this.condSelector;
-				this.panel.querySelector('#bool_val').onblur = this.inpCheck;
+// 				this.panel.querySelector('#bool_val').onblur = this.inpCheck;
 				this.panel.querySelector('#bool_dict').onclick = this.valSelector;
 				return this;
 			},
@@ -623,7 +622,7 @@ let keyTool = {			// Add key-value floating window operations
 				let vbox = host.popup;
 				if ( !vbox ) {
 					vbox = createObj('select',{'className':'popBox','size':6,'style.display':'none',
-									'onblur':function() {this.style.display = 'none';keyTool.inpCheck();},
+									'onblur':function() {this.style.display = 'none';},		// keyTool.inpCheck();
 									'onchange':function() {host.previousElementSibling.value=this.value;
 											keyTool.panel.querySelector('input#keyName').value=this.value;
 											this.blur() 
@@ -673,7 +672,7 @@ let keyTool = {			// Add key-value floating window operations
 				let cbox = host.popup;
 				if ( !cbox ) {
 					cbox = createObj('select',{'className':'popBox','size':6,'style.display':'none',
-									'onblur':function() {this.style.display = 'none';keyTool.inpCheck();},
+									'onblur':function() {this.style.display = 'none';},		// keyTool.inpCheck();
 									'onchange':function() {host.value=this.value; 
 											host.title=this.options[this.selectedIndex].innerText;
 											keyTool.panel.querySelector('input#keyName').value=this.value;
@@ -728,7 +727,7 @@ let keyTool = {			// Add key-value floating window operations
 				if ( this.preset.items.includes('query') ) {		// It's visible (active)?
 					let qdom = toDOM( this.preset.qdata.data);
 					divQuery.innerHTML = '';
-					qdom.querySelectorAll('.domItem .same').forEach( di =>{ di.parentNode.removeChild(di)} );
+// 					qdom.querySelectorAll('.domItem .same').forEach( di =>{ di.parentNode.removeChild(di)} );
 					qdom.querySelectorAll('.domItem .value').forEach( di =>{ di.className += ' qItem inbox'
 																if ( di.lastElementChild.matches('span.keyVal') ) {
 																	di.onclick = keyTool.liChoose;
@@ -777,7 +776,7 @@ let keyTool = {			// Add key-value floating window operations
 								if ( this.value.length > 0) addon = ' ['+this.value+']';
 								divText.querySelector('input#keyName').value 
 										= divCheck.querySelector('.box label').innerText + addon;
-								keyTool.inpCheck();
+// 								keyTool.inpCheck();
 							};
 					}
 					divCheck.removeAttribute('style');
@@ -803,7 +802,7 @@ let keyTool = {			// Add key-value floating window operations
 					keyTool.preset.info.className += ' active';
 				}
 				document.documentElement.onclick = this.keyTrap;
-				this.panel.querySelector('button.ok').setAttribute('disabled', 1);
+// 				this.panel.querySelector('button.ok').setAttribute('disabled', 1);
 
 				if ( !this.panel.style.top ) {			// First call, find position
 					this.panel.style.top = bodyOut.offsetTop+'px';
@@ -887,20 +886,20 @@ let keyTool = {			// Add key-value floating window operations
 					booln.value = '$'+li.firstElementChild.innerText;
 					if ( li.lastElementChild.matches('span.keyVal')) boolv.value = li.lastElementChild.innerText;
 				}
-				keyTool.inpCheck();
+// 				keyTool.inpCheck();
 			},
-		inpCheck: function(evt) {		// Check for some of list selected
-				if ( !this.panel ) return;
-				let txt = this.panel.querySelector('input#keyName');
-				let li = this.panel.querySelector('li.active') 
-											|| (txt.dataset.value !== txt.value);	// Ignore this check - allow empty keyName
-				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {			// Stub for ignore list checking is being used!
-					this.panel.querySelector('button.ok').removeAttribute('disabled');
+// 		inpCheck: function(evt) {		// Check for some of list selected
+// 				if ( !this.panel ) return;
+// 				let txt = this.panel.querySelector('input#keyName');
+// 				let li = this.panel.querySelector('li.active') 
+// 											|| (txt.dataset.value !== txt.value);	// Ignore this check - allow empty keyName
+// 				if ( txt.value.replace(/\s/g,'').length > 0 && li ) {			// Stub for ignore list checking is being used!
+// 					this.panel.querySelector('button.ok').removeAttribute('disabled');
 // 					this.panel.querySelector('button.ok').focus();
-				} else {
-					this.panel.querySelector('button.ok').setAttribute('disabled',1);
-				}
-			},
+// 				} else {
+// 					this.panel.querySelector('button.ok').setAttribute('disabled',1);
+// 				}
+// 			},
 	};
 
 
@@ -1362,13 +1361,14 @@ let showRESP = function(resp) {			// Markup and Display incoming response receiv
 												+ resp.qw_send.code
 												+ '"] .message.qw_recv .qw_body .qw_data');
 		if (sameData) {
-			let json = fromJSON(fromDOM(sameData));
-			keyApply(body_recv.querySelector('.qw_data'), json);
-			console.log(json);
+			let json = fromJSON(fromDOM(sameData), 1);			// Just model, ignore test checkloaded data
+			keyApply(body_recv.querySelector('.qw_data .domItem'), json);
+console.log(json);
+// console.log(body_recv.querySelector('.qw_data .domItem'));
 		} else {				// Or try to get table from other processors
 			flush( {'code':'model','data':{'code':resp.qw_send.code,'template':template}}, url, 
 					function(got) { if ( got.match(/^[\{\[]/) ) got = JSON.parse(got);
-									if ( got.data ) keyApply(body_recv.querySelector('.qw_data'), got.data);
+									if ( got.data ) keyApply(body_recv.querySelector('.qw_data .domItem'), got.data);
 									}
 				);
 		}
