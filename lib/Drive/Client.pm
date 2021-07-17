@@ -366,19 +366,15 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 
 		$qw_send->{'data'} = Drive::Support->required_query( $qw_send->{'data'}, $qw_load );
 														# Assign required data & possible defaults
-
 		my $userdata = {%{$udata->{'record'}}};						# User switcheable parameters
 		$userdata->{'_umode'} = $current_umode;						# 
 		Drive::Support->apply_user( $qw_send->{'data'}, $userdata );
-# $self->logger->dump( "With user: ".Dumper($qw_send->{'data'}) );
 
 		# Collect Original named parameners for HTML::Template (used later)
-		my $tmpl_send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);
-# $self->logger->dump( "After Tmpl: ".Dumper($qw_send->{'data'}) );
-# $self->logger->dump( "For Tmpl: ".Dumper($tmpl_send_data) );
+		my $tmpl_send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);	# Obtain native-named keys for HTML::Template 
 		my $send_code = $qw_send->{'code'};
 
-			# Remove overload info from keys and translate keys for 1C
+			# Remove overloaded info from keys and translate keys for 1C
 		$qw_send->{'data'} = Drive::Support->from_json( $qw_send->{'data'});
 		$qw_send = encode_json( $qw_send);
 
@@ -400,8 +396,10 @@ $self->logger->dump("RECV: $resp");
 				$out = {%$resp};				# Use HASH copy To prevent cyclic reference
 
 			} elsif ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
+				my $disp_send_data = Drive::Support->key_vals( {%$tmpl_send_data} );	# Assign keyNames as values for displaying
+$self->logger->dump(Dumper($disp_send_data));
 				my $watch = {
-								'qw_send' => {'code' => $send_code, 'data' => $tmpl_send_data},
+								'qw_send' => {'code' => $send_code, 'data' => $disp_send_data},
 								'qw_recv' => $resp,
 							};
 				open( my $fh, "> $Drive::sys_root/watchdog" );

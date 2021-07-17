@@ -570,7 +570,7 @@ my ($self, $obj, $nouname) = @_;
 		$res = [];
 		foreach my $ai ( @$obj) {
 			next if $ai =~ /^==manifest/;
-			my $val = $self->from_json( $ai);
+			my $val = $self->from_json( $ai, $nouname);
 			push( @$res, $val);
 		}
 	} elsif( ref( $obj) eq 'HASH' ) {
@@ -580,13 +580,36 @@ my ($self, $obj, $nouname) = @_;
 			my $okey = $self->key_split( $key);
 			
 			my $keyIn = $okey->{'uname'};
-			if ( $nouname && $okey->{'name'} ) {			# User defined or original keynames can be returned
-				$keyIn = $okey->{'name'};
+			if ( $nouname ) {			# User defined or original keynames can be returned
+				$keyIn = $okey->{'name'} || $okey->{'uname'};
 			} elsif( exists($tr_table->{ $okey->{'uname'}}) ) {
 				$keyIn = $tr_table->{ $okey->{'uname'}};
 			}
-			$res->{$keyIn} = $self->from_json($val);
+			$res->{$keyIn} = $self->from_json($val, $nouname);
 		}
+	} else {
+		$res = $obj;
+	}
+	return $res;
+}
+#####################
+sub key_vals {			# Make JSON query where values become keyNames 
+#####################
+my ($self, $obj, $keyname ) = @_;
+	my $res;
+	if ( ref( $obj) eq 'ARRAY' ) {
+		$res = [];
+		foreach my $ai ( @$obj) {
+			my $val = $self->key_vals( $ai);
+			push( @$res, $val);
+		}
+	} elsif( ref( $obj) eq 'HASH' ) {
+		$res = {};
+		while( my ($key, $val) = each( %$obj) ) {
+			$res->{$key} = $self->key_vals($val, $key);
+		}
+	} elsif($keyname) {
+		$res = "\$$keyname";
 	} else {
 		$res = $obj;
 	}

@@ -566,7 +566,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 										'translate':translate
 										};
 						let ajax = document.querySelectorAll('.tabContent.shown .qw_talks.ajax');
-						for ( let aN=0; aN<ajax.length; aN++) {
+						for ( let aN=0; aN<ajax.length; aN++) {					// Collect AJAX queries definition
 							let send = ajax[aN].querySelector('.message.qw_send');
 							let recv = ajax[aN].querySelector('.message.qw_recv');
 							if ( recv.querySelector('.qw_code .code') && send.querySelector('.qw_code .code') ) {
@@ -708,7 +708,7 @@ let keyTool = {			// Add key-value floating window operations
 				if ( !('items' in this.preset) ) return this;
 
 				this.preset.items.forEach( it =>{ it = it.replace(/^\./g,'');
-						if ( it in this.preset ) this.panel.querySelector('.optgroup.'+it+' label').innerText = this.preset[it];
+						if ( it in this.preset ) this.panel.querySelector('.optgroup.'+it+' label').innerHTML = this.preset[it];
 						this.panel.querySelector('.optgroup.'+it).removeAttribute('style');
 					} );
 				let liShow = this.preset.valuesOnly ? 'none' : 'list-item';
@@ -800,7 +800,7 @@ let keyTool = {			// Add key-value floating window operations
 				this.callbk = callbk;
 
 				if ( keyTool.preset.info ) {
-					keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');
+					keyTool.preset.info.className = keyTool.preset.info.className.replace(/\s*active/g,'');	// Prevent double
 					keyTool.preset.info.className += ' active';
 				}
 				document.documentElement.onclick = this.keyTrap;
@@ -920,17 +920,18 @@ let keyEdit = {
 				inpt.select();
 			},
 		varname: function(evt) {
-				keyEdit.target = evt.target;
-				let [w, h] = [evt.target.offsetWidth, evt.target.offsetHeight];
-				keyEdit.preval = evt.target.innerText;
-				evt.target.innerHTML = '';
-				let inpt = createObj('input',{'type':'text','className':'jsonKeyEdit',
-						'style.width':w+'px','style.height':h+'px',
-						'value':keyEdit.preval,
-						'onblur':keyEdit.killInpt,'onkeydown':keyEdit.keyOut });
-				evt.target.appendChild(inpt);
-				inpt.focus();
-				inpt.select();
+				let keyVal = evt.target;
+				let div = keyVal.closest('.value');
+				keyTool.set( { info:div, value:keyVal.innerText, valuesOnly:false, items:['text'],
+							head:'Укажите переменную',
+							text:'Принятый ключ &laquo;'+div.dataset.name+'&raquo;<br>транслировать в переменную'})
+						.fire( function(key, val) {
+									let fldName = val.dataset.name;
+									div.dataset.name = fldName;
+									div.title = val.title;
+									keyVal.innerText = '$'+ fldName;
+									commitEnable();
+								} );
 			},
 		keyvalue: function(evt) {
 				let keyVal = evt.target;
@@ -1334,29 +1335,32 @@ let showRESP = function(resp) {			// Markup and Display incoming response receiv
 			let bar = outBox.querySelector('div.buttonbar.listener');
 			bar.parentNode.removeChild(bar);						// Remove `listen` button
 			outBox.dataset.code = resp.qw_send.code;
-			outBox.className = outBox.className.replace(/\s*control/i,'');
+			outBox.className = outBox.className.replace(/\s*control/i,'');		// Remove `control' className
 			let checkHide = outBox.querySelector('.hidener input[type="checkbox"]');		// Hide unassigned?
 			checkHide.onchange = function() { let box = this.closest('.qw_body');
 												box.className = box.className.replace(/\s*omit/g,'');
 												if ( this.checked ) box.className += ' omit';
 											};
-			checkHide.id += resp.qw_send.code;
-			outBox.querySelector('.hidener label').htmlFor += resp.qw_send.code;
-			sample.parentNode.insertBefore(outBox, sample);
+			checkHide.id += resp.qw_send.code;										// Make unique id for checkbox
+			outBox.querySelector('.hidener label').htmlFor += resp.qw_send.code;	// Tear label to checkbox
+			sample.parentNode.insertBefore(outBox, sample);				// Append New cloned node
 		}
 		let domsend = toDOM(resp.qw_send.data);
+		domsend.querySelectorAll('div').forEach( setTranslate );
 		let domrecv = toDOM(resp.qw_recv.data);
 		let body_send = outBox.querySelector('.message.qw_send .qw_body');
 		let body_recv = outBox.querySelector('.message.qw_recv .qw_body');
+		let code_send = body_send.querySelector('.qw_code .code');
+		let code_recv = body_recv.querySelector('.qw_code .code');
 
 		outBox.querySelector('.buttonbar.killer code').innerText = resp.qw_send.code;
-		body_send.querySelector('.qw_code.qwHdr code').innerText = resp.qw_send.code;
-		body_recv.querySelector('.qw_code.qwHdr code').innerText = resp.qw_recv.code;
+		code_send.innerText = code_send.value = resp.qw_send.code;
+		code_recv.innerText = code_recv.value = resp.qw_recv.code;
 		body_send.querySelector('.qw_data').appendChild(domsend);
 		body_recv.querySelector('.qw_data').appendChild(domrecv);
 
 		body_send.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
-		body_recv.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.varname});
+		body_recv.querySelectorAll('.keyVal').forEach( ki =>{ ki.ondblclick = keyEdit.varname});
 		body_send.querySelector('.buttonbar.killer')
 					.onclick = function() {
 							let probox = this.closest('.qw_talks.ajax');
@@ -1372,8 +1376,6 @@ let showRESP = function(resp) {			// Markup and Display incoming response receiv
 		if (sameData) {
 			let json = fromJSON(fromDOM(sameData), 1);			// Just model, ignore test checkloaded data
 			keyApply(body_recv.querySelector('.qw_data .domItem'), json);
-console.log(json);
-// console.log(body_recv.querySelector('.qw_data .domItem'));
 		} else {				// Or try to get table from other processors
 			flush( {'code':'model','data':{'code':resp.qw_send.code,'template':template}}, url, 
 					function(got) { if ( got.match(/^[\{\[]/) ) got = JSON.parse(got);

@@ -1612,7 +1612,7 @@ h2 {
 
 .bid-stage {
 	width: 100%;
-	margin-bottom: 33px;
+	margin-bottom: 15px;
 }
 
 .bid-stage__text {
@@ -1818,7 +1818,6 @@ h2 {
 	-webkit-box-align: start;
 	-ms-flex-align: start;
 	align-items: start;
-	max-width: 170px;
 	width: 100%;
 }
 
@@ -2114,6 +2113,10 @@ h2 {
 	padding: 6px 0;
 }
 
+.requests-stage__course.lk-carrier {
+   max-width: 100%;
+}
+
 .requests-stage__course {
 	display: -webkit-box;
 	display: -ms-flexbox;
@@ -2155,7 +2158,6 @@ h2 {
 	-webkit-box-align: center;
 	-ms-flex-align: center;
 	align-items: center;
-	width: 162px;
 	border-left: 1px solid #e8e8e8;
 	border-right: 1px solid #e8e8e8;
 	font-size: 13px;
