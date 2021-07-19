@@ -1,912 +1,912 @@
 <div class="content_body">
-   <h1 order="0" strict="customer">Мои заявки</h1>
-      <div class="bid__filter">
-         <div class="stage">
-            <p class="stage__text">Этапы перевозки:</p>
-            <div class="stage-block">
-               <div class="stage-advance stage__point">
-                  <img src="img/advance.svg" alt="advance" class="stage-advance__image stage__img">
-                  <span class="stage-advance__text stage__subtitle">согласованная</span>
-               </div>
-               <div class="stage-download stage__point">
-                  <img src="img/download.svg" alt="download" class="stage-download__image stage__img">
-                  <span class="stage-download__text stage__subtitle">погрузка</span>
-               </div>
-               <div class="stage-moves stage__point">
-                  <img src="img/moves.svg" alt="moves" class="stage-moves__image stage__img">
-                  <span class="stage-moves__text stage__subtitle">в пути</span>
-               </div>
-               <div class="stage-unloading stage__point">
-                  <img src="img/unloading.svg" alt="unloading" class="stage-unloading__image stage__img">
-                  <span class="stage-unloading__text stage__subtitle">выгрузка</span>
-               </div>
-            </div>
-         </div>
-      </div>
-   <div class="bid__reqvuisition bid__reqvuisition--lkz">
-      <TMPL_LOOP NAME="list">
-         <div class="bid__reqvuisition--title bid__reqvuisition--title-lkz drivers-tab__header">
-            <div class="bid__reqvuisition--number bid__reqvuisition--number-lkz">
-               <span class="bid__reqvuisition--text">
-                  <TMPL_VAR NAME='requestNumber'>
-               </span>
-            </div>
-            <div class="wrap__requests-stage">
-               <div class="requests-stage">
-                  <div class="requests-stage__course">
-                     <div class="requests-stage__sity">
-                        <TMPL_VAR NAME='rout'>
-                     </div>
-                  </div>
-                  <div class="requests-stage__date">
-                     <span class="requests-stage__loading">
-                        <TMPL_VAR NAME='onDate-dd'>
-                     </span>
-                     <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image requests-stage__arrow2">
-                     <span class="requests-stage__unloading requests-stage__loading">
-                        <TMPL_VAR NAME='offDate-dd'>
-                     </span>
-                  </div>
-                  <div class="requests-stage__payment">
-                     <!--<img src="img/icon-yes.svg" alt="icon-yes" class="requests-stage__check">-->
-                     <input type="checkbox" class="carting__checkbox" <TMPL_IF NAME="payed">checked</TMPL_IF> />
-                     <p class="requests-stage__result">Оплата</p>
-                  </div>
-               </div>
-            </div>
-            <div class="requests-unfurl">
-               <a href="#" class="bid__reqvuisition--arrow">
-                  <img src="img/arrow-bottom.svg" alt="ARROW-BOTTOM" class="bid__reqvuisition--arrow-img">
-               </a>
-            </div>
-         </div>
-         <div class="data">
-            <div class="data-city">
-               <!-- <div class="city">
-               <div class="city-field">
-                  <div class="city-field__text city-field__loading">
-                     ?Тольятти?
-                  </div>
-                     <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-field__image">
-                     <img src="img/arrow4.svg" alt="ARROW" class="arrow__image city-field__image-mobile">
-                  <div class="city-field__text city-field__unloading">
-                     ?Дмитровград?
-                  </div>
-               </div>
-               <div class="city-date">
-                  <span class="city-date__loading city-date__text">
-                  <TMPL_VAR NAME='onDate-dd'>
-                        <img src="img/icon-calendar.svg" alt="calendar" class="city-date__icon">
-                  </span>
-                     <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-date__image">
-                  <span class="city-date__unloading city-date__text">?222222222?</span>
-               </div>
-            </div>-->
-               <!--/.city-->
-               <div class="bid-stage">
-                  <!--<p class="bid-stage__text data__transportation--title">Этапы перевозки:</p>-->
-                  <div class="bid-stage__block">
-                     <span class="bid-stage__action data__transportation--text">Этапы перевозки:</span>
-                     <div class="bid-stage__signal">
-                        <div class="bid-stage__advance">
-                           <img src="img/advance.svg" alt="advance" class="bid-stage__image">
-                        </div>
-                        <div class="bid-stage__download">
-                           <img src="img/download.svg" alt="download" class="bid-stage__image">
-                        </div>
-                        <div class="bid-stage__moves">
-                           <img src="img/moves.svg" alt="moves" class="bid-stage__image">
-                        </div>
-                        <div class="bid-stage__unloading">
-                           <img src="img/unloading.svg" alt="unloading" class="bid-stage__image">
-                        </div>
-                     </div>
-                  </div>
-               </div>
-               <!--/.big-stage-->
-            </div>
-            <!--data-city-->
-            <div class="data-common">
-               <div class="data__transportation">
-                  <div class="customer contacts">
-                     <div class="customer-delegate contacts-block">
-                        <span
-                           class="customer-delegate__title data__transportation--title contacts-block__title">Контактное
-                           лицо заказчика:</span>
-                        <span class="customer-delegate__name data__transportation--text contacts-block__name">
-                           <TMPL_VAR NAME='customer'>
-                        </span>
-                     </div>
-                     <a href="tel:<TMPL_VAR NAME='customerPhone'>" class="customer-contact contacts-phone button">
-                        <span class="customer-contact__text button__text contacts-phone__text">Связаться<br>
-                           <TMPL_VAR NAME='customerPhone'>
-                        </span>
-                        <div class="contacts-phone__tel button__tel">
-                           <div class="contacts-phone__border button__border"></div>
-                           <img src="img/vector_phone.svg" alt="phone" />
-                        </div>
-                     </a>
-                  </div>
-                  <!-- /.customer -->
-                  <div class="trucking">
-                     <div class="trucking-car">
-                        <div class="trucking-car__toving">
-                           <span class="trucking-car__title data__transportation--title">Авто:</span>
-                           <span class="trucking-car__name data__transportation--text">
-                              <TMPL_VAR NAME='carModel'>
-                           </span>
-                        </div>
-                        <!--<div class="trucking-car__number">
-                        <span class="trucking-car__text data__transportation--text">
-                        </span>
-                        <span class="trucking-car__region data__transportation--text">38</span>
-                     </div>-->
-                     </div>
-                     <!--<div class="trucking-trailer trucking-car">
-                     <div class="trucking-trailer__toving">
-                        <span
-                           class="trucking-trailer__title data__transportation--title trucking-car__toving">Прицеп:</span>
-                        <span class="trucking-trailer__name data__transportation--text">Трехосный</span>
-                     </div>
-                     <div class="trucking-trailer__number truck__number trucking-car__number">
-                        <span class="trucking-trailer__text trucking-car__text ">А1234ХМ</span>
-                        <span class="trucking-trailer__region trucking-car__region">38</span>
-                     </div>
-                  </div>-->
-                  </div>
-                  <!--/.trucking-->
-                  <div class="logistician contacts">
-                     <div class="logistician-surname contacts-block">
-                        <span
-                           class="logistician-surname__title data__transportation--title contacts-block--title">Контактное
-                           лицо перевозчика:</span>
-                        <span class="logistician-surname__name data__transportation--text contacts-block__name">
-                           <TMPL_VAR NAME='logist'>
-                        </span>
-                     </div>
-                     <a href="tel:<TMPL_VAR NAME='logistPhone'>" class="logistician-contact contacts-phone button">
-                        <span class="logistician-contact__text button__text contacts-phone__text">Связаться<br>
-                           <TMPL_VAR NAME='logistPhone'>
-                        </span>
-                        <div class="contacts-phone__tel button__tel">
-                           <div class="contacts-phone__border button__border"></div>
-                           <img src="img/vector_phone.svg" alt="phone" />
-                        </div>
-                     </a>
-                  </div>
-                  <!-- /.logistician -->
-                  <div class="driver contacts">
-                     <div class="driver-surname contacts-block">
-                        <span
-                           class="driver-surname__title data__transportation--title contacts-block__title">Водитель:</span>
-                        <span class="driver-surname__name data__transportation--text contacts-block__name">
-                           <TMPL_VAR NAME='driverName'>
-                        </span>
-                     </div>
-                     <a href="tel:<TMPL_VAR NAME='driverPhone'>" class="driver-contact contacts-phone button">
-                        <span class="driver-contact__text contacts-phone__text button__text">Связаться<br>
-                           <TMPL_VAR NAME='driverPhone'>
-                        </span>
-                        <div class="contacts-phone__tel button__tel">
-                           <div class="contacts-phone__border button__border"></div>
-                           <img src="img/vector_phone.svg" alt="phone" />
-                        </div>
-                     </a>
-                  </div>
-                  <!-- /.driver -->
-                  <div class="funds cargo">
-                     <div class="cargo-block cargo-block__border cargo-block__border2">
-                        <img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Стоимость, руб:</span>
-                           <span class="cargo-block__name data__transportation--text">
-                              <TMPL_VAR NAME='cost'>
-                           </span>
-                        </div>
-                     </div>
-                     <div class="cargo-block cargo-block__border cargo-block__border2">
-                        <img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Отсрочка платежа, дней:</span>
-                           <span class="cargo-block__name data__transportation--text">
-                              <TMPL_VAR NAME='postponement'>
-                           </span>
-                        </div>
-                     </div>
-                     <div class="cargo-block__last">
-                        <img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Срок оплаты:</span>
-                           <span class="cargo-block__name data__transportation--text cargo-block__line">
-                              <TMPL_VAR NAME='paymentOff-dd'>
-                           </span>
-                        </div>
-                     </div>
-                  </div>
-                  <!-- /.funds.cargo -->
+<h1 order="0" strict="customer">Мои заявки</h1>
+	<div class="bid__filter">
+		<div class="stage">
+			<p class="stage__text">Этапы перевозки:</p>
+			<div class="stage-block">
+			<div class="stage-advance stage__point">
+				<img src="img/advance.svg" alt="advance" class="stage-advance__image stage__img">
+				<span class="stage-advance__text stage__subtitle">согласованная</span>
+			</div>
+			<div class="stage-download stage__point">
+				<img src="img/download.svg" alt="download" class="stage-download__image stage__img">
+				<span class="stage-download__text stage__subtitle">погрузка</span>
+			</div>
+			<div class="stage-moves stage__point">
+				<img src="img/moves.svg" alt="moves" class="stage-moves__image stage__img">
+				<span class="stage-moves__text stage__subtitle">в пути</span>
+			</div>
+			<div class="stage-unloading stage__point">
+				<img src="img/unloading.svg" alt="unloading" class="stage-unloading__image stage__img">
+				<span class="stage-unloading__text stage__subtitle">выгрузка</span>
+			</div>
+			</div>
+		</div>
+	</div>
+<div class="bid__reqvuisition bid__reqvuisition--lkz">
+	<TMPL_LOOP NAME="list">
+		<div class="bid__reqvuisition--title bid__reqvuisition--title-lkz drivers-tab__header">
+			<div class="bid__reqvuisition--number bid__reqvuisition--number-lkz">
+			<span class="bid__reqvuisition--text">
+				<TMPL_VAR NAME='requestNumber'>
+			</span>
+			</div>
+			<div class="wrap__requests-stage">
+			<div class="requests-stage">
+				<div class="requests-stage__course">
+					<div class="requests-stage__sity">
+						<TMPL_VAR NAME='rout'>
+					</div>
+				</div>
+				<div class="requests-stage__date">
+					<span class="requests-stage__loading">
+						<TMPL_VAR NAME='onDate-dd'>
+					</span>
+					<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image requests-stage__arrow2">
+					<span class="requests-stage__unloading requests-stage__loading">
+						<TMPL_VAR NAME='offDate-dd'>
+					</span>
+				</div>
+				<div class="requests-stage__payment">
+					<!--<img src="img/icon-yes.svg" alt="icon-yes" class="requests-stage__check">-->
+					<input type="checkbox" class="carting__checkbox" <TMPL_IF NAME="payed">checked</TMPL_IF> />
+					<p class="requests-stage__result">Оплата</p>
+				</div>
+			</div>
+			</div>
+			<div class="requests-unfurl">
+			<a href="#" class="bid__reqvuisition--arrow">
+				<img src="img/arrow-bottom.svg" alt="ARROW-BOTTOM" class="bid__reqvuisition--arrow-img">
+			</a>
+			</div>
+		</div>
+		<div class="data">
+			<div class="data-city">
+			<!-- <div class="city">
+			<div class="city-field">
+				<div class="city-field__text city-field__loading">
+					?Тольятти?
+				</div>
+					<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-field__image">
+					<img src="img/arrow4.svg" alt="ARROW" class="arrow__image city-field__image-mobile">
+				<div class="city-field__text city-field__unloading">
+					?Дмитровград?
+				</div>
+			</div>
+			<div class="city-date">
+				<span class="city-date__loading city-date__text">
+				<TMPL_VAR NAME='onDate-dd'>
+						<img src="img/icon-calendar.svg" alt="calendar" class="city-date__icon">
+				</span>
+					<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-date__image">
+				<span class="city-date__unloading city-date__text">?222222222?</span>
+			</div>
+			</div>-->
+			<!--/.city-->
+			<div class="bid-stage">
+				<!--<p class="bid-stage__text data__transportation--title">Этапы перевозки:</p>-->
+				<div class="bid-stage__block">
+					<span class="bid-stage__action data__transportation--text">Этапы перевозки:</span>
+					<div class="bid-stage__signal">
+						<div class="bid-stage__advance">
+						<img src="img/advance.svg" alt="advance" class="bid-stage__image">
+						</div>
+						<div class="bid-stage__download">
+						<img src="img/download.svg" alt="download" class="bid-stage__image">
+						</div>
+						<div class="bid-stage__moves">
+						<img src="img/moves.svg" alt="moves" class="bid-stage__image">
+						</div>
+						<div class="bid-stage__unloading">
+						<img src="img/unloading.svg" alt="unloading" class="bid-stage__image">
+						</div>
+					</div>
+				</div>
+			</div>
+			<!--/.big-stage-->
+			</div>
+			<!--data-city-->
+			<div class="data-common">
+			<div class="data__transportation">
+				<div class="customer contacts">
+					<div class="customer-delegate contacts-block">
+						<span
+						class="customer-delegate__title data__transportation--title contacts-block__title">Контактное
+						лицо заказчика:</span>
+						<span class="customer-delegate__name data__transportation--text contacts-block__name">
+						<TMPL_VAR NAME='customer'>
+						</span>
+					</div>
+					<a href="tel:<TMPL_VAR NAME='customerPhone'>" class="customer-contact contacts-phone button">
+						<span class="customer-contact__text button__text contacts-phone__text">Связаться<br>
+						<TMPL_VAR NAME='customerPhone'>
+						</span>
+						<div class="contacts-phone__tel button__tel">
+						<div class="contacts-phone__border button__border"></div>
+						<img src="img/vector_phone.svg" alt="phone" />
+						</div>
+					</a>
+				</div>
+				<!-- /.customer -->
+				<div class="trucking">
+					<div class="trucking-car">
+						<div class="trucking-car__toving">
+						<span class="trucking-car__title data__transportation--title">Авто:</span>
+						<span class="trucking-car__name data__transportation--text">
+							<TMPL_VAR NAME='carModel'>
+						</span>
+						</div>
+						<!--<div class="trucking-car__number">
+						<span class="trucking-car__text data__transportation--text">
+						</span>
+						<span class="trucking-car__region data__transportation--text">38</span>
+					</div>-->
+					</div>
+					<!--<div class="trucking-trailer trucking-car">
+					<div class="trucking-trailer__toving">
+						<span
+						class="trucking-trailer__title data__transportation--title trucking-car__toving">Прицеп:</span>
+						<span class="trucking-trailer__name data__transportation--text">Трехосный</span>
+					</div>
+					<div class="trucking-trailer__number truck__number trucking-car__number">
+						<span class="trucking-trailer__text trucking-car__text ">А1234ХМ</span>
+						<span class="trucking-trailer__region trucking-car__region">38</span>
+					</div>
+				</div>-->
+				</div>
+				<!--/.trucking-->
+				<div class="logistician contacts">
+					<div class="logistician-surname contacts-block">
+						<span
+						class="logistician-surname__title data__transportation--title contacts-block--title">Контактное
+						лицо перевозчика:</span>
+						<span class="logistician-surname__name data__transportation--text contacts-block__name">
+						<TMPL_VAR NAME='logist'>
+						</span>
+					</div>
+					<a href="tel:<TMPL_VAR NAME='logistPhone'>" class="logistician-contact contacts-phone button">
+						<span class="logistician-contact__text button__text contacts-phone__text">Связаться<br>
+						<TMPL_VAR NAME='logistPhone'>
+						</span>
+						<div class="contacts-phone__tel button__tel">
+						<div class="contacts-phone__border button__border"></div>
+						<img src="img/vector_phone.svg" alt="phone" />
+						</div>
+					</a>
+				</div>
+				<!-- /.logistician -->
+				<div class="driver contacts">
+					<div class="driver-surname contacts-block">
+						<span
+						class="driver-surname__title data__transportation--title contacts-block__title">Водитель:</span>
+						<span class="driver-surname__name data__transportation--text contacts-block__name">
+						<TMPL_VAR NAME='driverName'>
+						</span>
+					</div>
+					<a href="tel:<TMPL_VAR NAME='driverPhone'>" class="driver-contact contacts-phone button">
+						<span class="driver-contact__text contacts-phone__text button__text">Связаться<br>
+						<TMPL_VAR NAME='driverPhone'>
+						</span>
+						<div class="contacts-phone__tel button__tel">
+						<div class="contacts-phone__border button__border"></div>
+						<img src="img/vector_phone.svg" alt="phone" />
+						</div>
+					</a>
+				</div>
+				<!-- /.driver -->
+				<div class="funds cargo">
+					<div class="cargo-block cargo-block__border cargo-block__border2">
+						<img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Стоимость, руб:</span>
+						<span class="cargo-block__name data__transportation--text">
+							<TMPL_VAR NAME='cost'>
+						</span>
+						</div>
+					</div>
+					<div class="cargo-block cargo-block__border cargo-block__border2">
+						<img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Отсрочка платежа, дней:</span>
+						<span class="cargo-block__name data__transportation--text">
+							<TMPL_VAR NAME='postponement'>
+						</span>
+						</div>
+					</div>
+					<div class="cargo-block__last">
+						<img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Срок оплаты:</span>
+						<span class="cargo-block__name data__transportation--text cargo-block__line">
+							<TMPL_VAR NAME='paymentOff-dd'>
+						</span>
+						</div>
+					</div>
+				</div>
+				<!-- /.funds.cargo -->
 
 
 
-                  <TMPL_LOOP NAME='detailsCargo'>
-                     <div class="loading contacts">
-                        <div class="loading-surname contacts-block">
-                           <span class="loading-surname__title data__transportation--title contacts-block__title">Вид:
-                              <strong>
-                                 <TMPL_VAR NAME='loadingView'>
-                              </strong></span>
-                           <span class="loading-surname__name data__transportation--text contacts-block__name"></span>
-                        </div>
-                     </div>
-                     <!-- /.loading -->
-                     <div class="cargo cargo-parameters">
-                        <div class="cargo-block cargo-block__border">
-                           <img src="img/icon-box.svg" alt="icon-box" class="cargo-block__image">
-                           <div class="cargo-block__type">
-                              <span class="cargo-block__title data__transportation--title">Груз:</span>
-                              <span class="cargo-block__name data__transportation--text">
-                                 <TMPL_VAR NAME='cargoName'>
-                              </span>
-                           </div>
-                        </div>
-                        <div class="cargo-block cargo-block__border">
-                           <img src="img/icon-weight.svg" alt="icon-weight" class="cargo-block__image">
-                           <div class="cargo-block__type">
-                              <span class="cargo-block__title data__transportation--title">Вес, тонн:</span>
-                              <span class="cargo-block__name data__transportation--text">
-                                 <TMPL_VAR NAME='cargoWeight'>
-                              </span>
-                           </div>
-                        </div>
-                        <div class="cargo-block">
-                           <img src="img/icon-volume.svg" alt="icon-volume" class="cargo-block__image">
-                           <div class="cargo-block__type">
-                              <span class="cargo-block__title data__transportation--title">Объем, куб.м:</span>
-                              <span class="cargo-block__name data__transportation--text">
-                                 <TMPL_VAR NAME='cargoVolume'>
-                              </span>
-                           </div>
-                        </div>
-                     </div>
-                     <!-- /.cargo -->
-                     <div class="loading-cargo ">
-                        <div class="loading-cargo__block cargo">
-                           <div class="cargo-block cargo-block__width">
-                              <img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Дата / <TMPL_VAR
-                                       NAME='loadingView'>:</span>
-                                 <span class="cargo-block__name data__transportation--text">
-                                    <TMPL_VAR NAME='loadingDate-dd'>
-                                 </span>
-                              </div>
-                           </div>
-                           <div class="cargo-block cargo-block__width cargo-block__width2">
-                              <img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Время / <TMPL_VAR
-                                       NAME='loadingView'>, МСК+1:</span>
-                                 <span class="cargo-block__name data__transportation--text">
-                                    <TMPL_VAR NAME='loadingTimeOn-dt'> - <TMPL_VAR NAME='loadingTimeOff-dt'>
-                                 </span>
-                              </div>
-                           </div>
-                           <div class="cargo-block cargo-block__width">
-                              <img src="img/icon-vid.svg" alt="icon-vid" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Тип / <TMPL_VAR
-                                       NAME='loadingView'>:</span>
-                                 <span class="cargo-block__name data__transportation--text">
-                                    <TMPL_VAR NAME='loadingType'>
-                                 </span>
-                              </div>
-                           </div>
-                        </div>
-                        <!-- /.loading-cargo__block -->
-                        <div class="loading-addres">
-                           <span class="loading-addres__title cargo-block__title data__transportation--title">Адрес /
-                              <TMPL_VAR NAME='loadingView'>:</span>
-                           <span class="loading-addres__text cargo-block__name data__transportation--text">
-                              <TMPL_VAR NAME='loadingAddress'>
-                           </span>
-                        </div>
-                     </div>
-                  </TMPL_LOOP>
+				<TMPL_LOOP NAME='detailsCargo'>
+					<div class="loading contacts">
+						<div class="loading-surname contacts-block">
+						<span class="loading-surname__title data__transportation--title contacts-block__title">Вид:
+							<strong>
+								<TMPL_VAR NAME='loadingView'>
+							</strong></span>
+						<span class="loading-surname__name data__transportation--text contacts-block__name"></span>
+						</div>
+					</div>
+					<!-- /.loading -->
+					<div class="cargo cargo-parameters">
+						<div class="cargo-block cargo-block__border">
+						<img src="img/icon-box.svg" alt="icon-box" class="cargo-block__image">
+						<div class="cargo-block__type">
+							<span class="cargo-block__title data__transportation--title">Груз:</span>
+							<span class="cargo-block__name data__transportation--text">
+								<TMPL_VAR NAME='cargoName'>
+							</span>
+						</div>
+						</div>
+						<div class="cargo-block cargo-block__border">
+						<img src="img/icon-weight.svg" alt="icon-weight" class="cargo-block__image">
+						<div class="cargo-block__type">
+							<span class="cargo-block__title data__transportation--title">Вес, тонн:</span>
+							<span class="cargo-block__name data__transportation--text">
+								<TMPL_VAR NAME='cargoWeight'>
+							</span>
+						</div>
+						</div>
+						<div class="cargo-block">
+						<img src="img/icon-volume.svg" alt="icon-volume" class="cargo-block__image">
+						<div class="cargo-block__type">
+							<span class="cargo-block__title data__transportation--title">Объем, куб.м:</span>
+							<span class="cargo-block__name data__transportation--text">
+								<TMPL_VAR NAME='cargoVolume'>
+							</span>
+						</div>
+						</div>
+					</div>
+					<!-- /.cargo -->
+					<div class="loading-cargo ">
+						<div class="loading-cargo__block cargo">
+						<div class="cargo-block cargo-block__width">
+							<img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Дата / <TMPL_VAR
+									NAME='loadingView'>:</span>
+								<span class="cargo-block__name data__transportation--text">
+									<TMPL_VAR NAME='loadingDate-dd'>
+								</span>
+							</div>
+						</div>
+						<div class="cargo-block cargo-block__width cargo-block__width2">
+							<img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Время / <TMPL_VAR
+									NAME='loadingView'>, МСК+1:</span>
+								<span class="cargo-block__name data__transportation--text">
+									<TMPL_VAR NAME='loadingTimeOn-dt'> - <TMPL_VAR NAME='loadingTimeOff-dt'>
+								</span>
+							</div>
+						</div>
+						<div class="cargo-block cargo-block__width">
+							<img src="img/icon-vid.svg" alt="icon-vid" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Тип / <TMPL_VAR
+									NAME='loadingView'>:</span>
+								<span class="cargo-block__name data__transportation--text">
+									<TMPL_VAR NAME='loadingType'>
+								</span>
+							</div>
+						</div>
+						</div>
+						<!-- /.loading-cargo__block -->
+						<div class="loading-addres">
+						<span class="loading-addres__title cargo-block__title data__transportation--title">Адрес /
+							<TMPL_VAR NAME='loadingView'>:</span>
+						<span class="loading-addres__text cargo-block__name data__transportation--text">
+							<TMPL_VAR NAME='loadingAddress'>
+						</span>
+						</div>
+					</div>
+				</TMPL_LOOP>
 
-                  <!-- /.loading-cargo -->
+				<!-- /.loading-cargo -->
 
-                  <!--<div class="unloading1 contacts">
-                  <div class="unloading1-surname contacts-block">
-                     <span class="unloading1-surname__title data__transportation--title contacts-block__title">Разгрузка 1:</span>
-                     <span class="unloading1-surname__name data__transportation--text contacts-block__name">Иванов Иван Иванович</span>
-                  </div>
-                  <a href="" class="unloading1-contact contacts-phone button">
-                     <span class="unloading1-contact__text contacts-phone__text button__text">Связаться с разгрузкой</span>
-                     <div class="contacts-phone__tel button__tel">
-                        <div class="contacts-phone__border button__border"></div>
-                           <img src="img/vector_phone.svg" alt="phone" />
-                     </div>
-                  </a>
-               </div>-->
-                  <!-- /.unloading1 -->
-                  <!--<div class="unloading-cargo">
-                  <div class="unloading-cargo__block cargo">
-                     <div class="cargo-block cargo-block__width">
-                           <img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Дата разгрузки:</span>
-                           <span class="cargo-block__name data__transportation--text">04.12.20</span>
-                        </div>
-                     </div>
-                     <div class="cargo-block cargo-block__width cargo-block__width2">
-                           <img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Время разгрузки, МСК+1:</span>
-                           <span class="cargo-block__name data__transportation--text">21:00 — 22:00</span>
-                        </div>
-                     </div>
-                     <div class="cargo-block cargo-block__width">
-                           <img src="img/icon-vid2.svg" alt="icon-vid2" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Тип выгрузки:</span>
-                           <span class="cargo-block__name data__transportation--text">Боковая</span>
-                        </div>
-                     </div>
-                  </div>-->
-                  <!-- /.unloading1-cargo__block -->
-                  <!--<div class="unloading-addres">
-                     <span class="unloading1-addres__title cargo-block__title data__transportation--title">Адрес разгрузки:</span>
-                     <span class="unloading-addres__text cargo-block__name data__transportation--text">Ульяновская область, г. Дмитроврад, ул. 9 линия , стр.23, корп. Г</span>
-                  </div>
-               </div>-->
-                  <!-- /.unloading1-cargo -->
-                  <!--<div class="unloading contacts">
-                  <div class="unloading1-surname contacts-block">
-                     <span
-                        class="unloading1-surname__title data__transportation--title contacts-block__title">Разгрузка 2:</span>
-                     <span class="unloading1-surname__name data__transportation--text contacts-block__name">Иванов Иван Иванович</span>
-                  </div>
-                  <a href="" class="unloading1-contact contacts-phone button">
-                     <span class="unloading1-contact__text contacts-phone__text button__text">Связаться с разгрузкой</span>
-                     <div class="contacts-phone__tel button__tel">
-                        <div class="contacts-phone__border button__border"></div>
-                           <img src="img/vector_phone.svg" alt="vector_phone" />
-                     </div>
-                  </a>
-               </div>-->
-                  <!--<div class="unloading-cargo">
-                  <div class="unloading-cargo__block cargo">
-                     <div class="cargo-block cargo-block__width">
-                           <img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Дата разгрузки:</span>
-                           <span class="cargo-block__name data__transportation--text">05.12.20</span>
-                        </div>
-                     </div>
-                     <div class="cargo-block cargo-block__width cargo-block__width2">
-                           <img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Время разгрузки, МСК+1:</span>
-                           <span class="cargo-block__name data__transportation--text">01:00 — 02:00</span>
-                        </div>
-                     </div>
-                     <div class="cargo-block cargo-block__width">
-                           <img src="img/icon-vid2.svg" alt="icon-vid2" class="cargo-block__image">
-                        <div class="cargo-block__type">
-                           <span class="cargo-block__title data__transportation--title">Тип выгрузки:</span>
-                           <span class="cargo-block__name data__transportation--text">Боковая</span>
-                        </div>
-                     </div>
-                  </div>-->
-                  <!-- /.unloading2-cargo__block -->
-                  <!--<div class="unloading-addres">
-                     <span class="unloading-addres__title cargo-block__title data__transportation--title">Адрес
-                        разгрузки:</span>
-                     <span class="unloading-addres__text cargo-block__name data__transportation--text">Ульяновская
-                        область, г. Дмитроврад, ул. Автостроителей, стр.21</span>
-                  </div>
-               </div>-->
-                  <!-- /.unloading2-cargo -->
-               </div>
-               <!-- /.data__transportation -->
-               <div class="bid-data__document">
-                  <div class="bid-document">
-                     <div class="wrar__content">
-                        <p class="bid-document__title">Документы:</p>
-                        <ul class="bid-document__list">
-                           <TMPL_LOOP NAME='document'>
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">
-                                       <TMPL_VAR NAME='documentName'>, <TMPL_VAR NAME='documentFile'>
-                                    </span>
-                                 </a>
-                              </li>
-                           </TMPL_LOOP>
-                        </ul>
-                     </div>
-                  </div>
-                  <!-- /.bid-document -->
-                  <div class="bid-additional">
-                     <div class="wrap__content">
-                        <span class="bid-additional__title">??Дополнительная информация:??</span>
-                        <p class="bid-additional__text">Lorem ipsum dolor sit amet, consectetur
-                           adipiscing elit. Mauris
-                           pretium accumsan est, vitae luctus justo pharetra in. Fusce feugiat
-                           tincidunt cursus. Nunc sed
-                           lacinia ex. Nullam feugiat ligula ante, ac fringilla sapien sollicitudin
-                           non. <br><br></p>
-                        <p class="bid-additional__text bid-additional__text2"> Phasellus a mollis
-                           justo. Donec
-                           hendrerit,
-                           metus ut scelerisque blandit, elit nulla scelerisque tortor, eget euismod
-                           dolor ligula a
-                           dolor.
-                           Integer dictum fermentum ligula a pretium.</p>
-                     </div>
-                  </div>
-                  <!-- /.bid-additional -->
-               </div>
-               <!-- /.bid-data__document -->
-            </div>
-            <!-- /.data__common -->
-         </div>
-         <!--/.data-->
-      </TMPL_LOOP>
-   </div>
-   <h3>Показано <strong id="shownRec">
-         <TMPL_VAR NAME="list-nn">
-      </strong> записей из <strong id="totalRec">
-         <TMPL_VAR NAME="quantity">
-      </strong></h3>
-   <ul data-code="request" class="pagination">
-   </ul>
-   <div class="report fail<TMPL_IF NAME='quantity'> hidden</TMPL_IF>">
-      <h3><strong>За период c <span>
-               <TMPL_VAR NAME='begin-dd'>
-            </span> по <span>
-               <TMPL_VAR NAME='end-dd'>
-            </span> заявки не найдены</strong></h3>
-   </div>
+				<!--<div class="unloading1 contacts">
+				<div class="unloading1-surname contacts-block">
+					<span class="unloading1-surname__title data__transportation--title contacts-block__title">Разгрузка 1:</span>
+					<span class="unloading1-surname__name data__transportation--text contacts-block__name">Иванов Иван Иванович</span>
+				</div>
+				<a href="" class="unloading1-contact contacts-phone button">
+					<span class="unloading1-contact__text contacts-phone__text button__text">Связаться с разгрузкой</span>
+					<div class="contacts-phone__tel button__tel">
+						<div class="contacts-phone__border button__border"></div>
+						<img src="img/vector_phone.svg" alt="phone" />
+					</div>
+				</a>
+			</div>-->
+				<!-- /.unloading1 -->
+				<!--<div class="unloading-cargo">
+				<div class="unloading-cargo__block cargo">
+					<div class="cargo-block cargo-block__width">
+						<img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Дата разгрузки:</span>
+						<span class="cargo-block__name data__transportation--text">04.12.20</span>
+						</div>
+					</div>
+					<div class="cargo-block cargo-block__width cargo-block__width2">
+						<img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Время разгрузки, МСК+1:</span>
+						<span class="cargo-block__name data__transportation--text">21:00 — 22:00</span>
+						</div>
+					</div>
+					<div class="cargo-block cargo-block__width">
+						<img src="img/icon-vid2.svg" alt="icon-vid2" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Тип выгрузки:</span>
+						<span class="cargo-block__name data__transportation--text">Боковая</span>
+						</div>
+					</div>
+				</div>-->
+				<!-- /.unloading1-cargo__block -->
+				<!--<div class="unloading-addres">
+					<span class="unloading1-addres__title cargo-block__title data__transportation--title">Адрес разгрузки:</span>
+					<span class="unloading-addres__text cargo-block__name data__transportation--text">Ульяновская область, г. Дмитроврад, ул. 9 линия , стр.23, корп. Г</span>
+				</div>
+			</div>-->
+				<!-- /.unloading1-cargo -->
+				<!--<div class="unloading contacts">
+				<div class="unloading1-surname contacts-block">
+					<span
+						class="unloading1-surname__title data__transportation--title contacts-block__title">Разгрузка 2:</span>
+					<span class="unloading1-surname__name data__transportation--text contacts-block__name">Иванов Иван Иванович</span>
+				</div>
+				<a href="" class="unloading1-contact contacts-phone button">
+					<span class="unloading1-contact__text contacts-phone__text button__text">Связаться с разгрузкой</span>
+					<div class="contacts-phone__tel button__tel">
+						<div class="contacts-phone__border button__border"></div>
+						<img src="img/vector_phone.svg" alt="vector_phone" />
+					</div>
+				</a>
+			</div>-->
+				<!--<div class="unloading-cargo">
+				<div class="unloading-cargo__block cargo">
+					<div class="cargo-block cargo-block__width">
+						<img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Дата разгрузки:</span>
+						<span class="cargo-block__name data__transportation--text">05.12.20</span>
+						</div>
+					</div>
+					<div class="cargo-block cargo-block__width cargo-block__width2">
+						<img src="img/icon-time.svg" alt="icon-time" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Время разгрузки, МСК+1:</span>
+						<span class="cargo-block__name data__transportation--text">01:00 — 02:00</span>
+						</div>
+					</div>
+					<div class="cargo-block cargo-block__width">
+						<img src="img/icon-vid2.svg" alt="icon-vid2" class="cargo-block__image">
+						<div class="cargo-block__type">
+						<span class="cargo-block__title data__transportation--title">Тип выгрузки:</span>
+						<span class="cargo-block__name data__transportation--text">Боковая</span>
+						</div>
+					</div>
+				</div>-->
+				<!-- /.unloading2-cargo__block -->
+				<!--<div class="unloading-addres">
+					<span class="unloading-addres__title cargo-block__title data__transportation--title">Адрес
+						разгрузки:</span>
+					<span class="unloading-addres__text cargo-block__name data__transportation--text">Ульяновская
+						область, г. Дмитроврад, ул. Автостроителей, стр.21</span>
+				</div>
+			</div>-->
+				<!-- /.unloading2-cargo -->
+			</div>
+			<!-- /.data__transportation -->
+			<div class="bid-data__document">
+				<div class="bid-document">
+					<div class="wrar__content">
+						<p class="bid-document__title">Документы:</p>
+						<ul class="bid-document__list">
+						<TMPL_LOOP NAME='document'>
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">
+									<TMPL_VAR NAME='documentName'>, <TMPL_VAR NAME='documentFile'>
+									</span>
+								</a>
+							</li>
+						</TMPL_LOOP>
+						</ul>
+					</div>
+				</div>
+				<!-- /.bid-document -->
+				<div class="bid-additional">
+					<div class="wrap__content">
+						<span class="bid-additional__title">??Дополнительная информация:??</span>
+						<p class="bid-additional__text">Lorem ipsum dolor sit amet, consectetur
+						adipiscing elit. Mauris
+						pretium accumsan est, vitae luctus justo pharetra in. Fusce feugiat
+						tincidunt cursus. Nunc sed
+						lacinia ex. Nullam feugiat ligula ante, ac fringilla sapien sollicitudin
+						non. <br><br></p>
+						<p class="bid-additional__text bid-additional__text2"> Phasellus a mollis
+						justo. Donec
+						hendrerit,
+						metus ut scelerisque blandit, elit nulla scelerisque tortor, eget euismod
+						dolor ligula a
+						dolor.
+						Integer dictum fermentum ligula a pretium.</p>
+					</div>
+				</div>
+				<!-- /.bid-additional -->
+			</div>
+			<!-- /.bid-data__document -->
+			</div>
+			<!-- /.data__common -->
+		</div>
+		<!--/.data-->
+	</TMPL_LOOP>
+</div>
+<h3>Показано <strong id="shownRec">
+		<TMPL_VAR NAME="list-nn">
+	</strong> записей из <strong id="totalRec">
+		<TMPL_VAR NAME="quantity">
+	</strong></h3>
+<ul data-code="request" class="pagination">
+</ul>
+<div class="report fail<TMPL_IF NAME='quantity'> hidden</TMPL_IF>">
+	<h3><strong>За период c <span>
+			<TMPL_VAR NAME='begin-dd'>
+			</span> по <span>
+			<TMPL_VAR NAME='end-dd'>
+			</span> заявки не найдены</strong></h3>
+</div>
 </div>
 <div class="section-history content_wide">
-   <div class="container">
+<div class="container">
 
 
 
 
-      <p>Страница выполненных перевозок заказчика ( same as request)</p>
-      <div class="usermode">Заказчик: <TMPL_VAR NAME="compname">
-      </div>
-      <h2>Заявки за период </h2>
-      <div class="form__data">
-         <input type="hidden" data-key="koldoc" class="udata" value="<TMPL_VAR NAME='koldoc'>" />
-         <input type="hidden" data-key="_umode" class="udata" value="<TMPL_VAR NAME='_umode'>" />
-         <input type="hidden" data-key="from" class="udata" value="<TMPL_VAR NAME='from'>" />
-         <input type="hidden" data-key="_uid" class="udata" value="<TMPL_VAR NAME='_uid'>" />
-         <div class="optrow">
-            <label for="d_start">Начало периода: </label><input data-key="begin" class="udata" id="d_start" type="date"
-               value="<TMPL_VAR NAME='begin-dd'>" />
-         </div>
-         <div class="optrow">
-            <label for="d_end">Окончание периода: </label><input data-key="end" class="udata" id="d_end" type="date"
-               value="<TMPL_VAR NAME='end-dd'>" />
-         </div>
-         <div class="buttonbar">
-            <button type="button" class="form__btn" data-code="request" id="sendquery">Запросить</button>
-         </div>
-      </div>
+	<p>Страница выполненных перевозок заказчика ( same as request)</p>
+	<div class="usermode">Заказчик: <TMPL_VAR NAME="compname">
+	</div>
+	<h2>Заявки за период </h2>
+	<div class="form__data">
+		<input type="hidden" data-key="koldoc" class="udata" value="<TMPL_VAR NAME='koldoc'>" />
+		<input type="hidden" data-key="_umode" class="udata" value="<TMPL_VAR NAME='_umode'>" />
+		<input type="hidden" data-key="from" class="udata" value="<TMPL_VAR NAME='from'>" />
+		<input type="hidden" data-key="_uid" class="udata" value="<TMPL_VAR NAME='_uid'>" />
+		<div class="optrow">
+			<label for="d_start">Начало периода: </label><input data-key="begin" class="udata" id="d_start" type="date"
+			value="<TMPL_VAR NAME='begin-dd'>" />
+		</div>
+		<div class="optrow">
+			<label for="d_end">Окончание периода: </label><input data-key="end" class="udata" id="d_end" type="date"
+			value="<TMPL_VAR NAME='end-dd'>" />
+		</div>
+		<div class="buttonbar">
+			<button type="button" class="form__btn" data-code="request" id="sendquery">Запросить</button>
+		</div>
+	</div>
 
 
 
 
 
-      <div class="history">
-         <h2 class="history__title">История заявок</h2>
-         <div class="history-filter">
-            <div class="history-form">
-               <div class="history-form__top">
-                  <div class="history-form__title">
-                     <img src="img/filter.svg" alt="filter" class="history-form__image">
-                     <span class="history-form__text">Поиск по параметрам</span>
-                  </div>
-                  <form action="#" class="history-search history-search__form">
-                     <label for="#" class="history-search__label">Поиск в истории заявок</label>
-                     <input type="text" placeholder="Поиск в истории заявок" class="history-search__input input">
-                  </form>
-               </div>
-               <!-- /.history-form__top -->
-               <form action="#" class="head head__form">
-                  <div class="head-block">
-                     <div class="head-number">
-                        <input type="text" class="input head-number__request" placeholder="Номер заявки">
-                        <a href="#" class="head-number__button">
-                           <img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
-                        </a>
-                     </div>
-                     <div class="head-number head-number__period--block">
-                        <input type="text" class="input head-number__request head-number__period" placeholder="Период">
-                        <a href="#" class="head-number__button">
-                           <img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
-                        </a>
-                     </div>
-                     <div class="head-number head-number__city--block">
-                        <input type="text" class="input head-number__request head-number__city"
-                           placeholder="Город от А до Я">
-                        <a href="#" class="head-number__button">
-                           <img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
-                        </a>
-                     </div>
-                     <div class="head-number head-number__logist--block">
-                        <input type="text" class="input head-number__request head-number__logist"
-                           placeholder="Логист от А до Я">
-                        <a href="#" class="head-number__button">
-                           <img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
-                        </a>
-                     </div>
-                     <div class="head-button">
-                        <a href="#" class="head-cleaning">
-                           <img src="img/cleaning.svg" alt="cleaning" class="head-cleaning__image">
-                           <span class="head-cleaning__text">Очистить <span class="head-cleaning__text">фильтр</span>
-                           </span>
-                        </a>
-                        <a href="#" class="head-action">Фильтровать заявки</a>
-                     </div>
-                     <!-- /.head-button -->
-                  </div>
-                  <!--head-block-->
-               </form>
-               <!--head form-->
-            </div>
-            <div class="result">
-               <p class="result__title">Найдено<span class="result__title--amount">12456</span>заявки</p>
-               <div class="result-block">
-                  <div class="result-total">
-                     <div class="result-total__header">
-                        <span
-                           class="result-total__header--title result-total__header--title-col1 result-total__header--title-lkz-col1"
-                           id="block-1">Заявка</span>
-                        <span
-                           class="result-total__header--title result-total__header--title-col2 result-total__header--title-lkz-col2">Маршрут</span>
-                        <span
-                           class="result-total__header--title result-total__header--title-col3 result-total__header--title-lkz-col3">Период
-                           перевозки</span>
-                        <span
-                           class="result-total__header--title result-total__header--title-col4 result-total__header--title-lkz-col4">Логист</span>
-                        <span
-                           class="result-total__header--title result-total__header--title-col5 result-total__header--title-lkz-col5">Транспорт</span>
-                        <span
-                           class="result-total__header--title result-total__header--title-col6 result-total__header--title-lkz-col6">Госномер</span>
-                        <span
-                           class="result-total__header--title result-total__header--title-col7 result-total__header--title-lkz-col7">Оплата</span>
-                        <div class="result-total__header--setting">
-                           <img src="img/gear.svg" alt="setting" class="result-total__header--setting-img">
-                           <div class="setting-modal">
-                              <div class="setting-modal__close"></div>
-                              <form action="#" class="setting-form">
-                                 <div class="setting-form__body">
-                                    <span class="setting-form__title">Настройка вывода</span>
-                                    <div class="setting-form__checkbox--wrap">
-                                       <label for="checkbox-1" class="setting-form__label">
-                                          <input type="checkbox" id="checkbox-1" class="setting-form__checkbox"
-                                             name="checkboxname" value="block-1">
-                                          <span class="setting-form__checkbox--new"></span>
-                                          Номер заявки</label>
-                                    </div>
-                                    <div class="setting-form__checkbox--wrap">
-                                       <label for="checkbox-2" class="setting-form__label">
-                                          <input type="checkbox" id="checkbox-2" class="setting-form__checkbox"
-                                             name="checkboxname" value="block-2">
-                                          <span class="setting-form__checkbox--new"></span>
-                                          Маршрут</label>
-                                    </div>
-                                    <div class="setting-form__checkbox--wrap">
-                                       <label for="checkbox-3" class="setting-form__label">
-                                          <input type="checkbox" id="checkbox-3" class="setting-form__checkbox"
-                                             name="checkboxname" value="block-3">
-                                          <span class="setting-form__checkbox--new"></span>
-                                          Период перевозки</label>
-                                    </div>
-                                    <div class="setting-form__checkbox--wrap">
-                                       <label for="checkbox-4" class="setting-form__label">
-                                          <input type="checkbox" id="checkbox-4" class="setting-form__checkbox"
-                                             name="checkboxname" value="block-4">
-                                          <span class="setting-form__checkbox--new"></span>
-                                          Логист</label>
-                                    </div>
-                                    <div class="setting-form__checkbox--wrap">
-                                       <label for="checkbox-5" class="setting-form__label">
-                                          <input type="checkbox" id="checkbox-5" class="setting-form__checkbox"
-                                             name="checkboxname" value="block-5">
-                                          <span class="setting-form__checkbox--new"></span>
-                                          Транспорт</label>
-                                    </div>
-                                    <div class="setting-form__checkbox--wrap">
-                                       <label for="checkbox-6" class="setting-form__label">
-                                          <input type="checkbox" id="checkbox-6" class="setting-form__checkbox"
-                                             name="checkboxname" value="block-6">
-                                          <span class="setting-form__checkbox--new"></span>
-                                          Госномер</label>
-                                    </div>
-                                 </div>
-                              </form>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                  <div class="requests-number number-test result-total__item">
-                     <div class="requests-number__ordinal result-total__ordinal result-total__ordinal--lkz">
-                        <span class="bid__reqvuisition--text requests-number__text">№ 1000005</span>
-                     </div>
-                     <div class="wrap-center wrap-center__lkz">
-                        <div class="requests-stage__course">
-                           <div class="requests-stage__sity result-total__sity">
-                              Москва
-                           </div>
-                           <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image requests-stage__arrow2">
-                           <div class="requests-stage__sity result-total__sity">
-                              Сочи
-                           </div>
-                        </div>
-                        <div class="requests-stage__date result-total__date">
-                           <span class="requests-stage__loading">22.11.20</span>
-                           <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image requests-stage__arrow2">
-                           <span class="requests-stage__unloading requests-stage__loading">26.11.20</span>
-                        </div>
-                        <div class="result-total__item--box">
-                           <span class="result-total__item--name">Иванов</span>
-                           <span class="result-total__item--name">Иван</span>
-                           <span class="result-total__item--name">Иванович</span>
-                        </div>
-                        <div class="result-total__item--box result-total__item--box-carname ">
-                           <span class="result-total__item--car">Камаз</span>
-                        </div>
-                        <div class="result-total__item--box result-total__item--box-car">
-                           <span class="result-total__item--carnum">А1233ХМ 38</span>
-                        </div>
-                        <div class="requests-stage">
-                           <div class="requests-stage__payment">
-                              <!--<img src="img/icon-yes.svg" alt="icon-yes" class="requests-stage__check">-->
-                              <input type="checkbox" class="carting__checkbox" checked />
-                              <p class="requests-stage__result">Оплата</p>
-                           </div>
-                        </div>
-                        <!-- /.requests-number__stage -->
-                     </div>
-                     <div class="requests-unfurl">
-                        <a href="#" class="bid__requisition--arrow">
-                           <img src="img/arrow-bottom.svg" alt="arrow" class="requests-unfurl__arrow">
-                        </a>
-                     </div>
-                  </div>
-                  <div class="result-full__data">
-                     <div class="line1">
-                        <div class="city line1-city">
-                           <div class="city-field line1-field">
-                              <div class="city-field__text city-field__loading line1-city__text">
-                                 Тольятти
-                              </div>
-                              <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-field__image">
-                              <img src="img/arrow4.svg" alt="ARROW" class="arrow2__image city-field__image-mobile">
-                              <div class="city-field__text city-field__unloading line1-city__text">Дмитровград</div>
-                           </div>
-                           <div class="city-date line1-date">
-                              <div
-                                 class="city-date__loading city-date__text line1-city__text line1-date__text line1-date__text--loading">
-                                 <img src="img/icon-calendar.svg" alt="icon-calendar"
-                                    class="city-date__icon line1-date__icon">
-                              </div>
-                              <img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-date__image">
-                              <span
-                                 class="city-date__unloading city-date__text line1-city__text line1-date__text">26.11.2020</span>
-                           </div>
-                        </div>
-                        <!-- /.city -->
-                        <div class="trucking line1-trucking">
-                           <div class="trucking-car">
-                              <div class="trucking-car__toving">
-                                 <span class="trucking-car__title data__transportation--title">Авто:</span>
-                                 <span class="trucking-car__name data__transportation--text">Камаз</span>
-                              </div>
-                              <div class="trucking-car__number data__transportation--number">
-                                 <span class="trucking-car__text data__transportation--text">А1234ХМ</span>
-                                 <span class="trucking-car__region data__transportation--text">38</span>
-                              </div>
-                           </div>
-                           <div class="trucking-trailer trucking-car">
-                              <div class="trucking-trailer__toving">
-                                 <span
-                                    class="trucking-trailer__title data__transportation--title trucking-car__toving">Прицеп:</span>
-                                 <span class="trucking-trailer__name data__transportation--text">Трехосный</span>
-                              </div>
-                              <div class="trucking-trailer__number truck__number trucking-car__number">
-                                 <span class="trucking-trailer__text trucking-car__text ">А1234ХМ</span>
-                                 <span class="trucking-trailer__region trucking-car__region">38</span>
-                              </div>
-                           </div>
-                        </div>
-                        <!-- /.trucking -->
-                     </div>
-                     <!--/.line1-->
-                     <div class="line2">
-                        <div class="driver contacts line2-contacts">
-                           <div class="driver-surname contacts-block line__text">
-                              <span
-                                 class="driver-surname__title data__transportation--title contacts-block__title">Логист:</span>
-                              <span class="driver-surname__name data__transportation--text contacts-block__name">Сидоров
-                                 Иван Иванович</span>
-                           </div>
-                           <a href="" class="driver-contact contacts-phone button line__button">
-                              <span class="driver-contact__text contacts-phone__text button__text">Связаться с
-                                 логистом</span>
-                              <div class="contacts-phone__tel button__tel">
-                                 <div class="contacts-phone__border button__border"></div>
-                                 <img src="img/vector_phone.svg" alt="phone" />
-                              </div>
-                           </a>
-                        </div>
-                        <!-- /.driver -->
-                     </div>
-                     <!-- /.line2 -->
-                     <div class="line3">
-                        <div class="cargo cargo-parameters line3-cargo__parameters">
-                           <div class="cargo-block cargo-block__lkz cargo-block__border">
-                              <img src="img/icon-box.svg" alt="" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Груз:</span>
-                                 <span class="cargo-block__name data__transportation--text">Запчасти</span>
-                              </div>
-                           </div>
-                           <div class="cargo-block cargo-block__lkz cargo-block__border">
-                              <img src="img/icon-weight.svg" alt="icon-weight" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Вес, тонн:</span>
-                                 <span class="cargo-block__name data__transportation--text">25</span>
-                              </div>
-                           </div>
-                           <div class="cargo-block cargo-block__lkz">
-                              <img src="img/icon-volume.svg" alt="icon-volume" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Объем, куб.м:</span>
-                                 <span class="cargo-block__name data__transportation--text">25</span>
-                              </div>
-                           </div>
-                        </div>
-                        <!-- /.cargo -->
-                        <div class="funds cargo line3-cargo line3-cargo__funds">
-                           <div class="cargo-block cargo-block__lkz cargo-block__lkz--cost">
-                              <img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Стоимость, руб</span>
-                                 <span class="cargo-block__name data__transportation--text">25 000</span>
-                              </div>
-                           </div>
-                           <div class="cargo-block cargo-block__lkz cargo-block__lkz--indebtedness">
-                              <img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Задолженность, руб:</span>
-                                 <span class="cargo-block__name data__transportation--text">0</span>
-                              </div>
-                           </div>
-                           <div class="cargo-block cargo-block__lkz funds__cargo-block--last">
-                              <img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
-                              <div class="cargo-block__type">
-                                 <span class="cargo-block__title data__transportation--title">Срок оплаты:</span>
-                                 <span class="cargo-block__name data__transportation--text">20.11.20-30.11.20</span>
-                              </div>
-                           </div>
-                        </div>
-                        <!-- /.funds.cargo -->
-                     </div>
-                     <!-- /.line3 -->
-                     <div class="line4">
-                        <div class="bid-document line4-document">
-                           <p class="bid-document__title">Документы:</p>
-                           <ul class="bid-document__list bid-document__list--line4">
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">Счет на оплату, pdf </span>
-                                 </a>
-                              </li>
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">Акт выполненных работ, pdf</span>
-                                 </a>
-                              </li>
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">Cчет фактура, pdf</span>
-                                 </a>
-                              </li>
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">Товарная накладная, pdf </span>
-                                 </a>
-                              </li>
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">УПД, pdf</span>
-                                 </a>
-                              </li>
-                              <li class="bid-document__item">
-                                 <a href="#" class="bid-document__item--link">
-                                    <img src="img/pdf.svg" alt="pdf" class="bid-document__image">
-                                    <span class="bid-document__text">ТТН, pdf</span>
-                                 </a>
-                              </li>
-                           </ul>
-                        </div>
-                        <!-- /.bid-document -->
-                        <div class="bid-additional line4-additional">
-                           <div class="line4-additional__block line4-additional__block--lkz">
-                              <span class="bid-additional__title">Дополнительная информация:</span>
-                              <p class="bid-additional__text">Lorem ipsum dolor sit amet, consectetur adipiscing
-                                 elit. Mauris
-                                 pretium accumsan est, vitae luctus justo pharetra in. Fusce feugiat tincidunt
-                                 cursus. Nunc sed
-                                 lacinia ex. Nullam feugiat ligula ante, ac fringilla sapien sollicitudin non.
-                                 <br><br>
-                                 <p class="bid-additional__text bid-additional__text2"> Phasellus a mollis justo.
-                                    Donec
-                                    hendrerit, metus ut scelerisque blandit, elit nulla scelerisque tortor, eget
-                                    euismod dolor
-                                    ligula a dolor. Integer dictum fermentum ligula a pretium.</p>
-                           </div>
-                        </div>
-                        <!-- /.bid-additional -->
-                     </div>
-                     <!-- /.line4 -->
-                  </div>
-               </div>
-            </div>
-         </div>
-         <div class="other">
-            <ul class="pagination">
-               <li class="page-item page-item__previous disabled">
-                  <a class="page-link page-link__previous" href="#">
-                     <img src="img/left-grey.svg" alt="left-grey" class="page-link__previous--img page-link__img">
-                  </a>
-               </li>
-               <li class="page-item page-item__active">
-                  <a class="page-link" href="#">1</a>
-               </li>
-               <li class="page-item"><a class="page-link" href="#">2</a></li>
-               <li class="page-item"><a class="page-link" href="#">3</a></li>
-               <li class="page-item"><a class="page-link" href="#">4</a></li>
-               <li class="page-item"><a class="page-link" href="#">5</a></li>
-               <li class="page-item page-item__next">
-                  <a class="page-link page-link__next" href="#">
-                     <img src="img/right-green.svg" alt="right-green" class="page-link__next--img page-link__img">
-                  </a>
-               </li>
-            </ul>
-            <div class="other-sort">
-               <p class="other-sort__title">Сортировка по месяцам:</p>
-               <div class="other-sort__month">
-                  <a href="#" class="other-sort__text other-sort__active">Март</a>
-                  <a href="#" class="other-sort__text">Февраль</a>
-                  <a href="#" class="other-sort__text">Январь</a>
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
+	<div class="history">
+		<h2 class="history__title">История заявок</h2>
+		<div class="history-filter">
+			<div class="history-form">
+			<div class="history-form__top">
+				<div class="history-form__title">
+					<img src="img/filter.svg" alt="filter" class="history-form__image">
+					<span class="history-form__text">Поиск по параметрам</span>
+				</div>
+				<form action="#" class="history-search history-search__form">
+					<label for="#" class="history-search__label">Поиск в истории заявок</label>
+					<input type="text" placeholder="Поиск в истории заявок" class="history-search__input input">
+				</form>
+			</div>
+			<!-- /.history-form__top -->
+			<form action="#" class="head head__form">
+				<div class="head-block">
+					<div class="head-number">
+						<input type="text" class="input head-number__request" placeholder="Номер заявки">
+						<a href="#" class="head-number__button">
+						<img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
+						</a>
+					</div>
+					<div class="head-number head-number__period--block">
+						<input type="text" class="input head-number__request head-number__period" placeholder="Период">
+						<a href="#" class="head-number__button">
+						<img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
+						</a>
+					</div>
+					<div class="head-number head-number__city--block">
+						<input type="text" class="input head-number__request head-number__city"
+						placeholder="Город от А до Я">
+						<a href="#" class="head-number__button">
+						<img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
+						</a>
+					</div>
+					<div class="head-number head-number__logist--block">
+						<input type="text" class="input head-number__request head-number__logist"
+						placeholder="Логист от А до Я">
+						<a href="#" class="head-number__button">
+						<img src="img/arrow3.svg" alt="ARROW" class="head-number__arrow3">
+						</a>
+					</div>
+					<div class="head-button">
+						<a href="#" class="head-cleaning">
+						<img src="img/cleaning.svg" alt="cleaning" class="head-cleaning__image">
+						<span class="head-cleaning__text">Очистить <span class="head-cleaning__text">фильтр</span>
+						</span>
+						</a>
+						<a href="#" class="head-action">Фильтровать заявки</a>
+					</div>
+					<!-- /.head-button -->
+				</div>
+				<!--head-block-->
+			</form>
+			<!--head form-->
+			</div>
+			<div class="result">
+			<p class="result__title">Найдено<span class="result__title--amount">12456</span>заявки</p>
+			<div class="result-block">
+				<div class="result-total">
+					<div class="result-total__header">
+						<span
+						class="result-total__header--title result-total__header--title-col1 result-total__header--title-lkz-col1"
+						id="block-1">Заявка</span>
+						<span
+						class="result-total__header--title result-total__header--title-col2 result-total__header--title-lkz-col2">Маршрут</span>
+						<span
+						class="result-total__header--title result-total__header--title-col3 result-total__header--title-lkz-col3">Период
+						перевозки</span>
+						<span
+						class="result-total__header--title result-total__header--title-col4 result-total__header--title-lkz-col4">Логист</span>
+						<span
+						class="result-total__header--title result-total__header--title-col5 result-total__header--title-lkz-col5">Транспорт</span>
+						<span
+						class="result-total__header--title result-total__header--title-col6 result-total__header--title-lkz-col6">Госномер</span>
+						<span
+						class="result-total__header--title result-total__header--title-col7 result-total__header--title-lkz-col7">Оплата</span>
+						<div class="result-total__header--setting">
+						<img src="img/gear.svg" alt="setting" class="result-total__header--setting-img">
+						<div class="setting-modal">
+							<div class="setting-modal__close"></div>
+							<form action="#" class="setting-form">
+								<div class="setting-form__body">
+									<span class="setting-form__title">Настройка вывода</span>
+									<div class="setting-form__checkbox--wrap">
+									<label for="checkbox-1" class="setting-form__label">
+										<input type="checkbox" id="checkbox-1" class="setting-form__checkbox"
+											name="checkboxname" value="block-1">
+										<span class="setting-form__checkbox--new"></span>
+										Номер заявки</label>
+									</div>
+									<div class="setting-form__checkbox--wrap">
+									<label for="checkbox-2" class="setting-form__label">
+										<input type="checkbox" id="checkbox-2" class="setting-form__checkbox"
+											name="checkboxname" value="block-2">
+										<span class="setting-form__checkbox--new"></span>
+										Маршрут</label>
+									</div>
+									<div class="setting-form__checkbox--wrap">
+									<label for="checkbox-3" class="setting-form__label">
+										<input type="checkbox" id="checkbox-3" class="setting-form__checkbox"
+											name="checkboxname" value="block-3">
+										<span class="setting-form__checkbox--new"></span>
+										Период перевозки</label>
+									</div>
+									<div class="setting-form__checkbox--wrap">
+									<label for="checkbox-4" class="setting-form__label">
+										<input type="checkbox" id="checkbox-4" class="setting-form__checkbox"
+											name="checkboxname" value="block-4">
+										<span class="setting-form__checkbox--new"></span>
+										Логист</label>
+									</div>
+									<div class="setting-form__checkbox--wrap">
+									<label for="checkbox-5" class="setting-form__label">
+										<input type="checkbox" id="checkbox-5" class="setting-form__checkbox"
+											name="checkboxname" value="block-5">
+										<span class="setting-form__checkbox--new"></span>
+										Транспорт</label>
+									</div>
+									<div class="setting-form__checkbox--wrap">
+									<label for="checkbox-6" class="setting-form__label">
+										<input type="checkbox" id="checkbox-6" class="setting-form__checkbox"
+											name="checkboxname" value="block-6">
+										<span class="setting-form__checkbox--new"></span>
+										Госномер</label>
+									</div>
+								</div>
+							</form>
+						</div>
+						</div>
+					</div>
+				</div>
+				<div class="requests-number number-test result-total__item">
+					<div class="requests-number__ordinal result-total__ordinal result-total__ordinal--lkz">
+						<span class="bid__reqvuisition--text requests-number__text">№ 1000005</span>
+					</div>
+					<div class="wrap-center wrap-center__lkz">
+						<div class="requests-stage__course">
+						<div class="requests-stage__sity result-total__sity">
+							Москва
+						</div>
+						<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image requests-stage__arrow2">
+						<div class="requests-stage__sity result-total__sity">
+							Сочи
+						</div>
+						</div>
+						<div class="requests-stage__date result-total__date">
+						<span class="requests-stage__loading">22.11.20</span>
+						<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image requests-stage__arrow2">
+						<span class="requests-stage__unloading requests-stage__loading">26.11.20</span>
+						</div>
+						<div class="result-total__item--box">
+						<span class="result-total__item--name">Иванов</span>
+						<span class="result-total__item--name">Иван</span>
+						<span class="result-total__item--name">Иванович</span>
+						</div>
+						<div class="result-total__item--box result-total__item--box-carname ">
+						<span class="result-total__item--car">Камаз</span>
+						</div>
+						<div class="result-total__item--box result-total__item--box-car">
+						<span class="result-total__item--carnum">А1233ХМ 38</span>
+						</div>
+						<div class="requests-stage">
+						<div class="requests-stage__payment">
+							<!--<img src="img/icon-yes.svg" alt="icon-yes" class="requests-stage__check">-->
+							<input type="checkbox" class="carting__checkbox" checked />
+							<p class="requests-stage__result">Оплата</p>
+						</div>
+						</div>
+						<!-- /.requests-number__stage -->
+					</div>
+					<div class="requests-unfurl">
+						<a href="#" class="bid__requisition--arrow">
+						<img src="img/arrow-bottom.svg" alt="arrow" class="requests-unfurl__arrow">
+						</a>
+					</div>
+				</div>
+				<div class="result-full__data">
+					<div class="line1">
+						<div class="city line1-city">
+						<div class="city-field line1-field">
+							<div class="city-field__text city-field__loading line1-city__text">
+								Тольятти
+							</div>
+							<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-field__image">
+							<img src="img/arrow4.svg" alt="ARROW" class="arrow2__image city-field__image-mobile">
+							<div class="city-field__text city-field__unloading line1-city__text">Дмитровград</div>
+						</div>
+						<div class="city-date line1-date">
+							<div
+								class="city-date__loading city-date__text line1-city__text line1-date__text line1-date__text--loading">
+								<img src="img/icon-calendar.svg" alt="icon-calendar"
+									class="city-date__icon line1-date__icon">
+							</div>
+							<img src="img/arrow2.svg" alt="ARROW" class="arrow2__image city-date__image">
+							<span
+								class="city-date__unloading city-date__text line1-city__text line1-date__text">26.11.2020</span>
+						</div>
+						</div>
+						<!-- /.city -->
+						<div class="trucking line1-trucking">
+						<div class="trucking-car">
+							<div class="trucking-car__toving">
+								<span class="trucking-car__title data__transportation--title">Авто:</span>
+								<span class="trucking-car__name data__transportation--text">Камаз</span>
+							</div>
+							<div class="trucking-car__number data__transportation--number">
+								<span class="trucking-car__text data__transportation--text">А1234ХМ</span>
+								<span class="trucking-car__region data__transportation--text">38</span>
+							</div>
+						</div>
+						<div class="trucking-trailer trucking-car">
+							<div class="trucking-trailer__toving">
+								<span
+									class="trucking-trailer__title data__transportation--title trucking-car__toving">Прицеп:</span>
+								<span class="trucking-trailer__name data__transportation--text">Трехосный</span>
+							</div>
+							<div class="trucking-trailer__number truck__number trucking-car__number">
+								<span class="trucking-trailer__text trucking-car__text ">А1234ХМ</span>
+								<span class="trucking-trailer__region trucking-car__region">38</span>
+							</div>
+						</div>
+						</div>
+						<!-- /.trucking -->
+					</div>
+					<!--/.line1-->
+					<div class="line2">
+						<div class="driver contacts line2-contacts">
+						<div class="driver-surname contacts-block line__text">
+							<span
+								class="driver-surname__title data__transportation--title contacts-block__title">Логист:</span>
+							<span class="driver-surname__name data__transportation--text contacts-block__name">Сидоров
+								Иван Иванович</span>
+						</div>
+						<a href="" class="driver-contact contacts-phone button line__button">
+							<span class="driver-contact__text contacts-phone__text button__text">Связаться с
+								логистом</span>
+							<div class="contacts-phone__tel button__tel">
+								<div class="contacts-phone__border button__border"></div>
+								<img src="img/vector_phone.svg" alt="phone" />
+							</div>
+						</a>
+						</div>
+						<!-- /.driver -->
+					</div>
+					<!-- /.line2 -->
+					<div class="line3">
+						<div class="cargo cargo-parameters line3-cargo__parameters">
+						<div class="cargo-block cargo-block__lkz cargo-block__border">
+							<img src="img/icon-box.svg" alt="" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Груз:</span>
+								<span class="cargo-block__name data__transportation--text">Запчасти</span>
+							</div>
+						</div>
+						<div class="cargo-block cargo-block__lkz cargo-block__border">
+							<img src="img/icon-weight.svg" alt="icon-weight" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Вес, тонн:</span>
+								<span class="cargo-block__name data__transportation--text">25</span>
+							</div>
+						</div>
+						<div class="cargo-block cargo-block__lkz">
+							<img src="img/icon-volume.svg" alt="icon-volume" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Объем, куб.м:</span>
+								<span class="cargo-block__name data__transportation--text">25</span>
+							</div>
+						</div>
+						</div>
+						<!-- /.cargo -->
+						<div class="funds cargo line3-cargo line3-cargo__funds">
+						<div class="cargo-block cargo-block__lkz cargo-block__lkz--cost">
+							<img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Стоимость, руб</span>
+								<span class="cargo-block__name data__transportation--text">25 000</span>
+							</div>
+						</div>
+						<div class="cargo-block cargo-block__lkz cargo-block__lkz--indebtedness">
+							<img src="img/icon-cost.svg" alt="icon-cost" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Задолженность, руб:</span>
+								<span class="cargo-block__name data__transportation--text">0</span>
+							</div>
+						</div>
+						<div class="cargo-block cargo-block__lkz funds__cargo-block--last">
+							<img src="img/icon-calendar.svg" alt="icon-calendar" class="cargo-block__image">
+							<div class="cargo-block__type">
+								<span class="cargo-block__title data__transportation--title">Срок оплаты:</span>
+								<span class="cargo-block__name data__transportation--text">20.11.20-30.11.20</span>
+							</div>
+						</div>
+						</div>
+						<!-- /.funds.cargo -->
+					</div>
+					<!-- /.line3 -->
+					<div class="line4">
+						<div class="bid-document line4-document">
+						<p class="bid-document__title">Документы:</p>
+						<ul class="bid-document__list bid-document__list--line4">
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">Счет на оплату, pdf </span>
+								</a>
+							</li>
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">Акт выполненных работ, pdf</span>
+								</a>
+							</li>
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">Cчет фактура, pdf</span>
+								</a>
+							</li>
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">Товарная накладная, pdf </span>
+								</a>
+							</li>
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">УПД, pdf</span>
+								</a>
+							</li>
+							<li class="bid-document__item">
+								<a href="#" class="bid-document__item--link">
+									<img src="img/pdf.svg" alt="pdf" class="bid-document__image">
+									<span class="bid-document__text">ТТН, pdf</span>
+								</a>
+							</li>
+						</ul>
+						</div>
+						<!-- /.bid-document -->
+						<div class="bid-additional line4-additional">
+						<div class="line4-additional__block line4-additional__block--lkz">
+							<span class="bid-additional__title">Дополнительная информация:</span>
+							<p class="bid-additional__text">Lorem ipsum dolor sit amet, consectetur adipiscing
+								elit. Mauris
+								pretium accumsan est, vitae luctus justo pharetra in. Fusce feugiat tincidunt
+								cursus. Nunc sed
+								lacinia ex. Nullam feugiat ligula ante, ac fringilla sapien sollicitudin non.
+								<br><br>
+								<p class="bid-additional__text bid-additional__text2"> Phasellus a mollis justo.
+									Donec
+									hendrerit, metus ut scelerisque blandit, elit nulla scelerisque tortor, eget
+									euismod dolor
+									ligula a dolor. Integer dictum fermentum ligula a pretium.</p>
+						</div>
+						</div>
+						<!-- /.bid-additional -->
+					</div>
+					<!-- /.line4 -->
+				</div>
+			</div>
+			</div>
+		</div>
+		<div class="other">
+			<ul class="pagination">
+			<li class="page-item page-item__previous disabled">
+				<a class="page-link page-link__previous" href="#">
+					<img src="img/left-grey.svg" alt="left-grey" class="page-link__previous--img page-link__img">
+				</a>
+			</li>
+			<li class="page-item page-item__active">
+				<a class="page-link" href="#">1</a>
+			</li>
+			<li class="page-item"><a class="page-link" href="#">2</a></li>
+			<li class="page-item"><a class="page-link" href="#">3</a></li>
+			<li class="page-item"><a class="page-link" href="#">4</a></li>
+			<li class="page-item"><a class="page-link" href="#">5</a></li>
+			<li class="page-item page-item__next">
+				<a class="page-link page-link__next" href="#">
+					<img src="img/right-green.svg" alt="right-green" class="page-link__next--img page-link__img">
+				</a>
+			</li>
+			</ul>
+			<div class="other-sort">
+			<p class="other-sort__title">Сортировка по месяцам:</p>
+			<div class="other-sort__month">
+				<a href="#" class="other-sort__text other-sort__active">Март</a>
+				<a href="#" class="other-sort__text">Февраль</a>
+				<a href="#" class="other-sort__text">Январь</a>
+			</div>
+			</div>
+		</div>
+	</div>
+</div>
 </div>
 <script type="text/javascript" src="/js/assy_request.js?<TMPL_VAR NAME='js'>"></script>
 <script>
-   document.querySelectorAll('.drivers-tab__header').forEach(dt => {
-      dt.onclick = function () {
-         let infoContent = dt.nextElementSibling;
-         if (infoContent.matches('.drivers-info__active')) {
-            infoContent.className = infoContent.className.replace(/\s*drivers-info__active/g, '');
-         } else {
-            infoContent.className += ' drivers-info__active';
-         }
-      };
-   });
+document.querySelectorAll('.drivers-tab__header').forEach(dt => {
+	dt.onclick = function () {
+		let infoContent = dt.nextElementSibling;
+		if (infoContent.matches('.drivers-info__active')) {
+			infoContent.className = infoContent.className.replace(/\s*drivers-info__active/g, '');
+		} else {
+			infoContent.className += ' drivers-info__active';
+		}
+	};
+});
 </script>

@@ -24,14 +24,12 @@ var doubleClickEvent = new MouseEvent('dblclick', {
 var responder = createRequestObject();
 var flusher = function(e) {
 	try {
-		if (this.readyState == 4) {
-			if (this.status == 200) {
+		if (this.readyState === 4) {
+			if (this.status === 200) {
 				if ( this.getResponseHeader('Content-Type').match(/javascript/i) ) {
 					eval( this.responseText );
-				} else if ( typeof(this.hook) == 'function' ) {
+				} else if ( typeof(this.hook) === 'function' ) {
 					this.hook(this.responseText);
-				} else {
-// 					console.log(this.response.text);
 				} 
 				try { document.onreadystatechange() } catch(e) {};
 			} else if (this.status >= 500) {
@@ -40,10 +38,14 @@ var flusher = function(e) {
 				console.log("Reading from server:" + this.status);
 				this.abort();		// Clean
 			}
+		} else if( this.readyState == 3 ) {		// Access denied before XMLHttpRequest was executed
+			if ( this.getResponseHeader('Content-Type').match(/text\/html/i) ) {
+				alert('Сессия прервана.\nСтраница будет перезагружена');
+				document.location.reload();		// Reload page to re-authenticate user
+			}
 		}
 	} catch( e ) {
-	console.log('Processing error: '+ '\n' + e);	//+ this.responseText
-// 	console.log(this.responseText);
+		console.log('Processing error:\n' + e);	//+ this.responseText
 	// Bugzilla Bug 238559 XMLHttpRequest needs a way to report networking errors
 	}
 	dime(0);

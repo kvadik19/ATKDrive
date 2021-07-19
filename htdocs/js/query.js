@@ -447,12 +447,15 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 								if( resp.data && resp.data.success == 1) {
 									document.querySelectorAll('code.pageurl').forEach( c =>{ 
 															c.innerText = document.location.origin+'/'+name });
-									let define = resp.data;
+									document.querySelectorAll('.qw_talks.ajax[data-code]')
+													.forEach( ab =>{ ab.parentNode.removeChild(ab) });	// Reset AJAX boxes
 
+									let define = resp.data;
 									if ( define.qw_load && typeof(define.qw_load) === 'object' ) {
 										Object.keys( checkload).forEach( k =>{ delete checkload[k] });		// Purge previous
 										Object.keys( define.qw_load).forEach( k =>{ checkload[k] = define.qw_load[k] });	// Assign loaded
 									}
+
 									bodyOut.querySelector('.qw_code .code').value = define.qw_init.qw_send.code;
 									bodyOut.closest('.qw_talks').dataset.code = define.qw_init.qw_send.code;
 									let domsend = toDOM( define.qw_init.qw_send.data);
@@ -501,7 +504,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 							});
 						return true;
 					},
-				valSetup:function(evt) {
+				valSetup:function(evt) {			// Used on bodyOut keyValues doubleclick
 						let keyVal = evt.target;
 						let div = keyVal.closest('.value');
 						keyTool.set( { info:div, value:keyVal.innerText, items:['check'], valuesOnly: true,
@@ -522,7 +525,7 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 											commitEnable();
 										} );
 					},
-				valAssign:function(evt) {
+				valAssign:function(evt) {			// Used on bodyIn keyValues doubleclick
 						let qcode = bodyIn.querySelector('.qw_code .code').value;
 						if ( ('qdata' in keyTool.preset) && keyTool.preset.qdata.code === qcode ) {
 							let keyVal = evt.target;
@@ -828,7 +831,10 @@ let keyTool = {			// Add key-value floating window operations
 				this.panel.style.left = X+'px';
 				this.panel.style.top = Y+'px';
 				let inpt = this.panel.querySelector('.optgroup:not([style="display: none;"]) input[type="text"]');
-				if (inpt) inpt.focus();
+				if (inpt) {
+					inpt.focus();
+					inpt.select();
+				}
 
 				return this;
 			},
@@ -920,16 +926,29 @@ let keyEdit = {
 				inpt.select();
 			},
 		varname: function(evt) {
-				let keyVal = evt.target;
-				let div = keyVal.closest('.value');
-				keyTool.set( { info:div, value:keyVal.innerText, valuesOnly:false, items:['text'],
+				let host = evt.target;
+				let div = host.closest('.value');
+				let baseName = host.innerText;
+				let baseValue = host.innerText.replace(/^\$+/,'');
+				let isList = false;
+				if ( host.matches('.keyVal') ) baseName = host.previousElementSibling.innerText;
+				if ( baseValue.match(/^(.+) => \$(.+)$/) ) {			// Name of array found
+					isList = true;
+					let parts = baseValue.match(/^(.+) => \$(.+)$/);
+					baseName = parts[1];
+					baseValue = parts[2];
+				}
+				keyTool.set( { info:div, value:baseValue, valuesOnly:true, items:['text'],
 							head:'Укажите переменную',
-							text:'Принятый ключ &laquo;'+div.dataset.name+'&raquo;<br>транслировать в переменную'})
-						.fire( function(key, val) {
-									let fldName = val.dataset.name;
-									div.dataset.name = fldName;
-									div.title = val.title;
-									keyVal.innerText = '$'+ fldName;
+							text:'Принятый ключ &laquo;'+baseName+'&raquo;<br>транслировать в переменную'})
+						.fire( function(name ) {
+									name = name.replace(/^\$+/,'');
+									div.dataset.name = name;
+									if ( isList ) {
+										host.innerText = baseName +' => $'+name;
+									} else {
+										host.innerText = '$' + name;
+									}
 									commitEnable();
 								} );
 			},
@@ -1359,10 +1378,13 @@ let showRESP = function(resp) {			// Markup and Display incoming response receiv
 		body_send.querySelector('.qw_data').appendChild(domsend);
 		body_recv.querySelector('.qw_data').appendChild(domrecv);
 
-		body_send.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});
-		body_recv.querySelectorAll('.keyVal').forEach( ki =>{ ki.ondblclick = keyEdit.varname});
+		body_send.querySelectorAll('.keyName').forEach( ki =>{ ki.ondblclick = keyEdit.keyname});	// Assign requested key name
+		body_recv.querySelectorAll('.keyName').forEach( ki =>{ let tgt = ki;
+							if ( ki.nextElementSibling.matches('span.keyVal') ) tgt = ki.nextElementSibling;
+							tgt.ondblclick = keyEdit.varname
+						} );			// Assign variable name for responsed 1C key
 		body_send.querySelector('.buttonbar.killer')
-					.onclick = function() {
+					.onclick = function() {			// Kill this processor
 							let probox = this.closest('.qw_talks.ajax');
 							if ( confirm('Вы желаете удалить обработчик запроса\n\xAB'
 											+probox.dataset.code+'\xBB?') ) {
