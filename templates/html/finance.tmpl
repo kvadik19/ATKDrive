@@ -1,5 +1,5 @@
 <div class="content_body">
-   <h1 order="3" >Мои доходы</h1>
+   <h1 order="3">Мои доходы</h1>
    <div class="finance__filter">
       <div class="finance__filter--item">
          <span class="finance__filter--item-title span-title">Статус платежа:</span>
@@ -25,21 +25,15 @@
          <input type="date" class="finance__filter--item-input">
          <div class="finance__filter--item-input-dash">
          </div>
-            <input type="date" class="finance__filter--item-input">
+         <input type="date" class="finance__filter--item-input">
       </div>
    </div>
    <!-- Начало блок инфы по периоду -->
-   <div class="finance__info">    
+   <div class="finance__info">
       <span class="finance__info--title">
-         
-         <TMPL_VAR NAME="orddate-dd">  <!--Месяц заявки -->
-      
+         <TMPL_VAR NAME="orddate-dd">
       </span>
-      <span class="finance__info--subtitle">Сумма за период: 
-         
-         <TMPL_VAR NAME="sum_total">   <!--Общая сумма за выбранный месяц -->
-      
-      </span> 
+      <span class="finance__info--subtitle">Сумма за период: <TMPL_VAR NAME="sum_total"></span>
       <div class="finance__info--block">
          <div class="finance__info--block-title">
             <div class="finance__info--block-title-item finance__info--block-title-date">
@@ -59,113 +53,68 @@
             </div>
             <div class="finance__info--block-tab-last"></div>
          </div>
-         <!--Блок вывода инфы -->
-         
-         <TMPL_LOOP NAME="prixod"> <!--Начало цикла вывода данных о заявке-->
-         
-         <div class="finance__info--block-tab">
-            <div class="finance__info--block-title-item finance__info--block-tab-date">
-               <span class="finance__info--block-tab-col1">
-               
-               <TMPL_VAR NAME="orddate-dd">  <!--Дата заявки -->
-            
-               </span>
-            </div>
-            <div class="finance__info--block-wrap">
-               <div class="finance__info--block-title-item finance__info--block-tab-summ">
-                  <div class="finance__info--block-tab-col2">
-                  
-                  <TMPL_VAR NAME="sum">  <!--Сумма заявки -->
-               
+         <TMPL_LOOP NAME="prixod">
+            <!--Начало цикла вывода данных о заявке-->
+            <div class="finance__info--block-tab">
+               <div class="finance__info--block-title-item finance__info--block-tab-date">
+                  <span class="finance__info--block-tab-col1"><TMPL_VAR NAME="orddate-dd"></span>
+               </div>
+               <div class="finance__info--block-wrap">
+                  <div class="finance__info--block-title-item finance__info--block-tab-summ">
+                     <div class="finance__info--block-tab-col2"><TMPL_VAR NAME="sum"></div>
+                  </div>
+                  <div class="finance__info--block-title-item finance__info--block-tab-status">
+                     <input type="checkbox" class="carting__checkbox" <TMPL_IF NAME="payed">checked</TMPL_IF> />
+                  </div>
+                  <div class="finance__info--block-title-item finance__info--block-tab-bid">
+                     <span class="finance__info--block-tab-col4"><TMPL_VAR NAME="request_number"></span>
+                  </div>
+                  <div class="finance__info--block-title-item finance__info--block-tab-route">
+                     <div class="finance__info--block-tab-city"><TMPL_VAR NAME="shipment"></div>
                   </div>
                </div>
-               <div class="finance__info--block-title-item finance__info--block-tab-status">
-                  <label for="status" class="finance__filter--label">
-                     <input type="checkbox" name="status" id="status" class="drivers-tab__input" 
-                  
-                     <TMPL_IF NAME="payed">checked</TMPL_IF>>  <!--Условие оплачена заявка или нет? -->
-                  
-                     <span class="drivers-tab__new--checkbox finance__filter--checkbox-first"></span>
-                     <span class="finance__info--block-tab-status-label span-title__info--text">Оплачено</span>
-                  </label>
-               </div>
-               <div class="finance__info--block-title-item finance__info--block-tab-bid">
-                  <span class="finance__info--block-tab-col4">
-                  
-                     <TMPL_VAR NAME="request_number">  <!--Номер заявки -->
-               
-                  </span>
-               </div>
-               <div class="finance__info--block-title-item finance__info--block-tab-route">
-               <div class="finance__info--block-tab-city">
-                  
-                  <TMPL_VAR NAME="shipment">  <!--Маршрут место отправки -->
-               
-               </div>
-               <img src="/img/arrow2.svg" class="finance__info--block-tab-route-img" alt="ARROW" />
-               <div class="finance__info--block-tab-city">Сочи</div>
+               <div class="finance__info--block-title-item finance__info--block-tab-close">
+                  <img src="/img/arrow-bottom.svg" class="finance__info--block-tab-close-img" alt="ARROW" />
                </div>
             </div>
-            <div class="finance__info--block-title-item finance__info--block-tab-close">
-               <img src="/img/arrow-bottom.svg" class="finance__info--block-tab-close-img" alt="ARROW" />
-            </div>
-         </div>
-         <!-- Коней блока вывода инфы -->
-         
-         <!--Начало выпадающего блока вывода инфы -->
-         <div class="finance__info--block-open">
-            <div class="block-open__body">
-               <div class="block-open__summ">
-                  <span class="block-open__summ--title span-title__info">Сумма, руб</span>
-                  <span class="block-open__summ--text span-title">
-                  
-                  <TMPL_VAR NAME="sum">  <!--Сумма заявки -->
-               
-                  </span>
-               </div>
-               <div class="block-open__status">
-                  <label for="status-mobile" class="finance__filter--label">
-                     <input type="checkbox" name="status" id="status-mobile" class="drivers-tab__input"
-                  
-                     <TMPL_IF NAME="payed">checked</TMPL_IF>>  <!--Условие оплачена заявка или нет? -->
-                  
-                     <span class="drivers-tab__new--checkbox finance__filter--checkbox-first"></span>
+            <!-- Коней блока вывода инфы -->
+
+            <!--Начало выпадающего блока вывода инфы -->
+            <div class="finance__info--block-open">
+               <div class="block-open__body">
+                  <div class="block-open__summ">
+                     <span class="block-open__summ--title span-title__info">Сумма, руб</span>
+                     <span class="block-open__summ--text span-title"><TMPL_VAR NAME="sum"></span>
+                  </div>
+                  <div class="block-open__status">
+                     <input type="checkbox" class="carting__checkbox" <TMPL_IF NAME="payed">checked</TMPL_IF> />
                      <span class="block-open__status--label span-title__info--text">Оплачено</span>
-                  </label>
-               </div>
-               <div class="block-open__bid">
-                  <span class="block-open__summ--title span-title__info">Заявка:</span>
-                  <span class="block-open__summ--text span-title">
-               
-                  <TMPL_VAR NAME="request_number">  <!--Номер заявки -->
-               
-                  </span>
-               </div>
-               <div class="block-open__city">
-                  <div class="block-open__city--box finance__info--block-tab-city">Москва</div>
-                  <img src="/img/arrow2.svg" class="block-open__city--img finance__info--block-tab-route-img" alt="ARROW" />
-                  <img src="/img/arrow4.svg" class="block-open__city--img-mobile" alt="ARROW" />
-                  <div class="block-open__city--box finance__info--block-tab-city">
-               
-                     <TMPL_VAR NAME="shipment">  <!--Маршрут место отправки -->
-               
                   </div>
-               </div>
-               <div class="block-open__document">
-                  <span class="block-open__document--title info__title">Документы:</span>
-                  <div class="block-open__document--box-file">
-                     <a href="#" class=""><span class="block-open__document--file span-title__info">Квитанция об оплате, pdf</span></a>
-                     <a href="#" class=""><span class="block-open__document--file span-title__info">GPS отчëт</span></a>
+                  <div class="block-open__bid">
+                     <span class="block-open__summ--title span-title__info">Заявка:</span>
+                     <span class="block-open__summ--text span-title"><TMPL_VAR NAME="request_number"></span>
                   </div>
-                  <div class="block-open__document--btn">
-                     <a href="#" style="color: #ffffff;" class="block-open__document--link">Скачать все документы</a>
+                  <div class="block-open__city">
+                     <div class="block-open__city--box finance__info--block-tab-city"><TMPL_VAR NAME="shipment"></div>
+                  </div>
+                  <div class="block-open__document">
+                     <span class="block-open__document--title info__title">Документы:</span>
+                     <div class="block-open__document--box-file">
+                        <a href="#" class=""><span class="block-open__document--file span-title__info">Квитанция об
+                              оплате, pdf</span></a>
+                        <a href="#" class=""><span class="block-open__document--file span-title__info">GPS
+                              отчëт</span></a>
+                     </div>
+                     <div class="block-open__document--btn">
+                        <a href="#" style="color: #ffffff;" class="block-open__document--link">Скачать все документы</a>
+                     </div>
                   </div>
                </div>
             </div>
-         </div>
-         <!--Конец выпадающего блока вывода инфы -->
-         
-         </TMPL_LOOP>  <!--Конец цикла вывода данных о заявке -->
+            <!--Конец выпадающего блока вывода инфы -->
+
+         </TMPL_LOOP>
+         <!--Конец цикла вывода данных о заявке -->
 
       </div>
    </div>
@@ -173,20 +122,20 @@
 </div>
 
 <script>
-      document.addEventListener("DOMContentLoaded", function () {
+   document.addEventListener("DOMContentLoaded", function () {
       // Выпадающее меню сайдbара
 
-/*      let linkDesktop = document.querySelector(".navbar__list--link-desktop");
-      let subMenu = document.querySelector(".navbar__submenu--list-desktop");
-      let decktopArrow = document.querySelector(".navbar__submenu--link-desktop");
-      linkDesktop.addEventListener("click", (e) => {
-         e.preventDefault();
-         let target = e.target;
-         if (target) {
-            subMenu.classList.toggle("active-desktop");
-            decktopArrow.classList.toggle("decktop-arrow");
-      }
-   });*/
+      /*      let linkDesktop = document.querySelector(".navbar__list--link-desktop");
+            let subMenu = document.querySelector(".navbar__submenu--list-desktop");
+            let decktopArrow = document.querySelector(".navbar__submenu--link-desktop");
+            linkDesktop.addEventListener("click", (e) => {
+               e.preventDefault();
+               let target = e.target;
+               if (target) {
+                  subMenu.classList.toggle("active-desktop");
+                  decktopArrow.classList.toggle("decktop-arrow");
+            }
+         });*/
 
       //Выпадающее меню мобильного сайдбара
 
@@ -201,9 +150,9 @@
             mobileArrow.classList.toggle("mobile-arrow");
          }
       });*/
-   
+
       //Открытие блока информации о доходох
-  
+
       let financeTabImgOpen = document.querySelector(".finance__info--block-tab-close");
       let financeImg = document.querySelector(".finance__info--block-tab-close-img");
       let financeInfo = document.querySelector(".finance__info--block-open");
@@ -216,5 +165,4 @@
          }
       });
    });
-
 </script>

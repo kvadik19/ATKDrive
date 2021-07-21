@@ -319,7 +319,8 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 				}
 				$templates->{$action}->{'query'}->{'ajax'} = $ajax;
 			}
-			$qw_send = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_send'} || $param;
+			$qw_send = $param || $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_send'};
+
 			$qw_recv = $templates->{$action}->{'query'}->{'ajax'}->{$param->{'code'}}->{'qw_recv'} 
 										|| $templates->{$action}->{'query'}->{'init'}->{'qw_recv'};		# OR Use `init' data model
 		} else {
@@ -369,6 +370,7 @@ my $out = {'html_code' => "<div class=\"container\"><h1>$action is not implement
 		my $userdata = {%{$udata->{'record'}}};						# User switcheable parameters
 		$userdata->{'_umode'} = $current_umode;						# 
 		Drive::Support->apply_user( $qw_send->{'data'}, $userdata );
+# $self->logger->dump(Dumper($qw_send->{'data'}));
 
 		# Collect Original named parameners for HTML::Template (used later)
 		my $tmpl_send_data = Drive::Support->from_json( $qw_send->{'data'}, 1);	# Obtain native-named keys for HTML::Template 
@@ -397,7 +399,7 @@ $self->logger->dump("RECV: $resp");
 
 			} elsif ( -e("$Drive::sys_root/watchdog") && -z("$Drive::sys_root/watchdog") ) {		# Report received msg 
 				my $disp_send_data = Drive::Support->key_vals( {%$tmpl_send_data} );	# Assign keyNames as values for displaying
-$self->logger->dump(Dumper($disp_send_data));
+# $self->logger->dump(Dumper($disp_send_data));
 				my $watch = {
 								'qw_send' => {'code' => $send_code, 'data' => $disp_send_data},
 								'qw_recv' => $resp,
@@ -424,10 +426,12 @@ $self->logger->dump(Dumper($disp_send_data));
 				$out = Drive::Support->apply_data(	model => $qw_recv->{'data'}, 
 													data => $resp->{'data'},
 													date_mask => $testdate,
+# 													reverse => $is_ajax,
 												);
 				};
 		}
-# $self->logger->dump('Model: '.Dumper($qw_recv->{'data'}),1,1);
+# $self->logger->dump('GOT DATA: '.Dumper($resp->{'data'}),1,1);
+# $self->logger->dump('MODEL: '.Dumper($qw_recv->{'data'}),1,1);
 # $self->logger->dump('Applied: '.Dumper($out),1,1);
 		$self->logger->dump("Apply data on response to $action: $@", 3) if $@;
 		if ( $is_ajax ) {

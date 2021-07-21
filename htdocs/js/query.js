@@ -34,7 +34,8 @@ let subSwitch = function(tab) {			// Click on subTabs
 		}
 	};
 
-let getDOMVal = function(item, flat) {		// Obtain key:value pair from DOM <div class="value">
+let getDOMVal = function(item, init) {		// Obtain key:value pair from DOM <div class="value">
+		if ( !init ) init = {};
 		let value = {};
 		if ( item.firstElementChild.matches('.keyVal') ) {		// Scalar value as array item
 			value.val = item.firstElementChild.innerText;
@@ -42,7 +43,7 @@ let getDOMVal = function(item, flat) {		// Obtain key:value pair from DOM <div c
 					&& item.lastElementChild.matches('.keyVal') ) {		// key:scalar value pair
 			value.key = item.firstElementChild.innerText;
 			value.val= item.lastElementChild.innerText;
-			if ( !flat ) {
+			if ( !init.flat ) {
 				if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 				if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
 				if ( item.matches('.preset') ) value.key += ';%preset';
@@ -51,17 +52,17 @@ let getDOMVal = function(item, flat) {		// Obtain key:value pair from DOM <div c
 		} else if( item.lastElementChild ) {
 			if ( item.firstElementChild.matches('.keyName') ) {		// key:object pair or just object
 				value.key = item.firstElementChild.innerText;
-				if ( !flat ) {
+				if ( !init.flat ) {
 					if ( item.dataset.name ) value.key += ';'+item.dataset.name;
 					if ( item.matches('.jsonItem') ) value.key += ';%jsonItem';
 					if ( item.matches('.preset') ) value.key += ';%preset';
 					if ( item.matches('.bool') ) value.key += ';%bool';
 				}
 			}
-			if ( !flat ) value.val = fromDOM(item.lastElementChild);
+			if ( !init.flat ) value.val = fromDOM(item.lastElementChild, init.only);
 		}
 
-		if ( !flat && typeof(value.val) === 'string' ) {
+		if ( !init.flat && typeof(value.val) === 'string' ) {
 			let parts = value.val.match(/^([^\[]+)(\s\[([^\]]+)\])?$/);		// Defined test data?
 			if ( parts ) value.val = parts[1];						// Omit test data
 			if ( value.val.match(/^\d+$/) ) value.val = parseInt(value.val);			// Convert string to number for 1C
@@ -69,7 +70,7 @@ let getDOMVal = function(item, flat) {		// Obtain key:value pair from DOM <div c
 		return value;
 	};
 
-let fromDOM = function(node) {			// Parse DOM into JSON query definition 
+let fromDOM = function(node, only) {			// Parse DOM into JSON query definition 
 		let obj;
 		if ( node.className === 'domItem') node = node.firstElementChild;		// Skip extra containers
 		if ( !node ) return;
@@ -83,7 +84,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			for (let nC=0; nC< node.children.length; nC++) {
 				if ( node.children[nC].matches('.same') ) break;
 				if ( node.children[nC].matches('.value') ) {
-					let res = getDOMVal(node.children[nC]);
+					let res = getDOMVal(node.children[nC], {'only':only});
 					if ( res.key ) {
 						let got = {};
 						got[res.key] = res.val;
@@ -92,7 +93,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 						obj.push(res.val);
 					}
 				} else {
-					obj.push( fromDOM(node.children[nC]) );
+					obj.push( fromDOM(node.children[nC], only) );
 				}
 			}
 
@@ -103,12 +104,13 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			if ( node.matches('.set') ) manifest += '%set;';
 			obj  = { '==manifest':manifest };
 			for (let nC=0; nC< node.children.length; nC++) {
-				let res = getDOMVal(node.children[nC]);
+				if ( only && node.children[nC].matches('.value:not('+only+')') ) continue;
+				let res = getDOMVal(node.children[nC], {'only':only});
 				obj[res.key] = res.val;
 			}
 
-		} else if ( node.matches('.value') ) {		// Probably, Helpless trigger
-			let res = getDOMVal(node);
+		} else if ( node.matches('.value') ) {		// Probably, Helpless trigger?
+			let res = getDOMVal(node, {'only':only});
 			if ( res.key ) {
 				obj = {};
 				obj[res.key] = res.val;
@@ -117,7 +119,7 @@ let fromDOM = function(node) {			// Parse DOM into JSON query definition
 			}
 			
 		} else if ( node.firstElementChild ) {		// Possibly exceptions trap
-			obj = fromDOM(node.firstElementChild);
+			obj = fromDOM(node.firstElementChild, only);
 		}
 		return obj;
 	};
@@ -146,7 +148,7 @@ let keyApply = function(node, data) {
 
 		} else if ( node.matches('.object') && data.constructor.toString().match(/Object/i) ) {
 			for (let nC=0; nC< node.children.length; nC++) {
-				let res = getDOMVal(node.children[nC], 'This Key Only');
+				let res = getDOMVal(node.children[nC], {'flat':1});		// Get values from only one level
 				let branchName = Object.keys(data).find( kk =>{ 
 								if ( data[kk] == '$'+res.key) {
 									return true;
@@ -568,13 +570,13 @@ let dispatch = {		// Switching between Tabs/subTabs dispatcher
 										'ajax': [],
 										'translate':translate
 										};
-						let ajax = document.querySelectorAll('.tabContent.shown .qw_talks.ajax');
+						let ajax = document.querySelectorAll('.tabContent.shown .qw_talks.ajax[data-code]');
 						for ( let aN=0; aN<ajax.length; aN++) {					// Collect AJAX queries definition
 							let send = ajax[aN].querySelector('.message.qw_send');
 							let recv = ajax[aN].querySelector('.message.qw_recv');
 							if ( recv.querySelector('.qw_code .code') && send.querySelector('.qw_code .code') ) {
 								formData.ajax.push({ 'qw_recv':{'code':recv.querySelector('.qw_code .code').value,
-																'data':fromDOM( recv.querySelector('.qw_data'))},
+																'data':fromDOM( recv.querySelector('.qw_data'), '.set')},
 													'qw_send':{'code':send.querySelector('.qw_code .code').value,
 																'data':fromDOM( send.querySelector('.qw_data'))}
 													});
@@ -930,25 +932,36 @@ let keyEdit = {
 				let div = host.closest('.value');
 				let baseName = host.innerText;
 				let baseValue = host.innerText.replace(/^\$+/,'');
+
 				let isList = false;
-				if ( host.matches('.keyVal') ) baseName = host.previousElementSibling.innerText;
-				if ( baseValue.match(/^(.+) => \$(.+)$/) ) {			// Name of array found
+				if ( host.matches('.keyVal') ) {
+					baseName = host.previousElementSibling.innerText;
+				} else if (host.matches('.keyName')) {			// Item is an Array header
 					isList = true;
-					let parts = baseValue.match(/^(.+) => \$(.+)$/);
-					baseName = parts[1];
-					baseValue = parts[2];
+					if ( baseValue.match(/^(.+) => \$(.+)$/) ) {			// Name of Array always defined, found
+						let parts = baseValue.match(/^(.+) => \$(.+)$/);
+						baseName = parts[1];
+						baseValue = parts[2];
+					}
 				}
 				keyTool.set( { info:div, value:baseValue, valuesOnly:true, items:['text'],
 							head:'Укажите переменную',
 							text:'Принятый ключ &laquo;'+baseName+'&raquo;<br>транслировать в переменную'})
 						.fire( function(name ) {
+									div.className = div.className.replace(/\s*set/g,'');
 									name = name.replace(/^\$+/,'');
-									div.dataset.name = name;
-									if ( isList ) {
-										host.innerText = baseName +' => $'+name;
+									if ( name.length === 0 ) {			// Clear keyNames conformity
+										name = baseName;
+										host.innerText = name;
 									} else {
-										host.innerText = '$' + name;
+										div.className += ' set';
+										if ( isList ) {
+											host.innerText = baseName +' => $'+name;
+										} else {
+											host.innerText = '$' + name;
+										}
 									}
+									div.dataset.name = name;
 									commitEnable();
 								} );
 			},
@@ -1434,12 +1447,15 @@ document.getElementById('checkload').onclick = function(e) {		// Debugging query
 		document.getElementById('checkload_bar').style.visibility = 'visible';
 		flush(form, document.location.href, function(resp) {
 				document.getElementById('checkload_bar').style.visibility = 'hidden';
-				resp = JSON.parse(resp);
+				if ( resp.match(/^[\{\[]/) ) resp = JSON.parse(resp);
 				if ( resp.fail ) {
 					alert('Ошибка запроса к серверу\n'+resp.fail);
-				} else {
+				} else if( resp.data ) {
 					bodyIn.querySelector('.qw_code .code').value = resp.data.code;
 					keyTool.set( { qdata: resp.data });
+				} else {
+					console.log('Checkload failed');
 				}
+				
 			});
 	};

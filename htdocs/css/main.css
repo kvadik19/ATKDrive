@@ -2031,6 +2031,8 @@ h2 {
 
 .bid-document__image {
 	margin-right: 8px;
+   width: 24px;
+   height: 24px;
 }
 
 .bid-document__text {
@@ -4928,6 +4930,7 @@ h2 {
 	-webkit-box-align: center;
 	-ms-flex-align: center;
 	align-items: center;
+   font-size: 14px;
 	padding: 8px 25px;
 	border: 1px solid #e8e8e8;
 	border-radius: 4px;
@@ -4990,10 +4993,7 @@ h2 {
 	-webkit-box-flex: 0;
 	-ms-flex: 0 1 20%;
 	flex: 0 1 20%;
-}
-
-.block-open__status--label {
-	margin-left: 10px;
+   display: flex;
 }
 
 .block-open__bid {

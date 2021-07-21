@@ -1,5 +1,15 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <sys>
+	<required_query>
+		<_uid data="$_uid" type="n" comment="Идентификатор клиента из таблицы users" />
+		<_umode data="$_umode" type="n" comment="Тип клиента (заказчик/перевозчик) в данной сессии" />
+		<begin data="$def_begin" type="s" force="1" comment="Начальная дата выборки документов, значение вычисляется в момент запроса" />
+		<end data="$def_end" type="s" force="1" comment="Конечная дата выборки документов, значение вычисляется в момент запроса" />
+		<from data="1" type="n" comment="Начальный порядковый номер документа возвращаемого списка" />
+		<status data="0" type="n" comment="Статус заявки - исполнена=1, в работе=0" />
+		<koldoc data="10" type="n" comment="Количество запрашиваемых документов" />
+	</required_query>
+
 	<user_mode>
 		<carrier title="перевозчик" value="1" name="carrier" />
 		<customer title="заказчик" value="2" name="customer" />

@@ -298,9 +298,9 @@ sub apply_data {	# Apply data on data template
 			my $okey = $self->key_split( $k);
 			$k = $okey->{'uname'};
 			my $dk = $v;
-			if ( $okey->{'uname'} =~ / <= (.+)$/ ) {			# Special formatted keyName?
+			if ( $okey->{'uname'} =~ / (<=|=>) (.+)$/ ) {			# Special formatted keyName?
 				$k = $okey->{'name'};
-				$dk = $1;
+				$dk = $2;
 			}
 			$dk =~ s/^\$//;
 			if ( $okey->{'classname'} =~ /bool/ ) {			# Conditional assignment
@@ -448,13 +448,14 @@ my ($self, $query, $init) = @_;
 	my $def_end = Date::Handler->new( date => time, time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
 	my $def_begin = Date::Handler->new( date => [$def_end->Year(), $def_end->Month(), 1], 
 										time_zone => $Drive::our_timezone, locale => $Drive::our_locale);
-	my $defdata = { '_uid' => {'data'=>'$_uid'},
-					'_umode' => {'data'=>'$_umode'},
-					'begin' => {'data'=>$def_begin->TimeFormat( $sys->{'datefmt_send'}), 'force'=>1},
-					'end' => {'data'=>$def_end->TimeFormat( $sys->{'datefmt_send'}), 'force'=>1},
-					'koldoc' => {'data'=>10},
-					'from' => {'data'=>1}
-				};		# Default data always must present
+	my $forced_data = {	'begin' => $def_begin->TimeFormat( $sys->{'datefmt_send'}),
+						'end' => $def_end->TimeFormat( $sys->{'datefmt_send'}) };
+	my $defdata = $sys->{'required_query'};		# Default data always must present
+	while ( my ($key, $val) = each(%$defdata) ) {			# Assign forced values
+		if ( $val->{'force'} == 1 && exists( $forced_data->{$key}) ) {
+			$val->{'data'} = $forced_data->{$key}
+		}
+	}
 
 	my $keyfld;
 	my $utdef = Drive::hostConfig->{'utable'};
@@ -466,9 +467,9 @@ my ($self, $query, $init) = @_;
 	$query = {%$defdata} unless $query;
 	
 	while ( my($par, $val) = each(%$defdata) ) {		# Insert required data if need
-		##### Forgotten feature???
-# 		my $at_ut = Drive::find_first( $utdef, 
-# 									sub { my $fld = shift; return $fld->{'name'} eq $par } );	# Look at users stucture
+		##### Is this key is a `users' field?
+		my $at_ut = Drive::find_first( $utdef, 
+									sub { my $fld = shift; return $fld->{'name'} eq $par } );	# Look at users stucture
 
 		my $at_qt = Drive::find_hash( $query, 
 									sub { my ($key, $mask) = @_;
@@ -476,13 +477,16 @@ my ($self, $query, $init) = @_;
 											my $name = $name[1] || $name[0];		# Or just a 'name'
 											return $name eq $mask;
 										}, $par);		# Look at passed query
+# $Drive::logger->dump("Def $par as $at_qt, $query->{$at_qt}");
 		unless ( $at_qt) {
 			$query->{$par} = $val->{'data'} ;		# Key is'nt defined
+			$at_qt = $par;
 		} elsif( $val->{'force'} ) {
 			$query->{$at_qt} = $val->{'data'} ;		# Forced data assign
-# 		} elsif( $at_ut < 0 ) {					# Assign, if defined key is not from utable fields?
-# 			$query->{$at_qt} = $val->{'data'} ;
+		} elsif( $at_ut < 0 ) {					# Assign, if defined key is not from utable fields
+			$query->{$at_qt} = $val->{'data'} ;
 		}
+		$query->{$at_qt} *= 1 if $val->{'type'} =~ /^n/i;		# Need to pass as NUMBER for 1C
 	}
 
 	foreach my $pn ( keys(%$init) ) {			# Apply init data if passed
